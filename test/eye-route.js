@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Walk the fly-through centreline from the portal to the far north chamber and back,
+// Walk the fly-through centreline from the portal to the northwest end and back,
 // in 1 ft steps, for manual WASD and for P. The floor and ceiling used to judge the
 // camera are computed here from the point cloud (same 25 cm / 10 cm bins as app.js,
 // not by calling CALICO.eye.pointFloor). Fails when the eye is under 1.40 m above the
@@ -357,6 +357,8 @@ async function main() {
       await sleep(1000);
     }
     if (!ready) fail('page did not become ready');
+    const nw = await browser.evalJs('window.CALICO && CALICO.nw');
+    console.log('northwest destination', JSON.stringify(nw));
     console.log('page ready', ((Date.now() - t0) / 1000).toFixed(1) + 's — walking WASD');
     const wasd = await browser.evalJs(WALK_WASD, 180000);
     if (wasd.error) {

@@ -72,7 +72,8 @@ const OCC=0.1, occ=new Set(); const okey=(x,y,z)=>((Math.floor(x/OCC)+2000)*4096
 // (lowest dense floor directly under the viewer). Keep the sizes in sync with test/eye-route.js.
 const FCELL=0.25, FY0=-4, FYN=120, fgrid=new Map();
 function fbin(x,y,z,up){ const yi=Math.round((y-FY0)/0.1); if(yi<0||yi>=FYN) return;
- const k=Math.round(x/FCELL)*100000+Math.round(z/FCELL); let h=fgrid.get(k); if(!h){ h=new Uint16Array(FYN*2); fgrid.set(k,h); }
+ const ix=Math.round(x/FCELL), iz=Math.round(z/FCELL), k=ix*100000+iz;
+ let h=fgrid.get(k); if(!h){ h=new Uint16Array(FYN*2); h.ix=ix; h.iz=iz; fgrid.set(k,h); }
  const i=yi+(up?0:FYN); if(h[i]<65535) h[i]++; }
 function b64(s){const bin=atob(s),n=bin.length,u=new Uint8Array(n);for(let i=0;i<n;i++)u[i]=bin.charCodeAt(i);return u;}
 function decodeFile(fi){
@@ -126,7 +127,8 @@ function loadMesh(cb){
 let meshLoading=false;
 
 // ---------- controls ----------
-const keys={}; let yaw=0,pitch=0,speed=2.0,lampOn=true,auto=false,autoT=0,msgT=0,msg='';
+const keys={}; let yaw=0,pitch=0,speed=2.0,fastWalk=false,lampOn=true,auto=false,autoT=0,msgT=0,msg='';
+const WALK_FAST=4;
 let lookYaw=0, lookPitch=0;   // steadicam: the camera eases toward yaw/pitch (mouse targets) instead of snapping
 const path=new THREE.CatmullRomCurve3(M.path.map(p=>new THREE.Vector3().fromArray(p)),false,'centripetal');
 const pathLen=path.getLength();
@@ -141,7 +143,8 @@ addEventListener('keydown',e=>{keys[e.code]=true;
  if(e.code==="KeyR"){reset();auto=false;resetGuard();snapLook(); if(CALICO.syncTouchBtns) CALICO.syncTouchBtns();}
  if(e.code==='KeyB'){U.uCull.value=1-U.uCull.value;flash('Back-face point culling '+(U.uCull.value?'ON':'OFF'));}
  if(e.code==='KeyH'){document.body.classList.toggle('hidehelp');}
- if(e.code==='KeyP'){ if(auto) stopAuto(); else startAuto(); flash(auto?(FLY?'Auto fly-through to the far north chamber and back (P to stop)':'Auto fly-through (P to stop)'):'Manual'); if(CALICO.syncTouchBtns) CALICO.syncTouchBtns(); }
+ if(e.code==='KeyF'&&!e.repeat){ fastWalk=!fastWalk; flash(fastWalk?'Walking 4×':'Walking normal speed'); if(CALICO.syncTouchBtns) CALICO.syncTouchBtns(); }
+ if(e.code==='KeyP'){ if(auto) stopAuto(); else startAuto(); flash(auto?(FLY?'Auto fly-through to the northwest end and back (P to stop)':'Auto fly-through (P to stop)'):'Manual'); if(CALICO.syncTouchBtns) CALICO.syncTouchBtns(); }
  if(e.code==='KeyM'){loadMesh(()=>{mesh.visible=!mesh.visible;group.visible=!mesh.visible;flash(mesh.visible?'Surface mesh':'Points');});}
  if(e.code==='BracketRight')U.uSize.value*=1.15; if(e.code==='BracketLeft')U.uSize.value/=1.15;
  if(e.code==='Equal'||e.code==='NumpadAdd'){speed=Math.min(speed*1.25,40);flash('Speed '+speed.toFixed(1)+' m/s');}
@@ -161,25 +164,26 @@ addEventListener('mousemove',e=>{ if(document.pointerLockElement!==renderer.domE
  yaw-=e.movementX*0.0022; pitch=Math.max(-1.5,Math.min(1.5,pitch-e.movementY*0.0022)); });
 // ---------- touch: virtual joystick + drag look (no pointer lock) ----------
 // Phones never get a locked pointer. A coarse pointer or a real touch surface turns on on-screen controls.
-// The left thumb drives a joystick (forward/back/strafe). One finger on the right half of the screen looks around.
+// The right thumb drives a joystick (forward/back/strafe). A drag anywhere else — the left side, and the
+// area above the controls — looks around. The big 4× button (and F on a keyboard) quadruples walk speed.
 // Walking still goes through the same update() path, so the eye stays floor + EYE_HEIGHT with the steadicam spring.
 const TOUCH=matchMedia('(pointer: coarse)').matches||('ontouchstart' in window);
 let stickX=0, stickY=0;   // -1..1, x = strafe right, y = forward
 function enterTouch(){
  ov.style.display='none';
- if(!entered){ entered=true; showHint('Left thumb: move · Drag: look · ▶ fly-through',7000); }
+ if(!entered){ entered=true; showHint('Right thumb: move · Drag to look · 4× walks faster',7000); }
 }
 if(TOUCH){
  document.body.classList.add('touch');
  const big=document.querySelector('#enter .big'), ctl=document.querySelector('#enter .ctl');
  if(big) big.textContent='▶ Tap to enter';
- if(ctl) ctl.textContent='Left thumb: move · Drag: look · ▶ fly-through';
+ if(ctl) ctl.innerHTML='Right thumb: move · Drag to look · <b>4×</b> walks faster';
  const ui=document.createElement('div'); ui.id='touchui';
  ui.innerHTML='<div id="stick"><div class="pad"><div class="knob"></div></div></div>'+
-  '<div id="tbtns"><button type="button" id="tFly">▶ Fly-through</button><button type="button" id="tReset">Reset</button><button type="button" id="tLamp">Lamp</button></div>';
+  '<div id="tbtns"><button type="button" id="tFly">▶ Fly</button><div id="trow"><button type="button" id="tReset">Reset</button><button type="button" id="tLamp">Lamp</button></div><button type="button" id="tFast">4×</button></div>';
  document.body.appendChild(ui);
- const stick=ui.querySelector('#stick'), knob=ui.querySelector('.knob'), flyBtn=ui.querySelector('#tFly'), lampBtn=ui.querySelector('#tLamp');
- const STICK_R=36;
+ const stick=ui.querySelector('#stick'), knob=ui.querySelector('.knob'), flyBtn=ui.querySelector('#tFly'), lampBtn=ui.querySelector('#tLamp'), fastBtn=ui.querySelector('#tFast');
+ const STICK_R=42;
  let stickTid=null;
  const setKnob=(x,y)=>{ knob.style.transform=`translate(${x.toFixed(1)}px,${y.toFixed(1)}px)`; };
  function applyStick(t){
@@ -196,7 +200,7 @@ if(TOUCH){
  const onLookStart=e=>{
   if(!entered) return;
   for(const t of e.changedTouches){
-   if(lookTid!==null||t.clientX<innerWidth*0.5) continue;   // right half only; the joystick owns the left thumb
+   if(lookTid!==null) continue;   // the joystick and buttons sit on their own elements; the rest of the screen looks
    lookTid=t.identifier; lookX=t.clientX; lookY=t.clientY; e.preventDefault();
   }
  };
@@ -212,11 +216,13 @@ if(TOUCH){
  renderer.domElement.addEventListener('touchmove',onLookMove,{passive:false});
  renderer.domElement.addEventListener('touchend',onLookEnd,{passive:true});
  renderer.domElement.addEventListener('touchcancel',onLookEnd,{passive:true});
- function syncTouchBtns(){ flyBtn.textContent=auto?'■ Stop':'▶ Fly-through'; lampBtn.classList.toggle('off',!lampOn); }
+ function syncTouchBtns(){ flyBtn.textContent=auto?'■ Stop':'▶ Fly'; lampBtn.classList.toggle('off',!lampOn);
+  fastBtn.classList.toggle('on',fastWalk); fastBtn.textContent=fastWalk?'4× ON':'4×'; }
  flyBtn.addEventListener('click',()=>{ if(auto) stopAuto(); else startAuto();
-  flash(auto?(FLY?'Auto fly-through to the far north chamber and back':'Auto fly-through'):'Manual'); syncTouchBtns(); });
+  flash(auto?(FLY?'Auto fly-through to the northwest end and back':'Auto fly-through'):'Manual'); syncTouchBtns(); });
  ui.querySelector('#tReset').addEventListener('click',()=>{ reset(); auto=false; resetGuard(); snapLook(); syncTouchBtns(); });
  lampBtn.addEventListener('click',()=>{ lampOn=!lampOn; flash('Headlamp '+(lampOn?'ON':'OFF (flat light)')); syncTouchBtns(); });
+ fastBtn.addEventListener('click',()=>{ fastWalk=!fastWalk; flash(fastWalk?'Walking 4×':'Walking normal speed'); syncTouchBtns(); });
  CALICO.syncTouchBtns=syncTouchBtns;
 }
 function nearestT(){let best=0,bd=1e9;for(let i=0;i<=400;i++){const d=path.getPointAt(i/400).distanceTo(camera.position);if(d<bd){bd=d;best=i/400;}}return best;}
@@ -381,16 +387,17 @@ function snapLook(){ lookYaw=yaw; lookPitch=pitch; }
 function easeLook(dt,rate){ if(!(dt>0)){ snapLook(); return; } const k=1-Math.exp(-dt*rate);
  let d=yaw-lookYaw; d=Math.atan2(Math.sin(d),Math.cos(d)); lookYaw+=d*k; lookPitch+=(pitch-lookPitch)*k; }
 
-// ---------- P fly-through: portal -> far north chamber -> back to the portal ----------
-// Uses CALICO.tunnel (data/tunnel.js, from eyeheight/tunnel.py): a smoothed centreline through the main drift and the
-// connecting passage to the northernmost chamber. Its height is the same smoothed floor + 1.635 m as walking: a moving
-// average over about 8 ft, then the steadicam spring, ducked only when the roof is too low. The stored polyline
+// ---------- P fly-through: portal -> northwest end -> back to the portal ----------
+// Starts from CALICO.tunnel (data/tunnel.js): the smoothed centreline of the main drift. Once the point cloud is in,
+// retargetNorthwest() walks the open-tunnel graph and replaces the last stretch so the flight ends at the reachable
+// dead-end farthest toward the northwest (maximum north + west, using TUNNEL_BEARING_DEG). Height is unchanged:
+// smoothed floor + 1.635 m, then the steadicam spring, ducked only when the roof is too low. The stored polyline
 // was generated at TUN.eye (1.66 m) and is only a fallback where those points are missing. Speed eases
-// in and out (FLY_ACC), slows to a stop at the chamber, pauses while the view pans round, then returns.
+// in and out (FLY_ACC), slows to a stop at the end, pauses while the view pans round, then returns.
 // Without tunnel.js it falls back to the old meta.js path (raised to eye height).
 const FLY_ACC=0.45, FLY_DWELL=3.5;
-const FLY=TUN&&TUN.fly&&TUN.fly.length>3?new THREE.CatmullRomCurve3(TUN.fly.map(p=>new THREE.Vector3().fromArray(p)),false,'centripetal'):null;
-const FLY_LEN=FLY?FLY.getLength():0;
+let FLY=TUN&&TUN.fly&&TUN.fly.length>3?new THREE.CatmullRomCurve3(TUN.fly.map(p=>new THREE.Vector3().fromArray(p)),false,'centripetal'):null;
+let FLY_LEN=FLY?FLY.getLength():0;
 const flyAt=d=>FLY.getPointAt(Math.max(0,Math.min(1,d/FLY_LEN)));
 let flyD=0, flyV=0, flyDwell=0, flyBlend=1; const flyFrom=new THREE.Vector3(), flyQ=new THREE.Vector3();
 function nearestFlyD(p){ let best=0,bd=1e18; for(let i=0;i<=600;i++){ const q=flyAt(i/600*FLY_LEN), d=(q.x-p.x)**2+(q.z-p.z)**2+0.3*(q.y-p.y)**2; if(d<bd){bd=d;best=i/600*FLY_LEN;} } return best; }
@@ -425,7 +432,7 @@ reset();
 
 CALICO.poseAt=t=>{poseAt(t);}; CALICO.pathLen=pathLen; CALICO.reset=reset; CALICO.validHere=()=>inValidSpace(camera.position);
 CALICO.setPose=(p,l)=>{camera.position.fromArray(p);lookAt(new THREE.Vector3().fromArray(l));snapEye();snapLook();};
-CALICO.eye={floorCeil:(x,z,y)=>floorCeil(x,z,y),pointFloor:(x,z)=>pointFC(x,z),target:(x,z,y)=>eyeTarget(x,z,y),state:()=>({eyeY,eyeV,hOff,flyD,flyV,auto}),EYE_HEIGHT,HEAD_CLEAR,flyLen:FLY_LEN};
+CALICO.eye={floorCeil:(x,z,y)=>floorCeil(x,z,y),pointFloor:(x,z)=>pointFC(x,z),target:(x,z,y)=>eyeTarget(x,z,y),state:()=>({eyeY,eyeV,hOff,flyD,flyV,auto}),EYE_HEIGHT,HEAD_CLEAR,get flyLen(){return FLY_LEN;}};
 CALICO.touch={on:TOUCH,stick:()=>({x:stickX,y:stickY}),look:()=>({yaw,pitch})};
 CALICO.renderNow=()=>{update(0);renderer.render(scene,camera);};
 CALICO.toggleMesh=(on,cb)=>loadMesh(()=>{mesh.visible=on;group.visible=!on;cb&&cb();});
@@ -446,6 +453,7 @@ function update(dt){
   if(mv.lengthSq()>0){
    const keyed=keys.KeyW||keys.ArrowUp||keys.KeyS||keys.ArrowDown||keys.KeyA||keys.ArrowLeft||keys.KeyD||keys.ArrowRight||keys.KeyE||keys.Space||keys.KeyQ||keys.ShiftLeft||keys.ShiftRight;
    mv.normalize().multiplyScalar(speed*(keyed?1:Math.min(1,sm)));
+   if(fastWalk){ mv.x*=WALK_FAST; mv.z*=WALK_FAST; }   // 4× walk; up/down (Space/Shift) stays at the base speed
   }
   // gentle acceleration / deceleration (exponential approach to the key velocity)
   const k=1-Math.exp(-dt*ACCEL_RATE); vel.x+=(mv.x-vel.x)*k; vel.z+=(mv.z-vel.z)*k; hVel+=(mv.y-hVel)*k;
@@ -464,7 +472,87 @@ function update(dt){
  const fd=U.uFogDist.value*1.3;
  for(const o of chunkObjs) o.visible=o.userData.c.distanceTo(camera.position)-o.userData.r<fd;
 }
+// Farthest northwest reachable dead-end. Open cells are 25 cm floor/ceiling columns from the point cloud.
+// A dead-end is a cell you cannot walk farther from the portal. Among those, pick maximum north + west
+// (north − east) in the same compass frame as the HUD (entrance bearing N17.5°E). The flight follows the
+// existing centreline until that branch, then the graph path out to the dead-end.
+function retargetNorthwest(){
+ if(!TUN||FLYP.length<4||!fgrid.size) return;
+ const G=FCELL, N8=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
+ const kOf=(ix,iz)=>ix*100000+iz;
+ function columnOpen(h){
+  let peakUp=0; for(let i=0;i<FYN;i++) if(h[i]>peakUp) peakUp=h[i];
+  const needUp=Math.max(8,peakUp*0.1); let floor=null;
+  for(let i=0;i<FYN;i++) if(h[i]>=needUp){ floor=FY0+i*0.1; break; }
+  if(floor===null) return null;
+  let peakI=-1, peakDn=0;
+  for(let i=0;i<FYN;i++) if(FY0+i*0.1>=floor+0.7&&h[FYN+i]>peakDn){ peakDn=h[FYN+i]; peakI=i; }
+  if(!(peakI>=0&&peakDn>=5)) return null;
+  const needDn=Math.max(5,peakDn*0.15); let c=peakI;
+  while(c>0&&FY0+(c-1)*0.1>=floor+0.7&&h[FYN+c-1]>=needDn) c--;
+  const ceil=FY0+c*0.1, head=ceil-floor;
+  if(head<1.05||head>14) return null;
+  return {floor,ceil,head};
+ }
+ const open=new Map();
+ for(const h of fgrid.values()){ if(h.ix===undefined) continue; const fc=columnOpen(h); if(!fc) continue;
+  open.set(kOf(h.ix,h.iz),{ix:h.ix,iz:h.iz,floor:fc.floor,ceil:fc.ceil,head:fc.head}); }
+ let start=null, sd=1e18;
+ for(const c of open.values()){ const d=(c.ix*G)**2+(c.iz*G)**2; if(d<sd){ sd=d; start=c; } }
+ if(!start) return;
+ const comp=new Map(); const q=[start]; comp.set(kOf(start.ix,start.iz),start);
+ for(let qi=0;qi<q.length;qi++){ const c=q[qi];
+  for(const [dx,dz] of N8){ const k=kOf(c.ix+dx,c.iz+dz); if(comp.has(k)||!open.has(k)) continue;
+   const n=open.get(k); comp.set(k,n); q.push(n); } }
+ const dist=new Map(), parent=new Map();
+ dist.set(kOf(start.ix,start.iz),0); const qq=[start];
+ for(let qi=0;qi<qq.length;qi++){ const c=qq[qi], cd=dist.get(kOf(c.ix,c.iz));
+  for(const [dx,dz] of N8){ const k=kOf(c.ix+dx,c.iz+dz); if(!comp.has(k)||dist.has(k)) continue;
+   dist.set(k,cd+Math.hypot(dx,dz)*G); parent.set(k,kOf(c.ix,c.iz)); qq.push(comp.get(k)); } }
+ function nw(x,z){ const d=Math.hypot(x,z), t=(sceneBearing(x,z)-NORTH_OFFSET_DEG)*Math.PI/180;
+  const n=d*Math.cos(t), e=d*Math.sin(t); return {d,n,e,score:n-e,brg:(t*180/Math.PI+360)%360}; }
+ let best=null, bestS=-1e18;
+ for(const c of comp.values()){ const cd=dist.get(kOf(c.ix,c.iz)); if(cd<12) continue; let farther=false;
+  for(const [dx,dz] of N8){ const nd=dist.get(kOf(c.ix+dx,c.iz+dz)); if(nd!=null&&nd>cd+0.02){ farther=true; break; } }
+  if(farther) continue; const g=nw(c.ix*G,c.iz*G); if(g.score>bestS){ bestS=g.score; best=c; } }
+ if(!best) return;
+ // The rock-face cell can be too low to stand in. Step back along the route until a 1.635 m eye fits.
+ let stand=best, guard=0;
+ while(stand&&stand.head<1.75&&guard++<8){ const pk=parent.get(kOf(stand.ix,stand.iz)); const nxt=pk==null?null:comp.get(pk); if(!nxt) break; stand=nxt; }
+ best=stand;
+ const orig=FLYP.map(p=>p.clone());
+ const chain=[]; let cell=best, flyI=0;
+ while(cell&&chain.length<80){
+  chain.push(cell);
+  const x=cell.ix*G, z=cell.iz*G; let bd=1e18, bi=0;
+  for(let i=0;i<orig.length;i++){ const d=Math.hypot(orig[i].x-x,orig[i].z-z); if(d<bd){ bd=d; bi=i; } }
+  flyI=bi;
+  if(bd<0.9&&chain.length>1) break;
+  const pk=parent.get(kOf(cell.ix,cell.iz)); cell=pk==null?null:comp.get(pk);
+ }
+ const eye0=(TUN&&typeof TUN.eye==='number')?TUN.eye:EYE_HEIGHT;
+ const pts=orig.slice(0,flyI+1);
+ for(let i=chain.length-1;i>=0;i--){ const c=chain[i], x=c.ix*G, z=c.iz*G, prev=pts[pts.length-1];
+  if(Math.hypot(prev.x-x,prev.z-z)<0.2) continue;
+  pts.push(new THREE.Vector3(x,c.floor+eye0,z)); }
+ if(pts.length<4) return;
+ FLYP.length=0; for(const p of pts) FLYP.push(p);
+ FLYS.length=0; FLYS.push(0);
+ for(let i=1;i<FLYP.length;i++) FLYS.push(FLYS[i-1]+Math.hypot(FLYP[i].x-FLYP[i-1].x,FLYP[i].z-FLYP[i-1].z));
+ FLY=new THREE.CatmullRomCurve3(FLYP.slice(),false,'centripetal');
+ FLY_LEN=FLY.getLength();
+ const end=FLYP[FLYP.length-1], g=nw(end.x,end.z), routeM=FLYS[FLYS.length-1];
+ FN={x:end.x,z:end.z,floor_y:best.floor,route_m:routeM,route_ft:routeM*3.28084,straight_m:g.d,bearing:g.brg,north_m:g.n,east_m:g.e};
+ for(const f of FEATS) if(f.kind==='far_north'){
+  f.x=end.x; f.z=end.z; f.floor_y=best.floor; f.dist_ft=Math.round(routeM*3.28084); f.kind='nw_end';
+  f.lines=['Northwest end — farthest northwest reachable point',
+   `${f.dist_ft} ft (${routeM.toFixed(0)} m) from the portal by tunnel, about N${Math.round(g.brg)}°E`];
+ }
+ CALICO.nw={x:end.x,z:end.z,floor:best.floor,routeM,routeFt:routeM*3.28084,straightM:g.d,straightFt:g.d*3.28084,bearing:g.brg,northM:g.n,eastM:g.e};
+}
 function onLoaded(){
+ retargetNorthwest();
+ if(CALICO.nw) LD.log('Fly-through retargeted to the northwest end: '+Math.round(CALICO.nw.routeFt)+' ft along the tunnel, '+Math.round(CALICO.nw.straightFt)+' ft from the portal at about N'+Math.round(CALICO.nw.bearing)+'°E.','ok');
  LD.done(); if(!entered) reset(); update(0); renderer.render(scene,camera);
  LD.log(`Headlamp on, scene ready — ${(loadedPts/1e6).toFixed(2)} M points, first frame rendered just inside the portal.`,'ok');
  LD.log(TOUCH?'Ready — tap to enter.':'Ready — click to enter.','ok');
@@ -481,7 +569,7 @@ function loop(now){ requestAnimationFrame(loop); if(qs.has('capture')) return;
  if(msgT>0)msgT-=dt;
  navHud();
  const p=camera.position, o=M.origin_las;
- hud.textContent=`${(loadedPts/1e6).toFixed(2)} M pts   ${fpsA.toFixed(0)} fps   speed ${speed.toFixed(1)} m/s   noclip, keep-inside ${keepIn?'on':'off'}   lamp ${lampOn?'on':'off'}\n`+
+ hud.textContent=`${(loadedPts/1e6).toFixed(2)} M pts   ${fpsA.toFixed(0)} fps   speed ${(speed*(fastWalk?WALK_FAST:1)).toFixed(1)} m/s${fastWalk?'  4×':''}   noclip, keep-inside ${keepIn?'on':'off'}   lamp ${lampOn?'on':'off'}\n`+
   `LAS xyz  ${(p.x+o[0]).toFixed(2)}, ${(-p.z+o[1]).toFixed(2)}, ${(p.y+o[2]).toFixed(2)}`+(keepIn&&!curValid&&!pull&&outT>0.3?`
 Outside the tunnel: pulling you back in ${Math.max(0,OUT_GRACE-outT).toFixed(1)} s`:'')+(msgT>0?`
 ${msg}`:'');}
@@ -534,12 +622,12 @@ function navHud(){ const h=headingDeg(); if(Math.abs(h-navLastH)>0.2){ navLastH=
 CALICO.navHud=navHud; CALICO.distAlongPath=()=>distAlongPath(camera.position); CALICO.heading=headingDeg; CALICO.northOffset=NORTH_OFFSET_DEG; CALICO.latLon=()=>sceneToLatLon(camera.position);
 CALICO.sim={update:u=>update(u),keys,pos:()=>camera.position,setYaw:y=>{yaw=y;},setPitch:p=>{pitch=p;},path,pathLen,reset:()=>{reset();resetGuard();},auto:on=>{if(on)startAuto();else stopAuto();},
  state:()=>pull?'pulling':(curValid?'valid':'out '+outT.toFixed(1)+'s'),setKeepIn:v=>{keepIn=v;},valid:a=>inValidSpace(new THREE.Vector3().fromArray(a)),encl:a=>enclosure(new THREE.Vector3().fromArray(a)),isWall,
- routeAt:s=>{const p=routeAt(s);return{x:p.x,y:p.y,z:p.z};}, routeLen:FLYS.length?FLYS[FLYS.length-1]:0,
+ routeAt:s=>{const p=routeAt(s);return{x:p.x,y:p.y,z:p.z};}, get routeLen(){return FLYS.length?FLYS[FLYS.length-1]:0;},
  routeProj:(x,z)=>{const r=routeProj({x,z});return{s:r.s,d:r.d};},
  place:(x,y,z)=>{camera.position.set(x,y,z);snapEye();},
  face:(x,z)=>{lookAt(new THREE.Vector3(x,camera.position.y,z));snapLook();},
  render:()=>{renderer.render(scene,camera);}};
-// ---------- tunnel-change callouts + far north chamber guide (right-edge panel; hidden with H) ----------
+// ---------- tunnel-change callouts + northwest-end guide (right-edge panel; hidden with H) ----------
 // CALICO.tunnel.features: the major changes along the tunnel (wall steps >= 1.5 ft, floor/ceiling >= 1 ft, low headroom),
 // precomputed per 1 ft station by eyeheight/tunnel.py; one is shown while you are within CALLOUT_R (10 ft) of it.
 const CALLOUT_R=10*0.3048, NORTH_REACH=4.0, FT_M=3.28084;
@@ -548,10 +636,12 @@ const tpCss=document.createElement('style');
 tpCss.textContent='#tunpanel{position:fixed;right:12px;bottom:10px;max-width:290px;background:rgba(10,7,5,.55);padding:6px 10px;border-radius:6px;pointer-events:none;z-index:5;font-size:12px;line-height:1.5;color:#e8d8c4;display:none}'+
  '#tunpanel .co div{margin:1px 0}#tunpanel .co .h{color:#f3c79a;font-weight:600;font-size:12.5px}#tunpanel .co .l1{color:#f0b27a}#tunpanel .gd{font-variant-numeric:tabular-nums}'+
  '#tunpanel .co:not(:empty)+.gd:not(:empty){border-top:1px solid rgba(232,216,196,.18);margin-top:4px;padding-top:4px}#tunpanel .ar{display:inline-block;color:#f0b27a;margin-right:6px;transition:transform .15s linear}'+
- 'body.hidehelp #tunpanel{display:none!important}';
+ 'body.hidehelp #tunpanel{display:none!important}'+
+ 'body.touch #hud{left:8px;right:auto;top:78px;bottom:auto;max-width:42vw}'+
+ 'body.touch #tunpanel{left:max(8px,env(safe-area-inset-left));right:auto;top:auto;bottom:max(12px,env(safe-area-inset-bottom));max-width:min(210px,44vw)}';
 document.head.appendChild(tpCss); document.body.appendChild(tpEl);
 const tpCo=tpEl.querySelector('.co'), tpGd=tpEl.querySelector('.gd'), tpAr=tpEl.querySelector('.ar'), tpGt=tpEl.querySelector('.gt');
-const FEATS=TUN?TUN.features:[], FN=TUN?TUN.farNorth:null;
+const FEATS=TUN?TUN.features:[]; let FN=TUN?TUN.farNorth:null;
 let northReached=false, reachedT=0, tpLast='';
 const fmtFt=m=>`${Math.round(m*FT_M)} ft (${m.toFixed(0)} m)`;
 function routeProj(p){ let best={s:0,d:1e18};   // nearest point on the fly-through centreline (horizontal)
@@ -564,16 +654,16 @@ function tunnelPanel(){
  if(!TUN||(qs.has('capture')&&!qs.has('hud'))){ tpEl.style.display='none'; return; }
  const p=camera.position; let html='', best=null, bd=1e9;
  for(const f of FEATS){ const d=Math.hypot(f.x-p.x,f.z-p.z); if(d<CALLOUT_R&&Math.abs(p.y-(f.floor_y+1.2))<3&&d<bd){bd=d;best=f;} }
- if(best) html='<div class="h">'+(best.kind==='far_north'?'Far north chamber':`${Math.round(best.dist_ft)} ft in`)+`<span style="opacity:.7;font-weight:400"> · ${Math.round(bd*FT_M)} ft away</span></div>`+
+ if(best) html='<div class="h">'+(best.kind==='nw_end'||best.kind==='far_north'?'Northwest end':`${Math.round(best.dist_ft)} ft in`)+`<span style="opacity:.7;font-weight:400"> · ${Math.round(bd*FT_M)} ft away</span></div>`+
    best.lines.map((l,i)=>`<div class="${i?'':'l1'}">${l}</div>`).join('');
  let g='', ang=null;
  if(FN){ const toN=Math.hypot(FN.x-p.x,FN.z-p.z);
   if(!northReached&&toN<NORTH_REACH&&Math.abs(p.y-(FN.floor_y+1.2))<3){ northReached=true; reachedT=5; }
-  if(northReached){ if(reachedT>0){ g='&#10003; Reached far north chamber'; } }
+  if(northReached){ if(reachedT>0){ g='&#10003; Reached the northwest end'; } }
   else { const r=routeProj(p), L=FLYS[FLYS.length-1], left=Math.max(0,L-r.s)+r.d;
    const tgt=r.d>4?routeAt(r.s):routeAt(Math.min(L,r.s+5));   // head back to the route if you're off in a side passage
    const brg=Math.atan2(-(tgt.x-p.x),-(tgt.z-p.z)); let rel=brg-lookYaw; rel=Math.atan2(Math.sin(rel),Math.cos(rel)); ang=-rel*180/Math.PI-90;
-   g=`Far north chamber: ${fmtFt(left)} ahead`; } }
+   g=`Northwest end: ${fmtFt(left)} ahead`; } }
  if(ang!==null) tpAr.style.transform=`rotate(${ang.toFixed(0)}deg)`;   // the glyph points right; -90 = up = straight ahead
  tpAr.style.display=ang===null?'none':'inline-block';
  const key=html+'|'+g; if(key!==tpLast){ tpLast=key; tpCo.innerHTML=html; tpGt.innerHTML=g; }
