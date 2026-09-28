@@ -65,7 +65,7 @@ Walkthrough rendered by Mike Murrey, field camp class of 2019
 <div id="help"><b>Move</b> W A S D / arrow keys<br><b>Look</b> mouse (click to lock pointer)<br>
 <b>Up / Down</b> E or Space / Q or Shift<br><b>Speed</b> mouse wheel or + / −<br>
 <b>C</b> keep-inside pull-back on/off (you can walk through anything) &nbsp; <b>L</b> headlamp on/off<br><b>M</b> surface mesh (if built) &nbsp; <b>[ ]</b> point size<br>
-<b>B</b> back-face point culling on/off<br><b>P</b> auto fly-through along the tunnel<br><b>R</b> reset to portal &nbsp; <b>H</b> hide this help and the compass/distance overlay<br><span style="opacity:.75;font-size:11.5px">Colours are artistic/synthetic (the scans have no RGB or intensity). <a href="https://github.com/Stroop14/calico-mapping-lidar/releases/download/walkthrough-v1/calico-walkthrough.zip" style="color:#f0b27a">Offline copy + fly-through video</a> · <a href="https://github.com/Stroop14/calico-mapping-lidar" style="color:#f0b27a">Repo</a></span></div>
+<b>B</b> back-face point culling on/off<br><b>P</b> auto fly-through (to the far north chamber and back)<br><b>R</b> reset to portal &nbsp; <b>H</b> hide this help and the compass/distance overlay<br><span style="opacity:.75;font-size:11.5px">Colours are artistic/synthetic (the scans have no RGB or intensity). <a href="https://github.com/Stroop14/calico-mapping-lidar/releases/download/walkthrough-v1/calico-walkthrough.zip" style="color:#f0b27a">Offline copy + fly-through video</a> · <a href="https://github.com/Stroop14/calico-mapping-lidar" style="color:#f0b27a">Repo</a></span></div>
 <div id="hud"></div>
 <script>
 // ---------- byte-accurate loader with live event log ----------
@@ -138,9 +138,12 @@ var appReady=new Promise(function(resolve,reject){
   evalScript(t[1],'meta.js');
   var M=CALICO.meta;L.filePts=M.files.map(function(_,fi){return M.chunks.reduce(function(a,c){return a+(c.f===fi?c.n:0);},0);});
   log('Scan index loaded: '+(M.count/1e6).toFixed(2)+' M points in '+M.chunks.length+' blocks.','ok');
-  var s=document.createElement('script');s.src='app.js';
+  var tj=document.createElement('script');tj.src='data/tunnel.js';   // tunnel callouts + fly-through path (optional)
+  tj.onerror=function(){log('Tunnel callouts (data/tunnel.js) not available — continuing without them.');};
+  var go=function(){var s=document.createElement('script');s.src='app.js';
   s.onload=function(){resolve();};s.onerror=function(){reject(new Error('app.js could not be loaded'));};
-  document.body.appendChild(s);
+  document.body.appendChild(s);};
+  tj.addEventListener('load',go);tj.addEventListener('error',go);document.body.appendChild(tj);
  }).catch(reject);});
 appReady.catch(function(e){fail('viewer engine',e);});
 

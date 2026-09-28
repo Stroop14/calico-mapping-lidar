@@ -120,21 +120,21 @@ let meshLoading=false;
 
 // ---------- controls ----------
 const keys={}; let yaw=0,pitch=0,speed=2.0,lampOn=true,auto=false,autoT=0,msgT=0,msg='';
+let lookYaw=0, lookPitch=0;   // steadicam: the camera eases toward yaw/pitch (mouse targets) instead of snapping
 const path=new THREE.CatmullRomCurve3(M.path.map(p=>new THREE.Vector3().fromArray(p)),false,'centripetal');
 const pathLen=path.getLength();
 function lookAt(p){const d=new THREE.Vector3().subVectors(p,camera.position);yaw=Math.atan2(-d.x,-d.z);pitch=Math.atan2(d.y,Math.hypot(d.x,d.z));}
 // start ~6 m along the survey path: just inside the portal (past the entrance clutter), looking down the tunnel
 const START_D=6.0;
-function reset(){ const t=Math.min(START_D/pathLen,1); camera.position.copy(path.getPointAt(t)); lookAt(path.getPointAt(Math.min(t+3.0/pathLen,1))); pitch-=0.05; }
-reset();
+function reset(){ const t=Math.min(START_D/pathLen,1); poseAt(t); }
 function flash(t){msg=t;msgT=2.5;}
 addEventListener('keydown',e=>{keys[e.code]=true;
  if(e.code==='KeyC'){keepIn=!keepIn;outT=0;flash('Keep-inside pull-back '+(keepIn?'ON':'OFF (free flight)'));}
  if(e.code==='KeyL'){lampOn=!lampOn;flash('Headlamp '+(lampOn?'ON':'OFF (flat light)'));}
- if(e.code==="KeyR"){reset();auto=false;resetGuard();}
+ if(e.code==="KeyR"){reset();auto=false;resetGuard();snapLook();}
  if(e.code==='KeyB'){U.uCull.value=1-U.uCull.value;flash('Back-face point culling '+(U.uCull.value?'ON':'OFF'));}
  if(e.code==='KeyH'){document.body.classList.toggle('hidehelp');}
- if(e.code==='KeyP'){auto=!auto; if(auto){autoT=nearestT();} flash(auto?'Auto fly-through (P to stop)':'Manual');}
+ if(e.code==='KeyP'){ if(auto) stopAuto(); else startAuto(); flash(auto?(FLY?'Auto fly-through to the far north chamber and back (P to stop)':'Auto fly-through (P to stop)'):'Manual'); }
  if(e.code==='KeyM'){loadMesh(()=>{mesh.visible=!mesh.visible;group.visible=!mesh.visible;flash(mesh.visible?'Surface mesh':'Points');});}
  if(e.code==='BracketRight')U.uSize.value*=1.15; if(e.code==='BracketLeft')U.uSize.value/=1.15;
  if(e.code==='Equal'||e.code==='NumpadAdd'){speed=Math.min(speed*1.25,40);flash('Speed '+speed.toFixed(1)+' m/s');}
@@ -198,27 +198,117 @@ function guard(dt){
  if(outT>=OUT_GRACE){ let to=lastGood.clone(); if(!inValidSpace(to)) to=nearestValid(camera.position)||(reset(),camera.position.clone());
   pull={from:camera.position.clone(),to,t:0,dur:Math.min(1.0,0.5+0.1*to.distanceTo(camera.position))}; flash('Back inside the mine'); }
 }
+// ---------- eye height (floor + 1.66 m) ----------
+// The handheld GeoSLAM was carried at about waist height. The meta.js survey path is not the raw scanner track:
+// build.py set it to floor + PATH_EYE (1.40 m), capped at ceiling - 0.35 m and smoothed. Before this change the camera sat
+// on that path (start pose, R, P fly-through) and then flew freely with no floor following at all.
+// Now the eye sits EYE_HEIGHT above the tunnel floor (1.66 m, eye level for a 5 ft 10 in adult). The floor and ceiling come
+// from 5 short vertical probes (centre and +-20 cm) through the noise-filtered 10 cm wall voxels (isWall), taking the median.
+// Steadicam: the floor/ceiling samples are median-filtered over the last FLOOR_WIN metres walked, the ceiling is also
+// probed ~0.4 s ahead, and the eye height follows a critically damped spring (EYE_OMEGA). The eye is capped at
+// ceiling - HEAD_CLEAR so it ducks under low spots instead of clipping into the rock (hard cap at the current ceiling as a backstop).
+// Space/E and Shift/Q still fly up and down: they add an offset (hOff) on top of the floor-following eye height.
+// If no floor is found (outside the rock shell), the height is held.
+// (TUN, routeProj: defined further down; only used at run time.)
+const EYE_HEIGHT=1.66, HEAD_CLEAR=0.15, PATH_EYE=1.40, EYE_MIN=0.5, FLOOR_SCAN=2.6, CEIL_SCAN=3.5;
+const EYE_OMEGA=5.0, FLOOR_WIN=0.5, LOOK_RATE=12, LOOK_RATE_AUTO=2.2, ACCEL_RATE=4.5;
+const EYE_COLS=[[0,0],[0.2,0],[-0.2,0],[0,0.2],[0,-0.2]], TUN=CALICO.tunnel||null;
+const FLYP=TUN?TUN.fly.map(p=>new THREE.Vector3().fromArray(p)):[], FLYS=[0];   // route polyline + horizontal distance along it
+for(let i=1;i<FLYP.length;i++) FLYS.push(FLYS[i-1]+Math.hypot(FLYP[i].x-FLYP[i-1].x,FLYP[i].z-FLYP[i-1].z));
+let eyeY=0, eyeV=0, hOff=0, hVel=0, odo=0; const vel=new THREE.Vector3(), eyeBuf=[], lastXZ=new THREE.Vector2();
+function med(a){ a=a.slice().sort((x,y)=>x-y); return a[a.length>>1]; }
+function floorCeil(x,z,yRef){ const F=[],C=[];
+ for(const [dx,dz] of EYE_COLS){ const cx=x+dx, cz=z+dz; let f=null, free=false;
+  for(let y=yRef; y>=yRef-FLOOR_SCAN; y-=0.05){ if(!isWall(cx,y,cz)) free=true; else if(free){ f=y; break; } }
+  if(f===null) continue; F.push(f);
+  for(let y=f+EYE_MIN; y<=f+CEIL_SCAN; y+=0.05) if(isWall(cx,y,cz)){ C.push(y); break; } }
+ if(F.length<3) return null;
+ return {floor:med(F), ceil:C.length>=3?med(C):null}; }
+// On the surveyed route (within 1 m of the centreline in data/tunnel.js) use its 1 ft station floor/ceiling instead:
+// those come from all points in each 20 cm column and are median-filtered, so clutter and ghosted scan overlap
+// (e.g. ~305-316 ft) can't lift the eye.
+function stationFC(x,z){ if(!TUN||!TUN.stations) return null; const r=routeProj({x,z}); if(r.d>1.0) return null;
+ const S=TUN.stations, i=Math.max(0,Math.min(S.floor.length-1,Math.round(r.s/0.3048))); return {floor:S.floor[i],ceil:S.ceil[i]}; }
+function fcAt(x,z,yRef){ return stationFC(x,z)||floorCeil(x,z,yRef); }
+function eyeFrom(floor,ceil){ let y=floor+EYE_HEIGHT; if(ceil!==null) y=Math.min(y,ceil-HEAD_CLEAR); return Math.max(y,floor+EYE_MIN); }
+function eyeTarget(x,z,yRef){ const fc=fcAt(x,z,yRef); return fc?eyeFrom(fc.floor,fc.ceil):null; }
+function snapEye(){ eyeBuf.length=0; eyeV=0; hOff=0; hVel=0; vel.set(0,0,0); eyeY=camera.position.y; lastXZ.set(camera.position.x,camera.position.z); }
+function followEye(dt){
+ const p=camera.position; odo+=lastXZ.distanceTo(new THREE.Vector2(p.x,p.z)); lastXZ.set(p.x,p.z);
+ const fc=fcAt(p.x,p.z,eyeY);
+ if(fc){ const b=eyeBuf[eyeBuf.length-1]; if(!b||odo-b.s>=0.05||(b.t+=dt)>0.25) eyeBuf.push({s:odo,f:fc.floor,c:fc.ceil,t:0}); }
+ while(eyeBuf.length>1&&eyeBuf[0].s<odo-FLOOR_WIN) eyeBuf.shift();
+ if(eyeBuf.length){
+  const f=med(eyeBuf.map(b=>b.f)), cs=eyeBuf.filter(b=>b.c!==null).map(b=>b.c); let c=cs.length?med(cs):null;
+  const ah=vel.lengthSq()>0.01?fcAt(p.x+vel.x*0.4,p.z+vel.z*0.4,eyeY):null;   // look ahead for a dropping ceiling
+  if(ah&&ah.ceil!==null&&Math.abs(ah.floor-f)<0.6) c=c===null?ah.ceil:Math.min(c,ah.ceil);
+  const t=eyeFrom(f,c);
+  if(dt>0){ eyeV+=(EYE_OMEGA*EYE_OMEGA*(t-eyeY)-2*EYE_OMEGA*eyeV)*dt; eyeY+=eyeV*dt; } else { eyeY=t; eyeV=0; }
+  if(fc&&fc.ceil!==null&&eyeY>fc.ceil-0.05){ eyeY=fc.ceil-0.05; eyeV=Math.min(eyeV,0); }   // never poke through the rock
+ }
+ p.y=eyeY+hOff; }
 function poseAt(t){ const p=path.getPointAt(Math.min(t,1)); const q=path.getPointAt(Math.min(t+3.0/pathLen,1));
  if(t>=1){const a=path.getPointAt(0.995);q.copy(p).add(p.clone().sub(a).normalize());}
- camera.position.copy(p); lookAt(q); pitch-=0.05; }
-CALICO.poseAt=poseAt; CALICO.pathLen=pathLen; CALICO.reset=reset; CALICO.validHere=()=>inValidSpace(camera.position);
-CALICO.setPose=(p,l)=>{camera.position.fromArray(p);lookAt(new THREE.Vector3().fromArray(l));};
+ const tg=eyeTarget(p.x,p.z,p.y), dy=tg===null?EYE_HEIGHT-PATH_EYE:tg-p.y;   // fallback: path y - 1.40 m + 1.66 m
+ p.y+=dy; q.y+=dy; camera.position.copy(p); lookAt(q); pitch-=0.05; snapEye(); snapLook(); }
+function snapLook(){ lookYaw=yaw; lookPitch=pitch; }
+function easeLook(dt,rate){ if(!(dt>0)){ snapLook(); return; } const k=1-Math.exp(-dt*rate);
+ let d=yaw-lookYaw; d=Math.atan2(Math.sin(d),Math.cos(d)); lookYaw+=d*k; lookPitch+=(pitch-lookPitch)*k; }
+
+// ---------- P fly-through: portal -> far north chamber -> back to the portal ----------
+// Uses CALICO.tunnel (data/tunnel.js, from eyeheight/tunnel.py): a smoothed centreline through the main drift and the
+// connecting passage to the northernmost chamber, at floor + 1.66 m capped 0.15 m under the ceiling. Speed eases in and
+// out (FLY_ACC), slows to a stop at the chamber, pauses while the view pans round, then returns.
+// Without tunnel.js it falls back to the old meta.js path (raised to eye height).
+const FLY_ACC=0.45, FLY_DWELL=3.5;
+const FLY=TUN&&TUN.fly&&TUN.fly.length>3?new THREE.CatmullRomCurve3(TUN.fly.map(p=>new THREE.Vector3().fromArray(p)),false,'centripetal'):null;
+const FLY_LEN=FLY?FLY.getLength():0;
+const flyAt=d=>FLY.getPointAt(Math.max(0,Math.min(1,d/FLY_LEN)));
+let flyD=0, flyV=0, flyDwell=0, flyBlend=1; const flyFrom=new THREE.Vector3(), flyQ=new THREE.Vector3();
+function nearestFlyD(p){ let best=0,bd=1e18; for(let i=0;i<=600;i++){ const q=flyAt(i/600*FLY_LEN), d=(q.x-p.x)**2+(q.z-p.z)**2+0.3*(q.y-p.y)**2; if(d<bd){bd=d;best=i/600*FLY_LEN;} } return best; }
+function startAuto(){ auto=true; if(!FLY){ autoT=nearestT(); return; }
+ flyD=nearestFlyD(camera.position); if(flyD>FLY_LEN-1) flyD=2*FLY_LEN-flyD;   // at the chamber already: head back
+ flyV=0; flyDwell=0; flyBlend=0; flyFrom.copy(camera.position); }
+function stopAuto(){ auto=false; snapEye(); }
+function flyStep(dt){
+ const L=FLY_LEN, out=flyD<L, stopAt=out?L:2*L;
+ if(flyD>=L-0.02&&flyD<L+0.02&&flyDwell<FLY_DWELL){ flyDwell+=dt; flyV=0; if(flyDwell>=FLY_DWELL) flyD=L+0.021; }
+ else { const vt=Math.min(speed,Math.sqrt(2*FLY_ACC*Math.max(0,stopAt-flyD))+0.03);
+  flyV+=Math.max(-2*FLY_ACC*dt,Math.min(FLY_ACC*dt,vt-flyV)); flyD=Math.min(stopAt,flyD+flyV*dt); }
+ const back=flyD>L||(flyD>=L-0.02&&flyDwell>=FLY_DWELL*0.25), s=flyD>L?2*L-flyD:flyD;
+ const p=flyAt(s); let qs=back?s-3:s+3; flyQ.copy(flyAt(qs));
+ if(flyQ.distanceTo(p)<0.5){ const a=flyAt(back?s+1:s-1); flyQ.copy(p).add(p.clone().sub(a).normalize()); }
+ flyQ.y=p.y-0.15;
+ if(flyBlend<1){ flyBlend=Math.min(1,flyBlend+dt/2.0); const e=flyBlend*flyBlend*(3-2*flyBlend); p.lerpVectors(flyFrom,p,e); }
+ camera.position.copy(p); lookAt(flyQ); eyeY=p.y; hOff=0; eyeBuf.length=0; eyeV=0; vel.set(0,0,0);
+ if(flyD>=2*L-0.01){ auto=false; snapEye(); flash('Fly-through finished, back at the portal'); } }
+reset();
+
+CALICO.poseAt=t=>{poseAt(t);}; CALICO.pathLen=pathLen; CALICO.reset=reset; CALICO.validHere=()=>inValidSpace(camera.position);
+CALICO.setPose=(p,l)=>{camera.position.fromArray(p);lookAt(new THREE.Vector3().fromArray(l));snapEye();snapLook();};
+CALICO.eye={floorCeil:(x,z,y)=>floorCeil(x,z,y),target:(x,z,y)=>eyeTarget(x,z,y),state:()=>({eyeY,eyeV,hOff,flyD,flyV,auto}),EYE_HEIGHT,HEAD_CLEAR,flyLen:FLY_LEN};
 CALICO.renderNow=()=>{update(0);renderer.render(scene,camera);};
 CALICO.toggleMesh=(on,cb)=>loadMesh(()=>{mesh.visible=on;group.visible=!on;cb&&cb();});
 CALICO.setLamp=v=>{lampOn=v;};
 
 const fwd=new THREE.Vector3(), right=new THREE.Vector3(), mv=new THREE.Vector3();
 function update(dt){
- if(auto){ autoT+=dt*speed/pathLen; if(autoT>=1){autoT=1;auto=false;} poseAt(autoT); resetGuard(); }
- camera.rotation.set(pitch,yaw,0);
+ if(auto&&dt>0){ if(FLY) flyStep(dt); else { autoT+=dt*speed/pathLen; if(autoT>=1){autoT=1;auto=false;} poseAt(autoT); } resetGuard(); }
+ easeLook(dt,auto?LOOK_RATE_AUTO:LOOK_RATE);
+ camera.rotation.set(lookPitch,lookYaw,0);
  if(!auto && dt>0){
-  fwd.set(-Math.sin(yaw),0,-Math.cos(yaw)); right.set(Math.cos(yaw),0,-Math.sin(yaw)); mv.set(0,0,0);
+  fwd.set(-Math.sin(lookYaw),0,-Math.cos(lookYaw)); right.set(Math.cos(lookYaw),0,-Math.sin(lookYaw)); mv.set(0,0,0);
   if(keys.KeyW||keys.ArrowUp)mv.add(fwd); if(keys.KeyS||keys.ArrowDown)mv.sub(fwd);
   if(keys.KeyD||keys.ArrowRight)mv.add(right); if(keys.KeyA||keys.ArrowLeft)mv.sub(right);
   if(keys.KeyE||keys.Space)mv.y+=1; if(keys.KeyQ||keys.ShiftLeft||keys.ShiftRight)mv.y-=1;
-  if(mv.lengthSq()>0 && !pull){ mv.normalize().multiplyScalar(speed*dt); camera.position.add(mv); }
+  if(mv.lengthSq()>0) mv.normalize().multiplyScalar(speed);
+  // gentle acceleration / deceleration (exponential approach to the key velocity)
+  const k=1-Math.exp(-dt*ACCEL_RATE); vel.x+=(mv.x-vel.x)*k; vel.z+=(mv.z-vel.z)*k; hVel+=(mv.y-hVel)*k;
+  if(pull){ vel.set(0,0,0); hVel=0; eyeY=camera.position.y; hOff=0; eyeBuf.length=0; eyeV=0; }
+  else { camera.position.x+=vel.x*dt; camera.position.z+=vel.z*dt; hOff+=hVel*dt; followEye(dt); }   // eye = floor + 1.66 m (+ Space/Shift offset)
   guard(dt);
  }
+ tunnelPanel();
  U.uCam.value.copy(camera.position);
  camera.updateMatrixWorld();
  const d=new THREE.Vector3(); camera.getWorldDirection(d);
@@ -230,7 +320,7 @@ function update(dt){
  for(const o of chunkObjs) o.visible=o.userData.c.distanceTo(camera.position)-o.userData.r<fd;
 }
 function onLoaded(){
- LD.done(); update(0); renderer.render(scene,camera);
+ LD.done(); if(!entered) reset(); update(0); renderer.render(scene,camera);
  LD.log(`Headlamp on, scene ready — ${(loadedPts/1e6).toFixed(2)} M points, first frame rendered just inside the portal.`,'ok');
  LD.log('Ready — click to enter.','ok');
  LD.status(`All ${M.files.length} tunnel sections loaded (${(loadedPts/1e6).toFixed(2)} M points). Click anywhere to enter.`);
@@ -297,7 +387,54 @@ function navHud(){ const h=headingDeg(); if(Math.abs(h-navLastH)>0.2){ navLastH=
   const ll=sceneToLatLon(camera.position);
   navLL.textContent=`portal ${PORTAL_LAT.toFixed(5)}, ${PORTAL_LON.toFixed(5)} · you ≈ ${ll[0].toFixed(5)}, ${ll[1].toFixed(5)}`; } }
 CALICO.navHud=navHud; CALICO.distAlongPath=()=>distAlongPath(camera.position); CALICO.heading=headingDeg; CALICO.northOffset=NORTH_OFFSET_DEG; CALICO.latLon=()=>sceneToLatLon(camera.position);
-CALICO.sim={update:u=>update(u),keys,pos:()=>camera.position,setYaw:y=>{yaw=y;},setPitch:p=>{pitch=p;},path,pathLen,reset:()=>{reset();resetGuard();},
+CALICO.sim={update:u=>update(u),keys,pos:()=>camera.position,setYaw:y=>{yaw=y;},setPitch:p=>{pitch=p;},path,pathLen,reset:()=>{reset();resetGuard();},auto:on=>{if(on)startAuto();else stopAuto();},
  state:()=>pull?'pulling':(curValid?'valid':'out '+outT.toFixed(1)+'s'),setKeepIn:v=>{keepIn=v;},valid:a=>inValidSpace(new THREE.Vector3().fromArray(a)),encl:a=>enclosure(new THREE.Vector3().fromArray(a)),isWall};
+// ---------- tunnel-change callouts + far north chamber guide (right-edge panel; hidden with H) ----------
+// CALICO.tunnel.features: the major changes along the tunnel (wall steps >= 1.5 ft, floor/ceiling >= 1 ft, low headroom),
+// precomputed per 1 ft station by eyeheight/tunnel.py; one is shown while you are within CALLOUT_R (10 ft) of it.
+const CALLOUT_R=10*0.3048, NORTH_REACH=4.0, FT_M=3.28084;
+const tpEl=document.createElement('div'); tpEl.id='tunpanel'; tpEl.innerHTML='<div class="co"></div><div class="gd"><span class="ar">&#10148;</span><span class="gt"></span></div>';
+const tpCss=document.createElement('style');
+tpCss.textContent='#tunpanel{position:fixed;right:12px;bottom:10px;max-width:290px;background:rgba(10,7,5,.55);padding:6px 10px;border-radius:6px;pointer-events:none;z-index:5;font-size:12px;line-height:1.5;color:#e8d8c4;display:none}'+
+ '#tunpanel .co div{margin:1px 0}#tunpanel .co .h{color:#f3c79a;font-weight:600;font-size:12.5px}#tunpanel .co .l1{color:#f0b27a}#tunpanel .gd{font-variant-numeric:tabular-nums}'+
+ '#tunpanel .co:not(:empty)+.gd:not(:empty){border-top:1px solid rgba(232,216,196,.18);margin-top:4px;padding-top:4px}#tunpanel .ar{display:inline-block;color:#f0b27a;margin-right:6px;transition:transform .15s linear}'+
+ 'body.hidehelp #tunpanel{display:none!important}';
+document.head.appendChild(tpCss); document.body.appendChild(tpEl);
+const tpCo=tpEl.querySelector('.co'), tpGd=tpEl.querySelector('.gd'), tpAr=tpEl.querySelector('.ar'), tpGt=tpEl.querySelector('.gt');
+const FEATS=TUN?TUN.features:[], FN=TUN?TUN.farNorth:null;
+let northReached=false, reachedT=0, tpLast='';
+const fmtFt=m=>`${Math.round(m*FT_M)} ft (${m.toFixed(0)} m)`;
+function routeProj(p){ let best={s:0,d:1e18};   // nearest point on the fly-through centreline (horizontal)
+ for(let i=0;i+1<FLYP.length;i++){ const a=FLYP[i], b=FLYP[i+1], abx=b.x-a.x, abz=b.z-a.z, l2=abx*abx+abz*abz||1e-9;
+  const t=Math.max(0,Math.min(1,((p.x-a.x)*abx+(p.z-a.z)*abz)/l2)), qx=a.x+abx*t-p.x, qz=a.z+abz*t-p.z, d=qx*qx+qz*qz;
+  if(d<best.d) best={s:FLYS[i]+t*(FLYS[i+1]-FLYS[i]),d}; }
+ best.d=Math.sqrt(best.d); return best; }
+function routeAt(s){ for(let i=0;i+1<FLYP.length;i++) if(FLYS[i+1]>=s){ const t=(s-FLYS[i])/Math.max(1e-9,FLYS[i+1]-FLYS[i]); return FLYP[i].clone().lerp(FLYP[i+1],Math.max(0,Math.min(1,t))); } return FLYP[FLYP.length-1].clone(); }
+function tunnelPanel(){
+ if(!TUN||(qs.has('capture')&&!qs.has('hud'))){ tpEl.style.display='none'; return; }
+ const p=camera.position; let html='', best=null, bd=1e9;
+ for(const f of FEATS){ const d=Math.hypot(f.x-p.x,f.z-p.z); if(d<CALLOUT_R&&Math.abs(p.y-(f.floor_y+1.2))<3&&d<bd){bd=d;best=f;} }
+ if(best) html='<div class="h">'+(best.kind==='far_north'?'Far north chamber':`${Math.round(best.dist_ft)} ft in`)+`<span style="opacity:.7;font-weight:400"> · ${Math.round(bd*FT_M)} ft away</span></div>`+
+   best.lines.map((l,i)=>`<div class="${i?'':'l1'}">${l}</div>`).join('');
+ let g='', ang=null;
+ if(FN){ const toN=Math.hypot(FN.x-p.x,FN.z-p.z);
+  if(!northReached&&toN<NORTH_REACH&&Math.abs(p.y-(FN.floor_y+1.2))<3){ northReached=true; reachedT=5; }
+  if(northReached){ if(reachedT>0){ g='&#10003; Reached far north chamber'; } }
+  else { const r=routeProj(p), L=FLYS[FLYS.length-1], left=Math.max(0,L-r.s)+r.d;
+   const tgt=r.d>4?routeAt(r.s):routeAt(Math.min(L,r.s+5));   // head back to the route if you're off in a side passage
+   const brg=Math.atan2(-(tgt.x-p.x),-(tgt.z-p.z)); let rel=brg-lookYaw; rel=Math.atan2(Math.sin(rel),Math.cos(rel)); ang=-rel*180/Math.PI-90;
+   g=`Far north chamber: ${fmtFt(left)} ahead`; } }
+ if(ang!==null) tpAr.style.transform=`rotate(${ang.toFixed(0)}deg)`;   // the glyph points right; -90 = up = straight ahead
+ tpAr.style.display=ang===null?'none':'inline-block';
+ const key=html+'|'+g; if(key!==tpLast){ tpLast=key; tpCo.innerHTML=html; tpGt.innerHTML=g; }
+ tpEl.style.display=(html||g)?'block':'none'; }
+setInterval(()=>{ if(reachedT>0){ reachedT-=0.25; } },250);
+// subtle 3-D markers: a faint amber ring on the floor with a small down-pointing cone above it
+const mkGroup=new THREE.Group(); scene.add(mkGroup);
+if(TUN){ const ringG=new THREE.RingGeometry(0.28,0.34,40), coneG=new THREE.ConeGeometry(0.07,0.16,16);
+ const mkM=new THREE.MeshBasicMaterial({color:0xe9a066,transparent:true,opacity:0.35,side:THREE.DoubleSide,depthWrite:false});
+ for(const f of FEATS){ const r=new THREE.Mesh(ringG,mkM); r.rotation.x=-Math.PI/2; r.position.set(f.x,f.floor_y+0.03,f.z);
+  const c=new THREE.Mesh(coneG,mkM); c.rotation.x=Math.PI; c.position.set(f.x,f.floor_y+0.55,f.z); mkGroup.add(r,c); } }
+CALICO.tunnelPanel=()=>{tunnelPanel();return {text:tpEl.innerText,visible:tpEl.style.display!=='none',northReached};};
 requestAnimationFrame(loop);
 })();
