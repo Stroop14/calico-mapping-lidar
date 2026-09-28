@@ -627,7 +627,7 @@ CALICO.sim={update:u=>update(u),keys,pos:()=>camera.position,setYaw:y=>{yaw=y;},
  place:(x,y,z)=>{camera.position.set(x,y,z);snapEye();},
  face:(x,z)=>{lookAt(new THREE.Vector3(x,camera.position.y,z));snapLook();},
  render:()=>{renderer.render(scene,camera);}};
-// ---------- tunnel-change callouts + far north chamber guide (right-edge panel; hidden with H) ----------
+// ---------- tunnel-change callouts + northwest-end guide (right-edge panel; hidden with H) ----------
 // CALICO.tunnel.features: the major changes along the tunnel (wall steps >= 1.5 ft, floor/ceiling >= 1 ft, low headroom),
 // precomputed per 1 ft station by eyeheight/tunnel.py; one is shown while you are within CALLOUT_R (10 ft) of it.
 const CALLOUT_R=10*0.3048, NORTH_REACH=4.0, FT_M=3.28084;
