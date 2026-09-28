@@ -129,13 +129,15 @@ let meshLoading=false;
 // ---------- controls ----------
 const keys={}; let yaw=0,pitch=0,speed=2.0,fastWalk=false,lampOn=true,auto=false,autoT=0,msgT=0,msg='';
 const WALK_FAST=4;
+let guided=false, guideS=0, guideOff=0, guideV=0, peekYaw=0, peekPitch=0, peekHold=false, guideInited=false;
+let lookAxisX=0, lookAxisY=0, peekTimer=0;
 let lookYaw=0, lookPitch=0;   // steadicam: the camera eases toward yaw/pitch (mouse targets) instead of snapping
 const path=new THREE.CatmullRomCurve3(M.path.map(p=>new THREE.Vector3().fromArray(p)),false,'centripetal');
 const pathLen=path.getLength();
 function lookAt(p){const d=new THREE.Vector3().subVectors(p,camera.position);yaw=Math.atan2(-d.x,-d.z);pitch=Math.atan2(d.y,Math.hypot(d.x,d.z));}
 // start ~6 m along the survey path: just inside the portal (past the entrance clutter), looking down the tunnel
 const START_D=6.0;
-function reset(){ const t=Math.min(START_D/pathLen,1); poseAt(t); }
+function reset(){ const t=Math.min(START_D/pathLen,1); poseAt(t); guideInited=false; guideOff=0; guideV=0; peekYaw=0; peekPitch=0; }
 function flash(t){msg=t;msgT=2.5;}
 addEventListener('keydown',e=>{keys[e.code]=true;
  if(e.code==='KeyC'){keepIn=!keepIn;outT=0;flash('Keep-inside pull-back '+(keepIn?'ON':'OFF (free flight)'));}
@@ -144,6 +146,7 @@ addEventListener('keydown',e=>{keys[e.code]=true;
  if(e.code==='KeyB'){U.uCull.value=1-U.uCull.value;flash('Back-face point culling '+(U.uCull.value?'ON':'OFF'));}
  if(e.code==='KeyH'){document.body.classList.toggle('hidehelp');}
  if(e.code==='KeyF'&&!e.repeat){ fastWalk=!fastWalk; flash(fastWalk?'Walking 4×':'Walking normal speed'); if(CALICO.syncTouchBtns) CALICO.syncTouchBtns(); }
+ if(e.code==='KeyG'&&!e.repeat){ setGuided(!guided); }
  if(e.code==='KeyP'){ if(auto) stopAuto(); else startAuto(); flash(auto?(FLY?'Auto fly-through to the northwest end and back (P to stop)':'Auto fly-through (P to stop)'):'Manual'); if(CALICO.syncTouchBtns) CALICO.syncTouchBtns(); }
  if(e.code==='KeyM'){loadMesh(()=>{mesh.visible=!mesh.visible;group.visible=!mesh.visible;flash(mesh.visible?'Surface mesh':'Points');});}
  if(e.code==='BracketRight')U.uSize.value*=1.15; if(e.code==='BracketLeft')U.uSize.value/=1.15;
@@ -161,69 +164,85 @@ document.addEventListener('pointerlockchange',()=>{const L=document.pointerLockE
   if(!entered){ entered=true; showHint("You're just inside the mine portal, facing into the tunnel.<br><b>W</b> to walk forward · mouse to look · <b>P</b> for an automatic fly-through",6000); } }
  else if(ov.dataset.ready){ ov.style.display='flex'; document.querySelector('#enter .big').textContent='▶ Paused — click to continue'; LD.status('Paused. Click anywhere to continue.'); hint.classList.remove('show'); }});
 addEventListener('mousemove',e=>{ if(document.pointerLockElement!==renderer.domElement) return;
- yaw-=e.movementX*0.0022; pitch=Math.max(-1.5,Math.min(1.5,pitch-e.movementY*0.0022)); });
-// ---------- touch: virtual joystick + drag look (no pointer lock) ----------
-// Phones never get a locked pointer. A coarse pointer or a real touch surface turns on on-screen controls.
-// The right thumb drives a joystick (forward/back/strafe). A drag anywhere else — the left side, and the
-// area above the controls — looks around. The big 4× button (and F on a keyboard) quadruples walk speed.
-// Walking still goes through the same update() path, so the eye stays floor + EYE_HEIGHT with the steadicam spring.
+ if(guided){ peekYaw=Math.max(-1,Math.min(1,peekYaw-e.movementX*0.0022)); peekPitch=Math.max(-0.6,Math.min(0.6,peekPitch-e.movementY*0.0022));
+  peekHold=true; clearTimeout(peekTimer); peekTimer=setTimeout(()=>{peekHold=false;},160); }
+ else { yaw-=e.movementX*0.0022; pitch=Math.max(-1.5,Math.min(1.5,pitch-e.movementY*0.0022)); } });
+// ---------- touch: guided stick, or free-view twin sticks (no pointer lock) ----------
+// Phones never get a locked pointer. Guided is the default: the right thumb follows the fly-through
+// route, and a drag anywhere else peeks, then eases back down the hallway. Free View puts a move
+// stick on the left and a look stick on the right (the old free roam). F or 4× quadruples walk speed.
+// Walking still goes through update(), so the eye stays floor + EYE_HEIGHT.
 const TOUCH=matchMedia('(pointer: coarse)').matches||('ontouchstart' in window);
+guided=TOUCH;
+document.body.classList.toggle('guided', guided);
+document.body.classList.toggle('freeview', !guided);
 let stickX=0, stickY=0;   // -1..1, x = strafe right, y = forward
 function enterTouch(){
  ov.style.display='none';
- if(!entered){ entered=true; showHint('Right thumb: move · Drag to look · 4× walks faster',7000); }
+ if(!entered){ entered=true; showHint(guided?'Guided: push forward to follow the tunnel<br>Drag to peek · 4× walks faster':'Free View: left stick moves, right stick looks. Tap Guided to go back to auto-steer.',7000); }
 }
 if(TOUCH){
  document.body.classList.add('touch');
  const big=document.querySelector('#enter .big'), ctl=document.querySelector('#enter .ctl');
  if(big) big.textContent='▶ Tap to enter';
- if(ctl) ctl.innerHTML='Right thumb: move · Drag to look · <b>4×</b> walks faster';
+ if(ctl) ctl.innerHTML='<b>Guided</b> follows the tunnel · <b>Free View</b> for two sticks · <b>4×</b> walks faster';
  const ui=document.createElement('div'); ui.id='touchui';
  ui.innerHTML='<div id="stick"><div class="pad"><div class="knob"></div></div></div>'+
-  '<div id="tbtns"><button type="button" id="tFly">▶ Fly</button><div id="trow"><button type="button" id="tReset">Reset</button><button type="button" id="tLamp">Lamp</button></div><button type="button" id="tFast">4×</button></div>';
+  '<div id="lookstick"><div class="pad"><div class="knob"></div></div></div>'+
+  '<div id="tbtns"><button type="button" id="tFly">▶ Fly</button><div id="trow"><button type="button" id="tReset">Reset</button><button type="button" id="tLamp">Lamp</button></div>'+
+  '<div id="tbig"><button type="button" id="tFast">4×</button><button type="button" id="tMode">Guided<small>tap for Free View</small></button></div></div>';
  document.body.appendChild(ui);
- const stick=ui.querySelector('#stick'), knob=ui.querySelector('.knob'), flyBtn=ui.querySelector('#tFly'), lampBtn=ui.querySelector('#tLamp'), fastBtn=ui.querySelector('#tFast');
+ const flyBtn=ui.querySelector('#tFly'), lampBtn=ui.querySelector('#tLamp'), fastBtn=ui.querySelector('#tFast'), modeBtn=ui.querySelector('#tMode');
  const STICK_R=42;
- let stickTid=null;
- const setKnob=(x,y)=>{ knob.style.transform=`translate(${x.toFixed(1)}px,${y.toFixed(1)}px)`; };
- function applyStick(t){
-  const b=stick.getBoundingClientRect(), cx=b.left+b.width/2, cy=b.top+b.height/2;
-  let dx=t.clientX-cx, dy=t.clientY-cy; const d=Math.hypot(dx,dy)||1, m=Math.min(STICK_R,d);
-  const nx=dx/d*m, ny=dy/d*m; setKnob(nx,ny); stickX=nx/STICK_R; stickY=-ny/STICK_R;
+ function bindStick(el, onChange){
+  const knob=el.querySelector('.knob'); let tid=null;
+  const setKnob=(x,y)=>{ knob.style.transform=`translate(${x.toFixed(1)}px,${y.toFixed(1)}px)`; };
+  function apply(t){
+   const b=el.getBoundingClientRect(), cx=b.left+b.width/2, cy=b.top+b.height/2;
+   let dx=t.clientX-cx, dy=t.clientY-cy; const d=Math.hypot(dx,dy)||1, m=Math.min(STICK_R,d);
+   const nx=dx/d*m, ny=dy/d*m; setKnob(nx,ny); onChange(nx/STICK_R, -ny/STICK_R);
+  }
+  function end(id){ if(id!==tid) return; tid=null; setKnob(0,0); onChange(0,0); }
+  el.addEventListener('touchstart',e=>{ if(!entered) return; e.preventDefault(); const t=e.changedTouches[0]; tid=t.identifier; apply(t); },{passive:false});
+  el.addEventListener('touchmove',e=>{ for(const t of e.changedTouches) if(t.identifier===tid){ e.preventDefault(); apply(t); } },{passive:false});
+  el.addEventListener('touchend',e=>{ for(const t of e.changedTouches) end(t.identifier); },{passive:true});
+  el.addEventListener('touchcancel',e=>{ for(const t of e.changedTouches) end(t.identifier); },{passive:true});
  }
- function endStick(id){ if(id!==stickTid) return; stickTid=null; stickX=0; stickY=0; setKnob(0,0); }
- stick.addEventListener('touchstart',e=>{ if(!entered) return; e.preventDefault(); const t=e.changedTouches[0]; stickTid=t.identifier; applyStick(t); },{passive:false});
- stick.addEventListener('touchmove',e=>{ for(const t of e.changedTouches) if(t.identifier===stickTid){ e.preventDefault(); applyStick(t); } },{passive:false});
- stick.addEventListener('touchend',e=>{ for(const t of e.changedTouches) endStick(t.identifier); },{passive:true});
- stick.addEventListener('touchcancel',e=>{ for(const t of e.changedTouches) endStick(t.identifier); },{passive:true});
+ bindStick(ui.querySelector('#stick'), (x,y)=>{ stickX=x; stickY=y; });
+ bindStick(ui.querySelector('#lookstick'), (x,y)=>{ lookAxisX=x; lookAxisY=y; });
  let lookTid=null, lookX=0, lookY=0;
  const onLookStart=e=>{
-  if(!entered) return;
+  if(!entered||!guided) return;
   for(const t of e.changedTouches){
-   if(lookTid!==null) continue;   // the joystick and buttons sit on their own elements; the rest of the screen looks
-   lookTid=t.identifier; lookX=t.clientX; lookY=t.clientY; e.preventDefault();
+   if(lookTid!==null) continue;
+   lookTid=t.identifier; lookX=t.clientX; lookY=t.clientY; peekHold=true; e.preventDefault();
   }
  };
  const onLookMove=e=>{
-  if(lookTid===null) return;
+  if(lookTid===null||!guided) return;
   for(const t of e.changedTouches) if(t.identifier===lookTid){
-   yaw-=(t.clientX-lookX)*0.005; pitch=Math.max(-1.2,Math.min(1.2,pitch-(t.clientY-lookY)*0.005));
+   peekYaw=Math.max(-1,Math.min(1,peekYaw-(t.clientX-lookX)*0.004));
+   peekPitch=Math.max(-0.55,Math.min(0.55,peekPitch-(t.clientY-lookY)*0.003));
    lookX=t.clientX; lookY=t.clientY; e.preventDefault();
   }
  };
- const onLookEnd=e=>{ for(const t of e.changedTouches) if(t.identifier===lookTid) lookTid=null; };
+ const onLookEnd=e=>{ for(const t of e.changedTouches) if(t.identifier===lookTid){ lookTid=null; peekHold=false; } };
  renderer.domElement.addEventListener('touchstart',onLookStart,{passive:false});
  renderer.domElement.addEventListener('touchmove',onLookMove,{passive:false});
  renderer.domElement.addEventListener('touchend',onLookEnd,{passive:true});
  renderer.domElement.addEventListener('touchcancel',onLookEnd,{passive:true});
  function syncTouchBtns(){ flyBtn.textContent=auto?'■ Stop':'▶ Fly'; lampBtn.classList.toggle('off',!lampOn);
-  fastBtn.classList.toggle('on',fastWalk); fastBtn.textContent=fastWalk?'4× ON':'4×'; }
+  fastBtn.classList.toggle('on',fastWalk); fastBtn.textContent=fastWalk?'4× ON':'4×';
+  modeBtn.classList.toggle('on', guided); modeBtn.classList.toggle('free', !guided);
+  modeBtn.innerHTML=guided?'Guided<small>tap for Free View</small>':'Free View<small>tap for Guided</small>'; }
  flyBtn.addEventListener('click',()=>{ if(auto) stopAuto(); else startAuto();
   flash(auto?(FLY?'Auto fly-through to the northwest end and back':'Auto fly-through'):'Manual'); syncTouchBtns(); });
  ui.querySelector('#tReset').addEventListener('click',()=>{ reset(); auto=false; resetGuard(); snapLook(); syncTouchBtns(); });
  lampBtn.addEventListener('click',()=>{ lampOn=!lampOn; flash('Headlamp '+(lampOn?'ON':'OFF (flat light)')); syncTouchBtns(); });
  fastBtn.addEventListener('click',()=>{ fastWalk=!fastWalk; flash(fastWalk?'Walking 4×':'Walking normal speed'); syncTouchBtns(); });
+ modeBtn.addEventListener('click',()=>{ setGuided(!guided); });
  CALICO.syncTouchBtns=syncTouchBtns;
+ syncTouchBtns();
 }
 function nearestT(){let best=0,bd=1e9;for(let i=0;i<=400;i++){const d=path.getPointAt(i/400).distanceTo(camera.position);if(d<bd){bd=d;best=i/400;}}return best;}
 // ---------- soft noclip ----------
@@ -434,20 +453,115 @@ CALICO.poseAt=t=>{poseAt(t);}; CALICO.pathLen=pathLen; CALICO.reset=reset; CALIC
 CALICO.setPose=(p,l)=>{camera.position.fromArray(p);lookAt(new THREE.Vector3().fromArray(l));snapEye();snapLook();};
 CALICO.eye={floorCeil:(x,z,y)=>floorCeil(x,z,y),pointFloor:(x,z)=>pointFC(x,z),target:(x,z,y)=>eyeTarget(x,z,y),state:()=>({eyeY,eyeV,hOff,flyD,flyV,auto}),EYE_HEIGHT,HEAD_CLEAR,get flyLen(){return FLY_LEN;}};
 CALICO.touch={on:TOUCH,stick:()=>({x:stickX,y:stickY}),look:()=>({yaw,pitch})};
-CALICO.renderNow=()=>{update(0);renderer.render(scene,camera);};
+CALICO.renderNow=()=>{update(0);drawMini();renderer.render(scene,camera);};
 CALICO.toggleMesh=(on,cb)=>loadMesh(()=>{mesh.visible=on;group.visible=!on;cb&&cb();});
 CALICO.setLamp=v=>{lampOn=v;};
 
 const fwd=new THREE.Vector3(), right=new THREE.Vector3(), mv=new THREE.Vector3();
+// Guided steering follows the same polyline as P. Forward/back ride that centreline; the view eases
+// onto its tangent (the fly-through's look-ahead) so the hallway stays in front of the camera. Near the
+// northwest end the look turns back into the chamber instead of into the end wall. A small side nudge
+// is allowed, then a spring returns to the centreline. Peek offsets decay on their own.
+const GUIDE_NUDGE=0.45;
+let yawKey='', yawVal=0;
+function routeLenM(){ return FLYS.length?FLYS[FLYS.length-1]:0; }
+function yawToward(ax,az,bx,bz){ return Math.atan2(-(bx-ax),-(bz-az)); }
+function clearRay(x,y,z,yw,max){ const fx=-Math.sin(yw), fz=-Math.cos(yw);
+ for(let r=0.2;r<=max;r+=0.1) if(isWall(x+fx*r,y,z+fz*r)) return r; return max; }
+// Same idea as the fly-through: look ahead along the polyline. A chord through a bend can point at
+// rock, so small (then larger) yaw offsets are tried until the hallway in front is open. In the last
+// few metres a clear look back into the chamber is preferred over the end wall.
+function guideYawAt(s, eyeY){
+ const L=routeLenM(); if(!(L>1)) return yaw;
+ const y=eyeY!=null?eyeY:camera.position.y;
+ const key=Math.round(s*5)+'|'+Math.round(y*4);
+ if(key===yawKey) return yawVal;
+ const here=routeAt(Math.max(0,Math.min(L,s)));
+ const tang=yawToward(here.x,here.z,routeAt(Math.min(L,s+0.8)).x,routeAt(Math.min(L,s+0.8)).z);
+ const aims=[tang];
+ for(const ahead of [2.2,3.2]){ const q=routeAt(Math.min(L,s+ahead));
+  if(Math.hypot(q.x-here.x,q.z-here.z)>0.35) aims.push(yawToward(here.x,here.z,q.x,q.z)); }
+ const near=L-s<6;
+ if(near){ for(const back of [2.5,4.5,7]){ const q=routeAt(Math.max(0,s-back));
+  if(Math.hypot(q.x-here.x,q.z-here.z)>0.35) aims.push(yawToward(here.x,here.z,q.x,q.z)); } }
+ const offs=[0,0.14,-0.14,0.28,-0.28,0.5,-0.5,0.75,-0.75,1.05,-1.05,1.25,-1.25];
+ let bestY=tang, bestS=-1e9;
+ for(const aim of aims) for(const off of offs){
+  const yw=aim+off, c=clearRay(here.x,y,here.z,yw,5);
+  let d=yw-tang; d=Math.abs(Math.atan2(Math.sin(d),Math.cos(d)));
+  const back=near&&L-s<3.5&&d>1.15&&c>=1.7?4:0;
+  const sc=(c>=1.65?12+Math.min(c,4):c)-d*1.35+back-Math.abs(off)*0.25;
+  if(sc>bestS){ bestS=sc; bestY=yw; }
+ }
+ yawKey=key; yawVal=bestY; return bestY; }
+function setGuided(on){
+ guided=!!on; document.body.classList.toggle('guided', guided); document.body.classList.toggle('freeview', !guided);
+ stickX=0; stickY=0; lookAxisX=0; lookAxisY=0; yawKey='';
+ if(guided){ guideInited=false; guideOff=0; guideV=0; peekYaw=0; peekPitch=0; peekHold=false;
+  flash('Guided: forward follows the tunnel'); }
+ else if(TOUCH) showHint('Free View: left stick moves, right stick looks. Tap Guided to go back to auto-steer.',5000);
+ else flash('Free view');
+ if(CALICO.syncTouchBtns) CALICO.syncTouchBtns();
+}
+function snapGuide(s){
+ setGuided(true);
+ const L=routeLenM(), ss=Math.max(0,Math.min(L,+s||0)), p=routeAt(ss);
+ const gen=(TUN&&typeof TUN.eye==='number')?TUN.eye:EYE_HEIGHT, tg=eyeTarget(p.x,p.z,p.y);
+ const y=tg==null?p.y+(EYE_HEIGHT-gen):tg;
+ camera.position.set(p.x,y,p.z);
+ guideS=ss; guideInited=true; guideOff=0; guideV=0; peekYaw=0; peekPitch=0; peekHold=false; hOff=0;
+ yawKey=''; yaw=guideYawAt(ss,y); pitch=-0.06; snapEye(); snapLook();
+}
+function clearAhead(max){ const p=camera.position; return clearRay(p.x,p.y,p.z,lookYaw,max==null?8:max); }
+function guidedStep(dt){
+ const L=routeLenM(); if(!(L>1)) return;
+ if(!guideInited){ guideInited=true; guideS=routeProj(camera.position).s; }
+ let along=0, nudge=0;
+ const sm=Math.hypot(stickX,stickY);
+ if(sm>0.16){ const a=Math.min(1,(sm-0.16)/0.84); along+=stickY/sm*a; nudge+=stickX/sm*a; }
+ if(keys.KeyW||keys.ArrowUp) along+=1; if(keys.KeyS||keys.ArrowDown) along-=1;
+ if(keys.KeyD||keys.ArrowRight) nudge+=1; if(keys.KeyA||keys.ArrowLeft) nudge-=1;
+ along=Math.max(-1,Math.min(1,along)); nudge=Math.max(-1,Math.min(1,nudge));
+ const sp=speed*(fastWalk?WALK_FAST:1);
+ const k=1-Math.exp(-dt*ACCEL_RATE);
+ guideV+=(along*sp-guideV)*k;
+ guideS=Math.max(0,Math.min(L, guideS+guideV*dt));
+ const c=routeAt(guideS), a=routeAt(Math.min(L, guideS+0.8));
+ let tx=a.x-c.x, tz=a.z-c.z; const tl=Math.hypot(tx,tz)||1; tx/=tl; tz/=tl;
+ const rx=-tz, rz=tx;   // camera-right of the route tangent
+ const ty=Math.atan2(-tx,-tz), yEye=camera.position.y;
+ const openL=clearRay(c.x,yEye,c.z,ty+Math.PI/2,1.2), openR=clearRay(c.x,yEye,c.z,ty-Math.PI/2,1.2);
+ let bias=0;
+ if(openL<0.45&&openR>openL+0.2) bias=Math.min(0.35,0.45-openL);
+ else if(openR<0.45&&openL>openR+0.2) bias=-Math.min(0.35,0.45-openR);
+ guideOff+=(nudge*GUIDE_NUDGE+bias-guideOff)*(1-Math.exp(-dt*4));
+ const desX=c.x+rx*guideOff, desZ=c.z+rz*guideOff;
+ const pull=1-Math.exp(-dt*3.5);
+ camera.position.x+=(desX-camera.position.x)*pull;
+ camera.position.z+=(desZ-camera.position.z)*pull;
+ const lat=(camera.position.x-c.x)*rx+(camera.position.z-c.z)*rz;
+ if(Math.abs(lat)>0.75){ camera.position.x+=(desX-camera.position.x)*0.4; camera.position.z+=(desZ-camera.position.z)*0.4; }
+ vel.set(tx*guideV, 0, tz*guideV);
+ if(keys.KeyE||keys.Space) hVel+=(1-hVel)*k; else if(keys.KeyQ||keys.ShiftLeft||keys.ShiftRight) hVel+=(-1-hVel)*k; else hVel*=Math.exp(-dt*3);
+ hOff+=hVel*dt;
+ followEye(dt);
+ if(!peekHold){ const decay=Math.exp(-dt*2.6); peekYaw*=decay; peekPitch*=decay; }
+ yaw=guideYawAt(guideS, camera.position.y)+peekYaw;
+ pitch=Math.max(-1.05,Math.min(0.9, -0.06+peekPitch));
+ guard(dt);
+}
 function update(dt){
  if(auto&&dt>0){ if(FLY) flyStep(dt); else { autoT+=dt*speed/pathLen; if(autoT>=1){autoT=1;auto=false;} poseAt(autoT); } resetGuard(); }
- easeLook(dt,auto?LOOK_RATE_AUTO:LOOK_RATE);
+ else if(guided&&dt>0) guidedStep(dt);
+ if(!guided && !auto && dt>0 && (Math.abs(lookAxisX)>0.12||Math.abs(lookAxisY)>0.12)){
+  yaw-=lookAxisX*1.8*dt; pitch=Math.max(-1.2,Math.min(1.2, pitch+lookAxisY*1.3*dt)); }
+ easeLook(dt, auto?LOOK_RATE_AUTO:(guided?4.5:LOOK_RATE));
  camera.rotation.set(lookPitch,lookYaw,0);
- if(!auto && dt>0){
+ if(!auto && !guided && dt>0){
   fwd.set(-Math.sin(lookYaw),0,-Math.cos(lookYaw)); right.set(Math.cos(lookYaw),0,-Math.sin(lookYaw)); mv.set(0,0,0);
   if(keys.KeyW||keys.ArrowUp)mv.add(fwd); if(keys.KeyS||keys.ArrowDown)mv.sub(fwd);
   if(keys.KeyD||keys.ArrowRight)mv.add(right); if(keys.KeyA||keys.ArrowLeft)mv.sub(right);
-  const sm=Math.hypot(stickX,stickY);   // joystick: same floor-following walk, scaled by how far the thumb pushes
+  const sm=Math.hypot(stickX,stickY);   // free view: left stick, camera-relative, same floor following
   if(sm>0.16){ const a=Math.min(1,(sm-0.16)/0.84); mv.addScaledVector(fwd,stickY/sm*a); mv.addScaledVector(right,stickX/sm*a); }
   if(keys.KeyE||keys.Space)mv.y+=1; if(keys.KeyQ||keys.ShiftLeft||keys.ShiftRight)mv.y-=1;
   if(mv.lengthSq()>0){
@@ -552,6 +666,7 @@ function retargetNorthwest(){
 }
 function onLoaded(){
  retargetNorthwest();
+ buildMiniMap();
  if(CALICO.nw) LD.log('Fly-through retargeted to the northwest end: '+Math.round(CALICO.nw.routeFt)+' ft along the tunnel, '+Math.round(CALICO.nw.straightFt)+' ft from the portal at about N'+Math.round(CALICO.nw.bearing)+'°E.','ok');
  LD.done(); if(!entered) reset(); update(0); renderer.render(scene,camera);
  LD.log(`Headlamp on, scene ready — ${(loadedPts/1e6).toFixed(2)} M points, first frame rendered just inside the portal.`,'ok');
@@ -565,7 +680,7 @@ U.uScreen.value=Hh()*renderer.getPixelRatio(); U.uFov.value=Math.tan(THREE.MathU
 let last=performance.now(), fpsA=60; const hud=document.getElementById('hud');
 function loop(now){ requestAnimationFrame(loop); if(qs.has('capture')) return;
  const dt=Math.min(0.1,(now-last)/1000); last=now; fpsA=fpsA*0.95+0.05/Math.max(dt,1e-3); U.uTime.value=now/1000;
- update(dt); renderer.render(scene,camera);
+ update(dt); drawMini(); renderer.render(scene,camera);
  if(msgT>0)msgT-=dt;
  navHud();
  const p=camera.position, o=M.origin_las;
@@ -587,6 +702,68 @@ const sceneBearing=(x,z)=>(Math.atan2(x,-z)*180/Math.PI+360)%360;
 const NORTH_OFFSET_DEG=(()=>{ const a=path.getPointAt(0), b=path.getPointAt(Math.min(1,10/pathLen)); return (sceneBearing(b.x-a.x,b.z-a.z)-TUNNEL_BEARING_DEG+360)%360; })();
 function sceneToLatLon(p){ const d=Math.hypot(p.x,p.z), t=(sceneBearing(p.x,p.z)-NORTH_OFFSET_DEG)*Math.PI/180, n=d*Math.cos(t), e=d*Math.sin(t);
  return [PORTAL_LAT+n/111320, PORTAL_LON+e/(111320*Math.cos(PORTAL_LAT*Math.PI/180))]; }
+// Top-down map, north up. Footprint is the floor bins; the route, entrance, and northwest end sit on top.
+// Open on a desktop, collapsed to a button on a phone so it stays clear of the sticks.
+let mapOpen=false, mapReady=false, mapCtx=null, mapBase=null, mapXY=null, mapDest=null;
+function neOf(x,z){ const d=Math.hypot(x,z); if(d<1e-6) return {e:0,n:0};
+ const t=(sceneBearing(x,z)-NORTH_OFFSET_DEG)*Math.PI/180; return {e:d*Math.sin(t),n:d*Math.cos(t)}; }
+function drawMini(){
+ if(!mapReady||!mapOpen||!mapCtx) return;
+ const W=mapCtx.canvas.width, H=mapCtx.canvas.height;
+ mapCtx.setTransform(1,0,0,1,0,0); mapCtx.clearRect(0,0,W,H); mapCtx.drawImage(mapBase,0,0);
+ const ne=neOf(camera.position.x,camera.position.z), xy=mapXY(ne.e,ne.n);
+ const fx=-Math.sin(lookYaw), fz=-Math.cos(lookYaw), Nr=NORTH_OFFSET_DEG*Math.PI/180;
+ const fN=fx*Math.sin(Nr)+fz*(-Math.cos(Nr)), fE=fx*Math.cos(Nr)+fz*Math.sin(Nr);
+ mapCtx.save(); mapCtx.translate(xy[0],xy[1]); mapCtx.rotate(Math.atan2(fE,fN));
+ mapCtx.beginPath(); mapCtx.moveTo(0,-18); mapCtx.lineTo(8,10); mapCtx.lineTo(-8,10); mapCtx.closePath();
+ mapCtx.fillStyle='rgba(255,214,170,.95)'; mapCtx.fill();
+ mapCtx.beginPath(); mapCtx.arc(0,0,5,0,Math.PI*2); mapCtx.fillStyle='#fff'; mapCtx.fill();
+ mapCtx.restore();
+ if(mapDest){ const xy=mapXY(mapDest.e, mapDest.n);
+  mapCtx.beginPath(); mapCtx.arc(xy[0],xy[1],8,0,Math.PI*2); mapCtx.strokeStyle='#ffd7a8'; mapCtx.lineWidth=3; mapCtx.stroke();
+  mapCtx.font='700 15px system-ui,Segoe UI,Helvetica,Arial,sans-serif'; mapCtx.fillStyle='#ffd7a8'; mapCtx.textAlign='left';
+  const ly=xy[1]<40?xy[1]+22:xy[1]-12; mapCtx.fillText('NW end', Math.min(xy[0]+12, mapCtx.canvas.width-78), ly); }
+}
+function buildMiniMap(){
+ const wrap=document.createElement('div'); wrap.id='mapwrap';
+ wrap.innerHTML='<button type="button" id="mapBtn">Map</button><canvas id="minimap" width="440" height="360"></canvas>';
+ document.body.appendChild(wrap);
+ const btn=wrap.querySelector('#mapBtn'), cv=wrap.querySelector('#minimap'), ctx=cv.getContext('2d');
+ const W=cv.width, H=cv.height, cells=[];
+ let minE=0, maxE=1, minN=0, maxN=1, seen=false;
+ function grow(e,n){ if(!seen){ minE=maxE=e; minN=maxN=n; seen=true; return; }
+  if(e<minE)minE=e; if(e>maxE)maxE=e; if(n<minN)minN=n; if(n>maxN)maxN=n; }
+ for(const h of fgrid.values()){ if(h.ix===undefined) continue; let up=0; for(let i=0;i<FYN;i++) up+=h[i]; if(up<6) continue;
+  const ne=neOf(h.ix*FCELL, h.iz*FCELL); cells.push(ne); grow(ne.e,ne.n); }
+ grow(0,0);
+ for(const p of FLYP){ const ne=neOf(p.x,p.z); grow(ne.e,ne.n); }
+ const padE=Math.max(4,(maxE-minE)*0.08), padN=Math.max(4,(maxN-minN)*0.08);
+ minE-=padE; maxE+=padE; minN-=padN; maxN+=padN;
+ const pad=26, spanE=Math.max(8,maxE-minE), spanN=Math.max(8,maxN-minN);
+ const sc=Math.min((W-pad*2)/spanE,(H-pad*2)/spanN);
+ const ox=pad+((W-pad*2)-spanE*sc)/2, oy=pad+((H-pad*2)-spanN*sc)/2;
+ mapXY=(e,n)=>[ox+(e-minE)*sc, oy+(maxN-n)*sc];
+ const base=document.createElement('canvas'); base.width=W; base.height=H; const b=base.getContext('2d');
+ b.fillStyle='#120e0b'; b.fillRect(0,0,W,H);
+ b.fillStyle='rgba(196,154,122,.9)';
+ const s=Math.max(1.6, sc*FCELL*0.95);
+ for(const c of cells){ const xy=mapXY(c.e,c.n); b.fillRect(xy[0]-s*0.5, xy[1]-s*0.5, s, s); }
+ if(FLYP.length>1){ b.beginPath(); FLYP.forEach((p,i)=>{ const ne=neOf(p.x,p.z), xy=mapXY(ne.e,ne.n); if(i) b.lineTo(xy[0],xy[1]); else b.moveTo(xy[0],xy[1]); });
+  b.strokeStyle='#e9a066'; b.lineWidth=2.2; b.stroke(); }
+ const ent=mapXY(0,0);
+ b.beginPath(); b.arc(ent[0],ent[1],6,0,Math.PI*2); b.fillStyle='#7dcea0'; b.fill();
+ b.font='600 13px system-ui,Segoe UI,Helvetica,Arial,sans-serif'; b.fillStyle='#b7e6c8'; b.textAlign='left'; b.fillText('entrance', ent[0]+9, ent[1]+4);
+ if(FLYP.length){ const end=FLYP[FLYP.length-1], ne=neOf(end.x,end.z); mapDest=ne; const xy=mapXY(ne.e,ne.n);
+  b.beginPath(); b.arc(xy[0],xy[1],7,0,Math.PI*2); b.strokeStyle='#f0b27a'; b.lineWidth=2.5; b.stroke();
+  b.fillStyle='#f0b27a'; b.textAlign='left'; b.fillText('NW end', xy[0]+10, xy[1]+4); }
+ b.fillStyle='#f3c79a'; b.font='700 14px system-ui,Segoe UI,Helvetica,Arial,sans-serif'; b.textAlign='center';
+ b.fillText('N', W/2, 16);
+ mapBase=base; mapCtx=ctx; mapReady=true; mapOpen=!TOUCH;
+ function sync(){ document.body.classList.toggle('mapopen', mapOpen); btn.textContent=mapOpen?'Hide map':'Map'; btn.classList.toggle('on', mapOpen); if(mapOpen) drawMini(); }
+ btn.addEventListener('click',()=>{ mapOpen=!mapOpen; sync(); });
+ CALICO.toggleMap=on=>{ mapOpen=on==null?!mapOpen:!!on; sync(); };
+ sync();
+}
 const navEl=document.createElement('div'); navEl.id='navhud';
 navEl.innerHTML='<div class="ttl">Silver King Mine · Calico</div><canvas width="300" height="30"></canvas><div class="hd"></div><div class="dist"></div><div class="ll"></div>';
 const navCss=document.createElement('style');
@@ -626,7 +803,8 @@ CALICO.sim={update:u=>update(u),keys,pos:()=>camera.position,setYaw:y=>{yaw=y;},
  routeProj:(x,z)=>{const r=routeProj({x,z});return{s:r.s,d:r.d};},
  place:(x,y,z)=>{camera.position.set(x,y,z);snapEye();},
  face:(x,z)=>{lookAt(new THREE.Vector3(x,camera.position.y,z));snapLook();},
- render:()=>{renderer.render(scene,camera);}};
+ render:()=>{drawMini();renderer.render(scene,camera);},
+ setGuided:on=>{setGuided(on);}, guided:()=>guided, snapGuide:s=>{snapGuide(s);}, clearAhead:m=>clearAhead(m)};
 // ---------- tunnel-change callouts + northwest-end guide (right-edge panel; hidden with H) ----------
 // CALICO.tunnel.features: the major changes along the tunnel (wall steps >= 1.5 ft, floor/ceiling >= 1 ft, low headroom),
 // precomputed per 1 ft station by eyeheight/tunnel.py; one is shown while you are within CALLOUT_R (10 ft) of it.
