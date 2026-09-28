@@ -7,6 +7,8 @@
 // roof is too low to stand under (ceiling - floor < 1.85 m), or when a walking-surface bin sits above the eye.
 // On a normal floor the eye may change by at most about 2 cm per 0.3 m of travel. A low
 // ceiling may duck faster. The max per-step change is printed either way.
+// After that, guided mode is sampled along the route: the forward view ray must stay
+// more than about 1.5 m from the nearest wall.
 'use strict';
 const fs = require('fs');
 const http = require('http');
@@ -179,6 +181,7 @@ async function cdp() {
 const WALK_WASD = `(function(){
   const FT=0.3048, sim=CALICO.sim, L=sim.routeLen, n=Math.floor(L/FT+1e-9);
   sim.setKeepIn(false);
+  if (sim.setGuided) sim.setGuided(false);
   for (const k of Object.keys(sim.keys)) sim.keys[k]=false;
   const samples=[];
   function grab(ft,dir){ const p=sim.pos(), r=sim.routeProj(p.x,p.z); return {ft:ft, dir:dir, mode:'wasd', x:p.x, y:p.y, z:p.z, off:r.d, s:r.s}; }
@@ -217,6 +220,7 @@ const WALK_WASD = `(function(){
 const WALK_P = `(function(){
   const FT=0.3048, sim=CALICO.sim, L=sim.routeLen, n=Math.floor(L/FT+1e-9);
   sim.setKeepIn(false);
+  if (sim.setGuided) sim.setGuided(false);
   for (const k of Object.keys(sim.keys)) sim.keys[k]=false;
   const p0=sim.routeAt(0);
   const y0=CALICO.eye.target(p0.x,p0.z,p0.y);
@@ -247,6 +251,23 @@ const WALK_P = `(function(){
   sim.auto(false);
   if(nextBack===null || nextBack>=0) return {error:'P did not return to the portal', samples:samples, t:t, nextOut:nextOut, nextBack:nextBack};
   return {samples:samples, n:n, t:t};
+})()`;
+
+// Guided yaw should look down the hallway: the forward ray stays more than about 1.5 m from the nearest wall.
+const WALK_GUIDE = `(function(){
+  const FT=0.3048, sim=CALICO.sim, L=sim.routeLen;
+  const bad=[], samples=[];
+  function take(s, tag){
+    sim.snapGuide(s);
+    const c=sim.clearAhead(8);
+    const row={ft:+(s/FT).toFixed(1), c:+c.toFixed(2), tag:tag||''};
+    samples.push(row);
+    if(!(c>1.5)) bad.push(row);
+  }
+  for (let s=8*FT; s<L-0.4; s+=10*FT) take(s);
+  take(Math.max(0, L-2), 'end');
+  samples.sort((a,b)=>a.c-b.c);
+  return {bad, n:samples.length, min:samples.length?samples[0].c:null, end:samples.filter(s=>s.tag==='end')[0]||null, tight:samples.slice(0,6)};
 })()`;
 
 const SHOT_JS = `(function(){
@@ -386,7 +407,10 @@ async function main() {
     }
     const off = all.filter(s => s.off > 1.5);
     if (off.length) fail(off.length + ' samples more than 1.5 m off the centreline, e.g. ' + off[0].mode + ' ' + off[0].ft + ' ft');
-    console.log('PASS', all.length, 'samples');
+    console.log('PASS', all.length, 'samples — checking guided clear-ahead');
+    const guide = await browser.evalJs(WALK_GUIDE, 180000);
+    console.log('guided clear-ahead', JSON.stringify({ n: guide.n, min: guide.min, end: guide.end, tight: guide.tight, bad: guide.bad }));
+    if (!guide || guide.bad && guide.bad.length) fail('guided forward ray is under 1.5 m from a wall at ' + (guide && guide.bad ? guide.bad.length : '?') + ' samples');
     fs.mkdirSync(path.dirname(SHOT), { recursive: true });
     const info = await browser.evalJs(SHOT_JS, 60000);
     const shot = await browser.send('Page.captureScreenshot', { format: 'png' }, 30000);
