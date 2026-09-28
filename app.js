@@ -265,11 +265,11 @@ function guard(dt){
  if(outT>=OUT_GRACE){ let to=lastGood.clone(); if(!inValidSpace(to)) to=nearestValid(camera.position)||(reset(),camera.position.clone());
   pull={from:camera.position.clone(),to,t:0,dur:Math.min(1.0,0.5+0.1*to.distanceTo(camera.position))}; flash('Back inside the mine'); }
 }
-// ---------- eye height (floor + 1.70 m) ----------
+// ---------- eye height (floor + 1.635 m) ----------
 // The handheld GeoSLAM was carried at about waist height. The meta.js survey path is not the raw scanner track:
 // build.py set it to floor + PATH_EYE (1.40 m), capped at ceiling - 0.35 m and smoothed. Before this change the camera sat
 // on that path (start pose, R, P fly-through) and then flew freely with no floor following at all.
-// Now the eye sits EYE_HEIGHT above the tunnel floor (1.70 m, eye level for a 6 ft adult), measured from the actual
+// Now the eye sits EYE_HEIGHT above the tunnel floor (1.635 m, about 2.5 inches below a 6 ft eye), measured from the actual
 // up-facing points directly under the viewer (the lowest dense 10 cm band within 0.5 m). It is never taken from a fixed
 // or zero elevation, so a rising floor lifts the eye with it. The ceiling is the underside of the dominant roof above
 // that floor, not a stray ledge: the eye ducks to ceiling - HEAD_CLEAR only when that roof is too low to stand under.
@@ -281,7 +281,7 @@ function guard(dt){
 // Space/E and Shift/Q still fly up and down: they add an offset (hOff) on top of the floor-following eye height.
 // If no floor is found (outside the rock shell), the height is held.
 // (TUN, routeProj: defined further down; only used at run time.)
-const EYE_HEIGHT=1.70, HEAD_CLEAR=0.15, PATH_EYE=1.40, EYE_MIN=0.5, FLOOR_SCAN=2.6, CEIL_SCAN=3.5;
+const EYE_HEIGHT=1.635, HEAD_CLEAR=0.15, PATH_EYE=1.40, EYE_MIN=0.5, FLOOR_SCAN=2.6, CEIL_SCAN=3.5;
 const EYE_OMEGA=7.0, FLOOR_SPAN=2.6, EYE_RATE=0.02/0.30, LOOK_RATE=12, LOOK_RATE_AUTO=2.2, ACCEL_RATE=4.5;
 const EYE_COLS=[[0,0],[0.2,0],[-0.2,0],[0,0.2],[0,-0.2]], TUN=CALICO.tunnel||null;
 const FLYP=TUN?TUN.fly.map(p=>new THREE.Vector3().fromArray(p)):[], FLYS=[0];   // route polyline + horizontal distance along it
@@ -375,7 +375,7 @@ function followEye(dt){
  p.y=eyeY+hOff; }
 function poseAt(t){ const p=path.getPointAt(Math.min(t,1)); const q=path.getPointAt(Math.min(t+3.0/pathLen,1));
  if(t>=1){const a=path.getPointAt(0.995);q.copy(p).add(p.clone().sub(a).normalize());}
- const tg=eyeTarget(p.x,p.z,p.y), dy=tg===null?EYE_HEIGHT-PATH_EYE:tg-p.y;   // fallback: path y - 1.40 m + 1.70 m
+ const tg=eyeTarget(p.x,p.z,p.y), dy=tg===null?EYE_HEIGHT-PATH_EYE:tg-p.y;   // fallback: path y - 1.40 m + 1.635 m
  p.y+=dy; q.y+=dy; camera.position.copy(p); lookAt(q); pitch-=0.05; snapEye(); snapLook(); }
 function snapLook(){ lookYaw=yaw; lookPitch=pitch; }
 function easeLook(dt,rate){ if(!(dt>0)){ snapLook(); return; } const k=1-Math.exp(-dt*rate);
@@ -383,7 +383,7 @@ function easeLook(dt,rate){ if(!(dt>0)){ snapLook(); return; } const k=1-Math.ex
 
 // ---------- P fly-through: portal -> far north chamber -> back to the portal ----------
 // Uses CALICO.tunnel (data/tunnel.js, from eyeheight/tunnel.py): a smoothed centreline through the main drift and the
-// connecting passage to the northernmost chamber. Its height is the same smoothed floor + 1.70 m as walking: a moving
+// connecting passage to the northernmost chamber. Its height is the same smoothed floor + 1.635 m as walking: a moving
 // average over about 8 ft, then the steadicam spring, ducked only when the roof is too low. The stored polyline
 // was generated at TUN.eye (1.66 m) and is only a fallback where those points are missing. Speed eases
 // in and out (FLY_ACC), slows to a stop at the chamber, pauses while the view pans round, then returns.
@@ -413,7 +413,7 @@ function flyStep(dt){
  feedPoints(pts, flyD);
  const moved=eyeMark===null?0:Math.max(0,flyD-eyeMark); eyeMark=flyD;
  const r=commandEye(flyD, moved, p.x, p.z, yRef);
- if(r.cmd===null) p.y+=EYE_HEIGHT-gen;   // no floor points here: keep the centreline, shifted up to 1.70 m
+ if(r.cmd===null) p.y+=EYE_HEIGHT-gen;   // no floor points here: keep the centreline, shifted up to 1.635 m
  else { glideTo(r.cmd, dt, moved, r.duck); if(r.duck&&r.now&&r.now.ceil!==null&&eyeY>r.now.ceil-0.05){ eyeY=r.now.ceil-0.05; eyeV=Math.min(eyeV,0); eyePrev=eyeY; } p.y=eyeY; }
  let qs=back?s-3:s+3; flyQ.copy(flyAt(qs));
  if(flyQ.distanceTo(p)<0.5){ const a=flyAt(back?s+1:s-1); flyQ.copy(p).add(p.clone().sub(a).normalize()); }
@@ -450,7 +450,7 @@ function update(dt){
   // gentle acceleration / deceleration (exponential approach to the key velocity)
   const k=1-Math.exp(-dt*ACCEL_RATE); vel.x+=(mv.x-vel.x)*k; vel.z+=(mv.z-vel.z)*k; hVel+=(mv.y-hVel)*k;
   if(pull){ vel.set(0,0,0); hVel=0; eyeY=camera.position.y; eyePrev=eyeY; eyeCmd=null; eyeMark=null; hOff=0; eyeBuf.length=0; eyeV=0; }
-  else { camera.position.x+=vel.x*dt; camera.position.z+=vel.z*dt; hOff+=hVel*dt; followEye(dt); }   // eye = floor + 1.70 m (+ Space/Shift offset)
+  else { camera.position.x+=vel.x*dt; camera.position.z+=vel.z*dt; hOff+=hVel*dt; followEye(dt); }   // eye = floor + 1.635 m (+ Space/Shift offset)
   guard(dt);
  }
  tunnelPanel();
@@ -579,12 +579,6 @@ function tunnelPanel(){
  const key=html+'|'+g; if(key!==tpLast){ tpLast=key; tpCo.innerHTML=html; tpGt.innerHTML=g; }
  tpEl.style.display=(html||g)?'block':'none'; }
 setInterval(()=>{ if(reachedT>0){ reachedT-=0.25; } },250);
-// subtle 3-D markers: a faint amber ring on the floor with a small down-pointing cone above it
-const mkGroup=new THREE.Group(); scene.add(mkGroup);
-if(TUN){ const ringG=new THREE.RingGeometry(0.28,0.34,40), coneG=new THREE.ConeGeometry(0.07,0.16,16);
- const mkM=new THREE.MeshBasicMaterial({color:0xe9a066,transparent:true,opacity:0.35,side:THREE.DoubleSide,depthWrite:false});
- for(const f of FEATS){ const r=new THREE.Mesh(ringG,mkM); r.rotation.x=-Math.PI/2; r.position.set(f.x,f.floor_y+0.03,f.z);
-  const c=new THREE.Mesh(coneG,mkM); c.rotation.x=Math.PI; c.position.set(f.x,f.floor_y+0.55,f.z); mkGroup.add(r,c); } }
 CALICO.tunnelPanel=()=>{tunnelPanel();return {text:tpEl.innerText,visible:tpEl.style.display!=='none',northReached};};
 requestAnimationFrame(loop);
 })();
