@@ -68,6 +68,12 @@ const maxExt=Math.max(ext.x,ext.y,ext.z);
 const group=new THREE.Group(); group.position.copy(bmin); group.scale.copy(ext); scene.add(group);
 const chunkObjs=[]; let loadedFiles=0, loadedPts=0;
 const OCC=0.1, occ=new Set(); const okey=(x,y,z)=>((Math.floor(x/OCC)+2000)*4096+(Math.floor(y/OCC)+2000))*4096+(Math.floor(z/OCC)+2000);
+// Up-facing / down-facing point counts, 25 cm in plan and 10 cm in height. The eye is measured from this grid
+// (lowest dense floor directly under the viewer). Keep the sizes in sync with test/eye-route.js.
+const FCELL=0.25, FY0=-4, FYN=120, fgrid=new Map();
+function fbin(x,y,z,up){ const yi=Math.round((y-FY0)/0.1); if(yi<0||yi>=FYN) return;
+ const k=Math.round(x/FCELL)*100000+Math.round(z/FCELL); let h=fgrid.get(k); if(!h){ h=new Uint16Array(FYN*2); fgrid.set(k,h); }
+ const i=yi+(up?0:FYN); if(h[i]<65535) h[i]++; }
 function b64(s){const bin=atob(s),n=bin.length,u=new Uint8Array(n);for(let i=0;i<n;i++)u[i]=bin.charCodeAt(i);return u;}
 function decodeFile(fi){
  const arr=CALICO.files[fi];
@@ -81,7 +87,8 @@ function decodeFile(fi){
   const c=new THREE.Vector3().fromArray(ch.c);
   g.boundingSphere=new THREE.Sphere(c.clone().sub(bmin).divide(ext),ch.r/maxExt+1e-4);
   const o=new THREE.Points(g,pmat); o.userData.c=c; o.userData.r=ch.r; group.add(o); chunkObjs.push(o);
-  for(let i=0;i<n;i++) occ.add(okey(bmin.x+pos[3*i]/65535*ext.x,bmin.y+pos[3*i+1]/65535*ext.y,bmin.z+pos[3*i+2]/65535*ext.z));
+  for(let i=0;i<n;i++){ const x=bmin.x+pos[3*i]/65535*ext.x, y=bmin.y+pos[3*i+1]/65535*ext.y, z=bmin.z+pos[3*i+2]/65535*ext.z;
+   occ.add(okey(x,y,z)); const ny=nrm[3*i+1]/127; if(ny>0.5||ny<-0.5) fbin(x,y,z,ny>0.5); }
   loadedPts+=n; });
  delete CALICO.files[fi]; loadedFiles++;
  LD.sectionAdded(fi,loadedPts);
@@ -262,16 +269,20 @@ function guard(dt){
 // The handheld GeoSLAM was carried at about waist height. The meta.js survey path is not the raw scanner track:
 // build.py set it to floor + PATH_EYE (1.40 m), capped at ceiling - 0.35 m and smoothed. Before this change the camera sat
 // on that path (start pose, R, P fly-through) and then flew freely with no floor following at all.
-// Now the eye sits EYE_HEIGHT above the tunnel floor (1.70 m, eye level for a 6 ft adult). The floor and ceiling come
-// from 5 short vertical probes (centre and +-20 cm) through the noise-filtered 10 cm wall voxels (isWall), taking the median.
-// Steadicam: the floor/ceiling samples are median-filtered over the last FLOOR_WIN metres walked, the ceiling is also
-// probed ~0.4 s ahead, and the eye height follows a critically damped spring (EYE_OMEGA). The eye is capped at
-// ceiling - HEAD_CLEAR so it ducks under low spots instead of clipping into the rock (hard cap at the current ceiling as a backstop).
+// Now the eye sits EYE_HEIGHT above the tunnel floor (1.70 m, eye level for a 6 ft adult), measured from the actual
+// up-facing points directly under the viewer (the lowest dense 10 cm band within 0.5 m). It is never taken from a fixed
+// or zero elevation, so a rising floor lifts the eye with it. The ceiling is the underside of the dominant roof above
+// that floor, not a stray ledge: the eye ducks to ceiling - HEAD_CLEAR only when that roof is too low to stand under.
+// Steadicam: floor/ceiling samples are median-filtered over the last FLOOR_WIN metres, but a higher floor underfoot
+// or within FLOOR_AHEAD metres in the direction of travel raises the target immediately so the eye cannot stay
+// down while the floor rises. A lower ceiling ahead ducks early. The eye height then glides on a critically damped
+// spring (EYE_OMEGA), with a hard cap at the current ceiling. Voxel probes and the tunnel.js stations are only a
+// fallback where the point grid has no floor.
 // Space/E and Shift/Q still fly up and down: they add an offset (hOff) on top of the floor-following eye height.
 // If no floor is found (outside the rock shell), the height is held.
 // (TUN, routeProj: defined further down; only used at run time.)
 const EYE_HEIGHT=1.70, HEAD_CLEAR=0.15, PATH_EYE=1.40, EYE_MIN=0.5, FLOOR_SCAN=2.6, CEIL_SCAN=3.5;
-const EYE_OMEGA=5.0, FLOOR_WIN=0.5, LOOK_RATE=12, LOOK_RATE_AUTO=2.2, ACCEL_RATE=4.5;
+const EYE_OMEGA=7.0, FLOOR_WIN=0.5, FLOOR_AHEAD=1.0, LOOK_RATE=12, LOOK_RATE_AUTO=2.2, ACCEL_RATE=4.5;
 const EYE_COLS=[[0,0],[0.2,0],[-0.2,0],[0,0.2],[0,-0.2]], TUN=CALICO.tunnel||null;
 const FLYP=TUN?TUN.fly.map(p=>new THREE.Vector3().fromArray(p)):[], FLYS=[0];   // route polyline + horizontal distance along it
 for(let i=1;i<FLYP.length;i++) FLYS.push(FLYS[i-1]+Math.hypot(FLYP[i].x-FLYP[i-1].x,FLYP[i].z-FLYP[i-1].z));
@@ -284,14 +295,36 @@ function floorCeil(x,z,yRef){ const F=[],C=[];
   for(let y=f+EYE_MIN; y<=f+CEIL_SCAN; y+=0.05) if(isWall(cx,y,cz)){ C.push(y); break; } }
  if(F.length<3) return null;
  return {floor:med(F), ceil:C.length>=3?med(C):null}; }
-// On the surveyed route (within 1 m of the centreline in data/tunnel.js) use its 1 ft station floor/ceiling instead:
-// those come from all points in each 20 cm column and are median-filtered, so clutter and ghosted scan overlap
-// (e.g. ~305-316 ft) can't lift the eye.
+// Fallback only where the point grid has no floor (the open portal). Within 1 m of the centreline the
+// tunnel.js 1 ft stations are the same point-derived floor and ceiling, median-filtered along the route.
 function stationFC(x,z){ if(!TUN||!TUN.stations) return null; const r=routeProj({x,z}); if(r.d>1.0) return null;
  const S=TUN.stations, i=Math.max(0,Math.min(S.floor.length-1,Math.round(r.s/0.3048))); return {floor:S.floor[i],ceil:S.ceil[i]}; }
-function fcAt(x,z,yRef){ return stationFC(x,z)||floorCeil(x,z,yRef); }
+// Lowest dense up-facing band within 0.5 m, and the bottom of the dominant roof above it.
+function pointFC(x,z){ const ix=Math.round(x/FCELL), iz=Math.round(z/FCELL);
+ const up=new Uint32Array(FYN), dn=new Uint32Array(FYN); let any=false;
+ for(let dx=-2;dx<=2;dx++) for(let dz=-2;dz<=2;dz++){ const cx=(ix+dx)*FCELL, cz=(iz+dz)*FCELL;
+  if((cx-x)*(cx-x)+(cz-z)*(cz-z)>0.25) continue; const h=fgrid.get((ix+dx)*100000+(iz+dz)); if(!h) continue; any=true;
+  for(let i=0;i<FYN;i++){ up[i]+=h[i]; dn[i]+=h[FYN+i]; } }
+ if(!any) return null;
+ let peakUp=0; for(let i=0;i<FYN;i++) if(up[i]>peakUp) peakUp=up[i];
+ const needUp=Math.max(40,peakUp*0.12); let floor=null;
+ for(let i=0;i<FYN;i++) if(up[i]>=needUp){ floor=FY0+i*0.1; break; }
+ if(floor===null) return null;
+ let ceil=null, peakI=-1, peakDn=0;
+ for(let i=0;i<FYN;i++) if(FY0+i*0.1>=floor+0.85&&dn[i]>peakDn){ peakDn=dn[i]; peakI=i; }
+ if(peakI>=0){ const needDn=Math.max(80,peakDn*0.2); let c=peakI;
+  while(c>0&&FY0+(c-1)*0.1>=floor+0.85&&dn[c-1]>=needDn) c--; ceil=FY0+c*0.1; }
+ return {floor, ceil}; }
+function fcAt(x,z,yRef){ return pointFC(x,z)||stationFC(x,z)||floorCeil(x,z,yRef); }
 function eyeFrom(floor,ceil){ let y=floor+EYE_HEIGHT; if(ceil!==null) y=Math.min(y,ceil-HEAD_CLEAR); return Math.max(y,floor+EYE_MIN); }
 function eyeTarget(x,z,yRef){ const fc=fcAt(x,z,yRef); return fc?eyeFrom(fc.floor,fc.ceil):null; }
+// Standing height is floor + 1.70, raised early when the floor ahead is higher, ducked when either roof is low.
+function glideTarget(x,z,yRef,ax,az){ const fc=fcAt(x,z,yRef), fa=ax==null?null:fcAt(ax,az,yRef);
+ if(!fc&&!fa) return null;
+ let floor=fc?fc.floor:fa.floor, ceil=fc?fc.ceil:null;
+ if(fa){ if(fa.floor>floor) floor=fa.floor;
+  if(fa.ceil!==null && Math.abs(fa.floor-(fc?fc.floor:fa.floor))<0.8) ceil=ceil===null?fa.ceil:Math.min(ceil,fa.ceil); }
+ return eyeFrom(floor, ceil); }
 function snapEye(){ eyeBuf.length=0; eyeV=0; hOff=0; hVel=0; vel.set(0,0,0); eyeY=camera.position.y; lastXZ.set(camera.position.x,camera.position.z); }
 function followEye(dt){
  const p=camera.position; odo+=lastXZ.distanceTo(new THREE.Vector2(p.x,p.z)); lastXZ.set(p.x,p.z);
@@ -299,9 +332,12 @@ function followEye(dt){
  if(fc){ const b=eyeBuf[eyeBuf.length-1]; if(!b||odo-b.s>=0.05||(b.t+=dt)>0.25) eyeBuf.push({s:odo,f:fc.floor,c:fc.ceil,t:0}); }
  while(eyeBuf.length>1&&eyeBuf[0].s<odo-FLOOR_WIN) eyeBuf.shift();
  if(eyeBuf.length){
-  const f=med(eyeBuf.map(b=>b.f)), cs=eyeBuf.filter(b=>b.c!==null).map(b=>b.c); let c=cs.length?med(cs):null;
-  const ah=vel.lengthSq()>0.01?fcAt(p.x+vel.x*0.4,p.z+vel.z*0.4,eyeY):null;   // look ahead for a dropping ceiling
-  if(ah&&ah.ceil!==null&&Math.abs(ah.floor-f)<0.6) c=c===null?ah.ceil:Math.min(c,ah.ceil);
+  let f=med(eyeBuf.map(b=>b.f)), cs=eyeBuf.filter(b=>b.c!==null).map(b=>b.c); let c=cs.length?med(cs):null;
+  if(fc.floor>f) f=fc.floor;   // the floor underfoot wins over an older, lower median
+  const sp=Math.hypot(vel.x,vel.z);
+  const ah=sp>0.2?fcAt(p.x+vel.x/sp*FLOOR_AHEAD,p.z+vel.z/sp*FLOOR_AHEAD,eyeY):null;
+  if(ah&&ah.floor>f) f=ah.floor;   // start the glide up before a rising floor is under the eye
+  if(ah&&ah.ceil!==null&&Math.abs(ah.floor-fc.floor)<0.8) c=c===null?ah.ceil:Math.min(c,ah.ceil);
   const t=eyeFrom(f,c);
   if(dt>0){ eyeV+=(EYE_OMEGA*EYE_OMEGA*(t-eyeY)-2*EYE_OMEGA*eyeV)*dt; eyeY+=eyeV*dt; } else { eyeY=t; eyeV=0; }
   if(fc&&fc.ceil!==null&&eyeY>fc.ceil-0.05){ eyeY=fc.ceil-0.05; eyeV=Math.min(eyeV,0); }   // never poke through the rock
@@ -317,9 +353,9 @@ function easeLook(dt,rate){ if(!(dt>0)){ snapLook(); return; } const k=1-Math.ex
 
 // ---------- P fly-through: portal -> far north chamber -> back to the portal ----------
 // Uses CALICO.tunnel (data/tunnel.js, from eyeheight/tunnel.py): a smoothed centreline through the main drift and the
-// connecting passage to the northernmost chamber. Its height follows the floor under the camera (the 1 ft stations in
-// tunnel.js, or a live probe), at floor + EYE_HEIGHT (1.70 m, a 6 ft adult) capped 0.15 m under the ceiling. The stored
-// polyline was generated at TUN.eye (1.66 m); flyStep shifts it up to EYE_HEIGHT and reclamps to that ceiling. Speed eases
+// connecting passage to the northernmost chamber. Its height is the same floor + 1.70 m as walking: the up-facing points
+// directly under the camera, gliding on the steadicam spring, and ducked only when the roof is lower. The stored polyline
+// was generated at TUN.eye (1.66 m) and is only a fallback where those points are missing. Speed eases
 // in and out (FLY_ACC), slows to a stop at the chamber, pauses while the view pans round, then returns.
 // Without tunnel.js it falls back to the old meta.js path (raised to eye height).
 const FLY_ACC=0.45, FLY_DWELL=3.5;
@@ -339,19 +375,24 @@ function flyStep(dt){
   flyV+=Math.max(-2*FLY_ACC*dt,Math.min(FLY_ACC*dt,vt-flyV)); flyD=Math.min(stopAt,flyD+flyV*dt); }
  const back=flyD>L||(flyD>=L-0.02&&flyDwell>=FLY_DWELL*0.25), s=flyD>L?2*L-flyD:flyD;
  const p=flyAt(s);
- const gen=(TUN&&typeof TUN.eye==='number')?TUN.eye:EYE_HEIGHT, tg=eyeTarget(p.x,p.z,p.y);
- p.y+=EYE_HEIGHT-gen; if(tg!==null) p.y=Math.min(p.y,tg);   // floor + EYE_HEIGHT, not the baked 1.66 m or the meta.js path
+ const gen=(TUN&&typeof TUN.eye==='number')?TUN.eye:EYE_HEIGHT, yRef=p.y+(EYE_HEIGHT-gen);
+ const pa=flyAt(Math.max(0,Math.min(L,s+(back?-1:1)*FLOOR_AHEAD)));
+ const tg=glideTarget(p.x,p.z,yRef,pa.x,pa.z);
+ if(tg===null) p.y+=EYE_HEIGHT-gen;   // no floor points here: keep the centreline, shifted up to 1.70 m
+ else { // glide onto floor + 1.70 (ducked only under the roof). Do not stay on the baked line if the floor has risen.
+  if(dt>0){ eyeV+=(EYE_OMEGA*EYE_OMEGA*(tg-eyeY)-2*EYE_OMEGA*eyeV)*dt; eyeY+=eyeV*dt; } else eyeY=tg;
+  p.y=eyeY; }
  let qs=back?s-3:s+3; flyQ.copy(flyAt(qs));
  if(flyQ.distanceTo(p)<0.5){ const a=flyAt(back?s+1:s-1); flyQ.copy(p).add(p.clone().sub(a).normalize()); }
  flyQ.y=p.y-0.15;
  if(flyBlend<1){ flyBlend=Math.min(1,flyBlend+dt/2.0); const e=flyBlend*flyBlend*(3-2*flyBlend); p.lerpVectors(flyFrom,p,e); }
- camera.position.copy(p); lookAt(flyQ); eyeY=p.y; hOff=0; eyeBuf.length=0; eyeV=0; vel.set(0,0,0);
+ camera.position.copy(p); lookAt(flyQ); eyeY=p.y; hOff=0; eyeBuf.length=0; if(tg===null) eyeV=0; vel.set(0,0,0);
  if(flyD>=2*L-0.01){ auto=false; snapEye(); flash('Fly-through finished, back at the portal'); } }
 reset();
 
 CALICO.poseAt=t=>{poseAt(t);}; CALICO.pathLen=pathLen; CALICO.reset=reset; CALICO.validHere=()=>inValidSpace(camera.position);
 CALICO.setPose=(p,l)=>{camera.position.fromArray(p);lookAt(new THREE.Vector3().fromArray(l));snapEye();snapLook();};
-CALICO.eye={floorCeil:(x,z,y)=>floorCeil(x,z,y),target:(x,z,y)=>eyeTarget(x,z,y),state:()=>({eyeY,eyeV,hOff,flyD,flyV,auto}),EYE_HEIGHT,HEAD_CLEAR,flyLen:FLY_LEN};
+CALICO.eye={floorCeil:(x,z,y)=>floorCeil(x,z,y),pointFloor:(x,z)=>pointFC(x,z),target:(x,z,y)=>eyeTarget(x,z,y),state:()=>({eyeY,eyeV,hOff,flyD,flyV,auto}),EYE_HEIGHT,HEAD_CLEAR,flyLen:FLY_LEN};
 CALICO.touch={on:TOUCH,stick:()=>({x:stickX,y:stickY}),look:()=>({yaw,pitch})};
 CALICO.renderNow=()=>{update(0);renderer.render(scene,camera);};
 CALICO.toggleMesh=(on,cb)=>loadMesh(()=>{mesh.visible=on;group.visible=!on;cb&&cb();});
@@ -459,7 +500,12 @@ function navHud(){ const h=headingDeg(); if(Math.abs(h-navLastH)>0.2){ navLastH=
   navLL.textContent=`portal ${PORTAL_LAT.toFixed(5)}, ${PORTAL_LON.toFixed(5)} · you ≈ ${ll[0].toFixed(5)}, ${ll[1].toFixed(5)}`; } }
 CALICO.navHud=navHud; CALICO.distAlongPath=()=>distAlongPath(camera.position); CALICO.heading=headingDeg; CALICO.northOffset=NORTH_OFFSET_DEG; CALICO.latLon=()=>sceneToLatLon(camera.position);
 CALICO.sim={update:u=>update(u),keys,pos:()=>camera.position,setYaw:y=>{yaw=y;},setPitch:p=>{pitch=p;},path,pathLen,reset:()=>{reset();resetGuard();},auto:on=>{if(on)startAuto();else stopAuto();},
- state:()=>pull?'pulling':(curValid?'valid':'out '+outT.toFixed(1)+'s'),setKeepIn:v=>{keepIn=v;},valid:a=>inValidSpace(new THREE.Vector3().fromArray(a)),encl:a=>enclosure(new THREE.Vector3().fromArray(a)),isWall};
+ state:()=>pull?'pulling':(curValid?'valid':'out '+outT.toFixed(1)+'s'),setKeepIn:v=>{keepIn=v;},valid:a=>inValidSpace(new THREE.Vector3().fromArray(a)),encl:a=>enclosure(new THREE.Vector3().fromArray(a)),isWall,
+ routeAt:s=>{const p=routeAt(s);return{x:p.x,y:p.y,z:p.z};}, routeLen:FLYS.length?FLYS[FLYS.length-1]:0,
+ routeProj:(x,z)=>{const r=routeProj({x,z});return{s:r.s,d:r.d};},
+ place:(x,y,z)=>{camera.position.set(x,y,z);snapEye();},
+ face:(x,z)=>{lookAt(new THREE.Vector3(x,camera.position.y,z));snapLook();},
+ render:()=>{renderer.render(scene,camera);}};
 // ---------- tunnel-change callouts + far north chamber guide (right-edge panel; hidden with H) ----------
 // CALICO.tunnel.features: the major changes along the tunnel (wall steps >= 1.5 ft, floor/ceiling >= 1 ft, low headroom),
 // precomputed per 1 ft station by eyeheight/tunnel.py; one is shown while you are within CALLOUT_R (10 ft) of it.
