@@ -119,7 +119,7 @@ function loadMesh(cb){
 let meshLoading=false;
 
 // ---------- controls ----------
-const keys={}; let yaw=0,pitch=0,speed=2.0,collide=true,lampOn=true,auto=false,autoT=0,msgT=0,msg='';
+const keys={}; let yaw=0,pitch=0,speed=2.0,lampOn=true,auto=false,autoT=0,msgT=0,msg='';
 const path=new THREE.CatmullRomCurve3(M.path.map(p=>new THREE.Vector3().fromArray(p)),false,'centripetal');
 const pathLen=path.getLength();
 function lookAt(p){const d=new THREE.Vector3().subVectors(p,camera.position);yaw=Math.atan2(-d.x,-d.z);pitch=Math.atan2(d.y,Math.hypot(d.x,d.z));}
@@ -129,9 +129,9 @@ function reset(){ const t=Math.min(START_D/pathLen,1); camera.position.copy(path
 reset();
 function flash(t){msg=t;msgT=2.5;}
 addEventListener('keydown',e=>{keys[e.code]=true;
- if(e.code==='KeyC'){collide=!collide;flash('Collision '+(collide?'ON':'OFF'));}
+ if(e.code==='KeyC'){keepIn=!keepIn;outT=0;flash('Keep-inside pull-back '+(keepIn?'ON':'OFF (free flight)'));}
  if(e.code==='KeyL'){lampOn=!lampOn;flash('Headlamp '+(lampOn?'ON':'OFF (flat light)'));}
- if(e.code==="KeyR"){reset();auto=false;}
+ if(e.code==="KeyR"){reset();auto=false;resetGuard();}
  if(e.code==='KeyB'){U.uCull.value=1-U.uCull.value;flash('Back-face point culling '+(U.uCull.value?'ON':'OFF'));}
  if(e.code==='KeyH'){document.body.classList.toggle('hidehelp');}
  if(e.code==='KeyP'){auto=!auto; if(auto){autoT=nearestT();} flash(auto?'Auto fly-through (P to stop)':'Manual');}
@@ -152,13 +152,56 @@ document.addEventListener('pointerlockchange',()=>{const L=document.pointerLockE
  else if(ov.dataset.ready){ ov.style.display='flex'; document.querySelector('#enter .big').textContent='▶ Paused — click to continue'; LD.status('Paused. Click anywhere to continue.'); hint.classList.remove('show'); }});
 addEventListener('mousemove',e=>{ if(document.pointerLockElement!==renderer.domElement) return;
  yaw-=e.movementX*0.0022; pitch=Math.max(-1.5,Math.min(1.5,pitch-e.movementY*0.0022)); });
-function blocked(p){ const R=0.22; for(let dx=-R;dx<=R+1e-6;dx+=0.1)for(let dy=-R;dy<=R+1e-6;dy+=0.1)for(let dz=-R;dz<=R+1e-6;dz+=0.1){
-  if(dx*dx+dy*dy+dz*dz>R*R*1.4) continue; if(occ.has(okey(p.x+dx,p.y+dy,p.z+dz))) return true;} return false;}
 function nearestT(){let best=0,bd=1e9;for(let i=0;i<=400;i++){const d=path.getPointAt(i/400).distanceTo(camera.position);if(d<bd){bd=d;best=i/400;}}return best;}
+// ---------- soft noclip ----------
+// Movement is never hard-blocked. Before this change, a few stray LiDAR noise points stopped the player dead.
+// Instead we track whether the player is in valid space, i.e. inside the mine, and ease them back if they
+// stay outside it for OUT_GRACE seconds.
+// Wall: a 10 cm voxel counts as wall only if its 50 cm (5x5x5 voxel) neighbourhood has at least WALL_MIN
+//   occupied voxels. Rock surfaces fill about 25 or more of those; isolated noise fills 1 to 10, so it is ignored.
+// Inside: rays in 26 directions from the player. Inside the tunnel nearly all of them (26/26 measured
+//   along the whole tunnel) hit a wall within RAY_MAX. Outside the rock shell, or under the floor,
+//   at most about half do (7 to 14 measured). A spot is valid if at least ENCL_MIN rays hit.
+// Portal: at the mine entrance, rays escape out of the portal, so there a spot within 4 m of the first few
+//   metres of the centreline also counts as valid if that centreline point sees it without crossing a wall.
+// Note: the centreline in meta.js drifts about 1 m outside the rock between ~65 and 85 m, so it is not
+//   used as the main in/out test.
+const WALL_MIN=18, OUT_GRACE=2.0, CHECK_DT=0.1, RAY_MAX=12.0, ENCL_MIN=20, SKIN=0.15;
+const ikey=(i,j,k)=>((i+2000)*4096+(j+2000))*4096+(k+2000);
+const wallCache=new Map();
+function isWall(x,y,z){ const i=Math.floor(x/OCC), j=Math.floor(y/OCC), k=Math.floor(z/OCC), key=ikey(i,j,k);
+ if(!occ.has(key)) return false; let v=wallCache.get(key); if(v!==undefined) return v; let c=0;
+ for(let a=-2;a<=2;a++)for(let b=-2;b<=2;b++)for(let d=-2;d<=2;d++) if(occ.has(ikey(i+a,j+b,k+d))) c++;
+ v=c>=WALL_MIN; wallCache.set(key,v); return v; }
+const DIRS=[]; for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++)for(let c=-1;c<=1;c++) if(a||b||c){ const l=Math.hypot(a,b,c); DIRS.push([a/l,b/l,c/l]); }
+function enclosure(p){ let h=0; for(const d of DIRS){ for(let r=SKIN;r<=RAY_MAX;r+=0.05){ if(isWall(p.x+d[0]*r,p.y+d[1]*r,p.z+d[2]*r)){h++;break;} } } return h; }
+const CL=[]; { const n=Math.ceil(pathLen/0.25); for(let i=0;i<=n;i++) CL.push(path.getPointAt(i/n)); }
+function nearestCL(p){ let bi=0,bd=1e18; for(let i=0;i<CL.length;i++){const d=CL[i].distanceToSquared(p); if(d<bd){bd=d;bi=i;}} return bi; }
+const losV=new THREE.Vector3();
+function losClear(a,p){ const d=a.distanceTo(p), end=d-SKIN; if(end<=0) return true; const n=Math.ceil(end/0.05);
+ for(let s=1;s<=n;s++){ losV.lerpVectors(a,p,(s/n)*end/d); if(isWall(losV.x,losV.y,losV.z)) return false; } return true; }
+function inValidSpace(p){
+ if(p.x<bmin.x-2||p.y<bmin.y-2||p.z<bmin.z-2||p.x>bmin.x+ext.x+2||p.y>bmin.y+ext.y+2||p.z>bmin.z+ext.z+2) return false;
+ if(enclosure(p)>=ENCL_MIN) return true;
+ for(let j=0;j<=16&&j<CL.length;j+=2) if(CL[j].distanceTo(p)<4 && losClear(CL[j],p)) return true;   // portal zone (first 4 m)
+ return false; }
+function nearestValid(p){ const idx=CL.map((c,i)=>i).sort((a,b)=>CL[a].distanceToSquared(p)-CL[b].distanceToSquared(p));
+ for(let k=0;k<Math.min(60,idx.length);k++){ if(inValidSpace(CL[idx[k]])) return CL[idx[k]].clone(); } return null; }
+let keepIn=true, outT=0, chkT=0, curValid=true, pull=null; const lastGood=new THREE.Vector3();
+function resetGuard(){ outT=0; chkT=0; curValid=true; pull=null; lastGood.copy(camera.position); }
+function guard(dt){
+ if(pull){ pull.t+=dt; const u=Math.min(1,pull.t/pull.dur), e=u*u*(3-2*u); camera.position.lerpVectors(pull.from,pull.to,e);
+  if(u>=1){ pull=null; outT=0; curValid=true; chkT=CHECK_DT; } return; }
+ chkT-=dt; if(chkT<=0){ chkT=CHECK_DT; curValid=inValidSpace(camera.position); if(curValid) lastGood.copy(camera.position); }
+ if(curValid||!keepIn){ outT=0; return; }
+ outT+=dt;
+ if(outT>=OUT_GRACE){ let to=lastGood.clone(); if(!inValidSpace(to)) to=nearestValid(camera.position)||(reset(),camera.position.clone());
+  pull={from:camera.position.clone(),to,t:0,dur:Math.min(1.0,0.5+0.1*to.distanceTo(camera.position))}; flash('Back inside the mine'); }
+}
 function poseAt(t){ const p=path.getPointAt(Math.min(t,1)); const q=path.getPointAt(Math.min(t+3.0/pathLen,1));
  if(t>=1){const a=path.getPointAt(0.995);q.copy(p).add(p.clone().sub(a).normalize());}
  camera.position.copy(p); lookAt(q); pitch-=0.05; }
-CALICO.poseAt=poseAt; CALICO.pathLen=pathLen; CALICO.reset=reset; CALICO.blockedHere=()=>blocked(camera.position);
+CALICO.poseAt=poseAt; CALICO.pathLen=pathLen; CALICO.reset=reset; CALICO.validHere=()=>inValidSpace(camera.position);
 CALICO.setPose=(p,l)=>{camera.position.fromArray(p);lookAt(new THREE.Vector3().fromArray(l));};
 CALICO.renderNow=()=>{update(0);renderer.render(scene,camera);};
 CALICO.toggleMesh=(on,cb)=>loadMesh(()=>{mesh.visible=on;group.visible=!on;cb&&cb();});
@@ -166,17 +209,15 @@ CALICO.setLamp=v=>{lampOn=v;};
 
 const fwd=new THREE.Vector3(), right=new THREE.Vector3(), mv=new THREE.Vector3();
 function update(dt){
- if(auto){ autoT+=dt*speed/pathLen; if(autoT>=1){autoT=1;auto=false;} poseAt(autoT); }
+ if(auto){ autoT+=dt*speed/pathLen; if(autoT>=1){autoT=1;auto=false;} poseAt(autoT); resetGuard(); }
  camera.rotation.set(pitch,yaw,0);
  if(!auto && dt>0){
   fwd.set(-Math.sin(yaw),0,-Math.cos(yaw)); right.set(Math.cos(yaw),0,-Math.sin(yaw)); mv.set(0,0,0);
   if(keys.KeyW||keys.ArrowUp)mv.add(fwd); if(keys.KeyS||keys.ArrowDown)mv.sub(fwd);
   if(keys.KeyD||keys.ArrowRight)mv.add(right); if(keys.KeyA||keys.ArrowLeft)mv.sub(right);
   if(keys.KeyE||keys.Space)mv.y+=1; if(keys.KeyQ||keys.ShiftLeft||keys.ShiftRight)mv.y-=1;
-  if(mv.lengthSq()>0){ mv.normalize().multiplyScalar(speed*dt);
-   const steps=Math.ceil(mv.length()/0.05); const s=mv.clone().divideScalar(steps);
-   for(let k=0;k<steps;k++) for(const ax of ['x','y','z']){ const old=camera.position[ax]; camera.position[ax]+=s[ax];
-     if(collide&&blocked(camera.position)) camera.position[ax]=old; } }
+  if(mv.lengthSq()>0 && !pull){ mv.normalize().multiplyScalar(speed*dt); camera.position.add(mv); }
+  guard(dt);
  }
  U.uCam.value.copy(camera.position);
  camera.updateMatrixWorld();
@@ -203,8 +244,59 @@ function loop(now){ requestAnimationFrame(loop); if(qs.has('capture')) return;
  const dt=Math.min(0.1,(now-last)/1000); last=now; fpsA=fpsA*0.95+0.05/Math.max(dt,1e-3); U.uTime.value=now/1000;
  update(dt); renderer.render(scene,camera);
  if(msgT>0)msgT-=dt;
+ navHud();
  const p=camera.position, o=M.origin_las;
- hud.textContent=`${(loadedPts/1e6).toFixed(2)} M pts   ${fpsA.toFixed(0)} fps   speed ${speed.toFixed(1)} m/s   collision ${collide?'on':'off'}   lamp ${lampOn?'on':'off'}\n`+
-  `LAS xyz  ${(p.x+o[0]).toFixed(2)}, ${(-p.z+o[1]).toFixed(2)}, ${(p.y+o[2]).toFixed(2)}`+(msgT>0?`\n${msg}`:'');}
+ hud.textContent=`${(loadedPts/1e6).toFixed(2)} M pts   ${fpsA.toFixed(0)} fps   speed ${speed.toFixed(1)} m/s   noclip, keep-inside ${keepIn?'on':'off'}   lamp ${lampOn?'on':'off'}\n`+
+  `LAS xyz  ${(p.x+o[0]).toFixed(2)}, ${(-p.z+o[1]).toFixed(2)}, ${(p.y+o[2]).toFixed(2)}`+(keepIn&&!curValid&&!pull&&outT>0.3?`
+Outside the tunnel: pulling you back in ${Math.max(0,OUT_GRACE-outT).toFixed(1)} s`:'')+(msgT>0?`
+${msg}`:'');}
+// ---------- nav HUD: distance from the portal along the centreline + approximate compass ----------
+// Silver King Mine, Calico. The scan is in a local SLAM frame with no true north. Mike Murrey confirmed that
+// the adit runs into the hill at about N15-20°E, so we take TUNNEL_BEARING_DEG=17.5 as the true bearing of the
+// first 10 m of the centreline from the portal, and derive the north offset from it. NORTH_OFFSET_DEG is the
+// scene bearing of true north, measured clockwise from scene -Z (LAS +Y) seen from above.
+// It works out to about 280°, so true north is roughly scene -X, turned about 10° toward -Z.
+// Terrain check (USGS 3DEP 1/3" DEM around the portal): the hillside 25-60 m out faces about 232° (SW), which would put
+// the into-hill direction at about 52°. That is more than 10° from 17.5°, so we keep Mike's 17.5° and the 'approx.' label.
+const TUNNEL_BEARING_DEG=17.5, PORTAL_LAT=34.95135819429888, PORTAL_LON=-116.8630954253439;   // WGS84, portal = scene origin
+const sceneBearing=(x,z)=>(Math.atan2(x,-z)*180/Math.PI+360)%360;
+const NORTH_OFFSET_DEG=(()=>{ const a=path.getPointAt(0), b=path.getPointAt(Math.min(1,10/pathLen)); return (sceneBearing(b.x-a.x,b.z-a.z)-TUNNEL_BEARING_DEG+360)%360; })();
+function sceneToLatLon(p){ const d=Math.hypot(p.x,p.z), t=(sceneBearing(p.x,p.z)-NORTH_OFFSET_DEG)*Math.PI/180, n=d*Math.cos(t), e=d*Math.sin(t);
+ return [PORTAL_LAT+n/111320, PORTAL_LON+e/(111320*Math.cos(PORTAL_LAT*Math.PI/180))]; }
+const navEl=document.createElement('div'); navEl.id='navhud';
+navEl.innerHTML='<div class="ttl">Silver King Mine · Calico</div><canvas width="300" height="30"></canvas><div class="hd"></div><div class="dist"></div><div class="ll"></div>';
+const navCss=document.createElement('style');
+navCss.textContent='#navhud{position:fixed;left:50%;top:10px;transform:translateX(-50%);background:rgba(10,7,5,.55);padding:5px 10px 6px;border-radius:6px;pointer-events:none;z-index:5;text-align:center;font-size:12px;line-height:1.45;color:#e8d8c4}'+
+ '#navhud canvas{display:block;width:300px;height:30px}#navhud .hd{opacity:.85;font-size:11.5px}#navhud .dist{font-variant-numeric:tabular-nums;font-size:13px}#navhud .dist b{color:#f0b27a;font-weight:600}#navhud .ttl{font-weight:600;color:#f3c79a;font-size:12.5px;letter-spacing:.03em}#navhud .ll{opacity:.75;font-size:11px;font-variant-numeric:tabular-nums}'+
+ 'body.hidehelp #navhud{display:none}';
+document.head.appendChild(navCss); document.body.appendChild(navEl);
+if(qs.has('capture')&&!qs.has('hud')) navEl.style.display='none';
+const navCv=navEl.querySelector('canvas'), navCtx=navCv.getContext('2d'), navHd=navEl.querySelector('.hd'), navDist=navEl.querySelector('.dist'), navLL=navEl.querySelector('.ll');
+const CL_STEP=pathLen/(CL.length-1);
+function distAlongPath(p){ // project onto the nearest centreline segment; cumulative length from the portal (path start)
+ const i=nearestCL(p); let best=i*CL_STEP, bd=CL[i].distanceToSquared(p);
+ for(const j of [i-1,i]){ if(j<0||j+1>=CL.length) continue; const a=CL[j], ab=new THREE.Vector3().subVectors(CL[j+1],a);
+  const t=Math.max(0,Math.min(1,new THREE.Vector3().subVectors(p,a).dot(ab)/ab.lengthSq())); const q=a.clone().addScaledVector(ab,t), d=q.distanceToSquared(p);
+  if(d<=bd){bd=d;best=(j+t)*CL_STEP;} }
+ return best; }
+function headingDeg(){ const fx=-Math.sin(yaw), fz=-Math.cos(yaw); return ((Math.atan2(fx,-fz)*180/Math.PI-NORTH_OFFSET_DEG)%360+360)%360; }
+const CARD=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+let navLastH=-1, navLastD=-1;
+function drawCompass(h){ const c=navCtx, W=300, H=30, pxPerDeg=W/120; c.clearRect(0,0,W,H); c.font='600 12px system-ui,Segoe UI,Helvetica,Arial,sans-serif'; c.textAlign='center';
+ for(let a=Math.ceil((h-62)/15)*15; a<=h+62; a+=15){ const x=W/2+(a-h)*pxPerDeg, n=((a%360)+360)%360, major=n%90===0;
+  c.fillStyle=major?'#f0b27a':'rgba(232,216,196,.7)'; c.fillRect(Math.round(x),major?17:(n%45===0?19:22),1,major?11:(n%45===0?9:6));
+  if(n%45===0){ c.fillStyle=major?'#f0b27a':'rgba(232,216,196,.8)'; c.fillText(CARD[n/22.5],x,13); } }
+ const g=c.createLinearGradient(0,0,W,0); g.addColorStop(0,'rgba(10,7,5,1)'); g.addColorStop(.14,'rgba(10,7,5,0)'); g.addColorStop(.86,'rgba(10,7,5,0)'); g.addColorStop(1,'rgba(10,7,5,1)');
+ c.globalCompositeOperation='destination-out'; c.fillStyle=g; c.fillRect(0,0,W,H); c.globalCompositeOperation='source-over';
+ c.fillStyle='#fff'; c.beginPath(); c.moveTo(W/2-5,H); c.lineTo(W/2+5,H); c.lineTo(W/2,H-7); c.closePath(); c.fill(); }
+function navHud(){ const h=headingDeg(); if(Math.abs(h-navLastH)>0.2){ navLastH=h; drawCompass(h);
+  navHd.textContent=`heading ${Math.round(h)%360}° ${CARD[Math.round(h/22.5)%16]} · true north approx.`; }
+ const m=distAlongPath(camera.position); if(Math.abs(m-navLastD)>0.01){ navLastD=m;
+  navDist.innerHTML=`from entrance <b>${Math.round(m*3.28084)} ft</b> · <b>${m.toFixed(1)} m</b> · <b>${(m/1609.344).toFixed(3)} mi</b>`;
+  const ll=sceneToLatLon(camera.position);
+  navLL.textContent=`portal ${PORTAL_LAT.toFixed(5)}, ${PORTAL_LON.toFixed(5)} · you ≈ ${ll[0].toFixed(5)}, ${ll[1].toFixed(5)}`; } }
+CALICO.navHud=navHud; CALICO.distAlongPath=()=>distAlongPath(camera.position); CALICO.heading=headingDeg; CALICO.northOffset=NORTH_OFFSET_DEG; CALICO.latLon=()=>sceneToLatLon(camera.position);
+CALICO.sim={update:u=>update(u),keys,pos:()=>camera.position,setYaw:y=>{yaw=y;},setPitch:p=>{pitch=p;},path,pathLen,reset:()=>{reset();resetGuard();},
+ state:()=>pull?'pulling':(curValid?'valid':'out '+outT.toFixed(1)+'s'),setKeepIn:v=>{keepIn=v;},valid:a=>inValidSpace(new THREE.Vector3().fromArray(a)),encl:a=>enclosure(new THREE.Vector3().fromArray(a)),isWall};
 requestAnimationFrame(loop);
 })();
