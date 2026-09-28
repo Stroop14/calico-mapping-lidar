@@ -2,9 +2,9 @@
 // Walk the fly-through centreline from the portal to the far north chamber and back,
 // in 1 ft steps, for manual WASD and for P. The floor and ceiling used to judge the
 // camera are computed here from the point cloud (same 25 cm / 10 cm bins as app.js,
-// not by calling CALICO.eye.pointFloor). Fails when the eye is more than 0.30 m below
-// a 6 ft stance (eye - floor < 1.40 m) unless the roof is too low to stand under
-// (ceiling - floor < 1.85 m = 1.70 + 0.15), or when a walking-surface bin sits above the eye.
+// not by calling CALICO.eye.pointFloor). Fails when the eye is under 1.40 m above the
+// local floor (the camera sits at 1.635 m, about 2.5 inches below a 6 ft eye) unless the
+// roof is too low to stand under (ceiling - floor < 1.85 m), or when a walking-surface bin sits above the eye.
 // On a normal floor the eye may change by at most about 2 cm per 0.3 m of travel. A low
 // ceiling may duck faster. The max per-step change is printed either way.
 'use strict';
