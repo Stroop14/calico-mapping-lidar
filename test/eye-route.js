@@ -5,6 +5,8 @@
 // not by calling CALICO.eye.pointFloor). Fails when the eye is more than 0.30 m below
 // a 6 ft stance (eye - floor < 1.40 m) unless the roof is too low to stand under
 // (ceiling - floor < 1.85 m = 1.70 + 0.15), or when a walking-surface bin sits above the eye.
+// On a normal floor the eye may change by at most about 2 cm per 0.3 m of travel. A low
+// ceiling may duck faster. The max per-step change is printed either way.
 'use strict';
 const fs = require('fs');
 const http = require('http');
@@ -283,6 +285,48 @@ function judge(samples) {
   return { bad, segs, nodata, floorAbove };
 }
 
+// |Δeye| scaled to 0.30 m of travel. Normal floor must stay near 2 cm; a low roof may duck faster.
+function stepReport(samples) {
+  const groups = new Map();
+  for (const s of samples) {
+    const k = s.mode + '|' + s.dir;
+    if (!groups.has(k)) groups.set(k, []);
+    groups.get(k).push(s);
+  }
+  const bad = [];
+  const maxN = { wasd: 0, P: 0 }, maxL = { wasd: 0, P: 0 };
+  const whereN = {}, whereL = {};
+  for (const [k, arr] of groups) {
+    const mode = k.slice(0, k.indexOf('|'));
+    for (let i = 1; i < arr.length; i++) {
+      const a = arr[i - 1], b = arr[i];
+      const ds = Math.hypot(b.x - a.x, b.z - a.z);
+      if (!(ds > 0.05 && ds < 0.8)) continue;
+      const per = Math.abs(b.y - a.y) * (0.30 / ds);
+      const low = (p) => p.ceil != null && p.floor != null && (p.ceil - p.floor) < 1.85;
+      if (low(a) || low(b)) {
+        if (per > maxL[mode]) { maxL[mode] = per; whereL[mode] = b; }
+      } else {
+        if (per > maxN[mode]) { maxN[mode] = per; whereN[mode] = b; }
+        if (per > 0.025) bad.push({ mode, dir: b.dir, ft: b.ft, per, ds, y0: a.y, y1: b.y, floor: b.floor, ceil: b.ceil });
+      }
+    }
+  }
+  return { bad, maxN, maxL, whereN, whereL };
+}
+
+function printSteps(st) {
+  console.log('\nmax |Δeye| per 0.30 m of travel');
+  for (const mode of ['wasd', 'P']) {
+    const label = mode === 'wasd' ? 'WASD' : 'P   ';
+    const wn = st.whereN[mode], wl = st.whereL[mode];
+    console.log(`  ${label}  normal floor ${(st.maxN[mode] * 100).toFixed(1)} cm`
+      + (wn ? ` at ${wn.ft} ft ${wn.dir}` : '')
+      + `    low ceiling ${(st.maxL[mode] * 100).toFixed(1)} cm`
+      + (wl ? ` at ${wl.ft} ft ${wl.dir}` : ''));
+  }
+}
+
 function printSegs(segs) {
   for (const mode of ['wasd', 'P']) {
     console.log('\n' + (mode === 'wasd' ? 'WASD' : 'P') + '  eye − floor (m) per 50 ft, both directions');
@@ -328,11 +372,14 @@ async function main() {
     console.log('P samples', fly.samples.length, 'sim', fly.t.toFixed(1) + 's');
     const all = wasd.samples.concat(fly.samples);
     const { bad, segs, nodata, floorAbove } = judge(all);
+    const steps = stepReport(all);
     printSegs(segs);
-    console.log('\nnodata (no floor within 1 m):', nodata, ' floor-bins above the eye:', floorAbove, ' failures:', bad.length);
-    if (bad.length) {
+    printSteps(steps);
+    console.log('\nnodata (no floor within 1 m):', nodata, ' floor-bins above the eye:', floorAbove, ' failures:', bad.length + steps.bad.length);
+    if (bad.length || steps.bad.length) {
       console.error('first failures:');
-      for (const b of bad.slice(0, 12)) console.error(`  ${b.mode} ${b.dir} ${b.ft} ft  eye ${b.y.toFixed(2)} floor ${b.floor == null ? '?' : b.floor.toFixed(2)} ceil ${b.ceil == null ? '?' : b.ceil.toFixed(2)}  ${b.why}`);
+      for (const b of bad.slice(0, 8)) console.error(`  ${b.mode} ${b.dir} ${b.ft} ft  eye ${b.y.toFixed(2)} floor ${b.floor == null ? '?' : b.floor.toFixed(2)} ceil ${b.ceil == null ? '?' : b.ceil.toFixed(2)}  ${b.why}`);
+      for (const b of steps.bad.slice(0, 8)) console.error(`  ${b.mode} ${b.dir} ${b.ft} ft  eye change ${(b.per * 100).toFixed(1)} cm per 0.30 m (${b.y0.toFixed(3)} -> ${b.y1.toFixed(3)})`);
       fail('eye-height route check failed');
     }
     const off = all.filter(s => s.off > 1.5);
@@ -343,7 +390,9 @@ async function main() {
     const shot = await browser.send('Page.captureScreenshot', { format: 'png' }, 30000);
     fs.writeFileSync(SHOT, Buffer.from(shot.data, 'base64'));
     console.log('screenshot', SHOT, JSON.stringify(info));
-    const rep = { nodata, floorAbove, failures: 0, shot: SHOT, pose: info };
+    const rep = { nodata, floorAbove, failures: 0, shot: SHOT, pose: info,
+      stepCmPer30cm: { wasd: { normal: +(steps.maxN.wasd * 100).toFixed(2), low: +(steps.maxL.wasd * 100).toFixed(2) },
+        P: { normal: +(steps.maxN.P * 100).toFixed(2), low: +(steps.maxL.P * 100).toFixed(2) } } };
     for (const mode of ['wasd', 'P']) {
       rep[mode] = {};
       for (const [k, g] of segs[mode]) rep[mode][k] = { n: g.length, min: Math.min(...g), med: median(g), max: Math.max(...g) };

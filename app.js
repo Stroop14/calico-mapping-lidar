@@ -273,20 +273,21 @@ function guard(dt){
 // up-facing points directly under the viewer (the lowest dense 10 cm band within 0.5 m). It is never taken from a fixed
 // or zero elevation, so a rising floor lifts the eye with it. The ceiling is the underside of the dominant roof above
 // that floor, not a stray ledge: the eye ducks to ceiling - HEAD_CLEAR only when that roof is too low to stand under.
-// Steadicam: floor/ceiling samples are median-filtered over the last FLOOR_WIN metres, but a higher floor underfoot
-// or within FLOOR_AHEAD metres in the direction of travel raises the target immediately so the eye cannot stay
-// down while the floor rises. A lower ceiling ahead ducks early. The eye height then glides on a critically damped
-// spring (EYE_OMEGA), with a hard cap at the current ceiling. Voxel probes and the tunnel.js stations are only a
-// fallback where the point grid has no floor.
+// The floor profile is a moving average over FLOOR_SPAN metres of travel (about 8 ft): a gentle ramp, not a
+// foot-by-foot step. On a normal floor the commanded height, and the camera after the spring, change by at most
+// about 2 cm per 0.3 m. A low ceiling (roof under 1.85 m above the floor) may drop the eye faster, down to
+// ceiling - HEAD_CLEAR. The critically damped spring (EYE_OMEGA) still glides on top of that command.
+// Voxel probes and the tunnel.js stations are only a fallback where the point grid has no floor.
 // Space/E and Shift/Q still fly up and down: they add an offset (hOff) on top of the floor-following eye height.
 // If no floor is found (outside the rock shell), the height is held.
 // (TUN, routeProj: defined further down; only used at run time.)
 const EYE_HEIGHT=1.70, HEAD_CLEAR=0.15, PATH_EYE=1.40, EYE_MIN=0.5, FLOOR_SCAN=2.6, CEIL_SCAN=3.5;
-const EYE_OMEGA=7.0, FLOOR_WIN=0.5, FLOOR_AHEAD=1.0, LOOK_RATE=12, LOOK_RATE_AUTO=2.2, ACCEL_RATE=4.5;
+const EYE_OMEGA=7.0, FLOOR_SPAN=2.6, EYE_RATE=0.02/0.30, LOOK_RATE=12, LOOK_RATE_AUTO=2.2, ACCEL_RATE=4.5;
 const EYE_COLS=[[0,0],[0.2,0],[-0.2,0],[0,0.2],[0,-0.2]], TUN=CALICO.tunnel||null;
 const FLYP=TUN?TUN.fly.map(p=>new THREE.Vector3().fromArray(p)):[], FLYS=[0];   // route polyline + horizontal distance along it
 for(let i=1;i<FLYP.length;i++) FLYS.push(FLYS[i-1]+Math.hypot(FLYP[i].x-FLYP[i-1].x,FLYP[i].z-FLYP[i-1].z));
-let eyeY=0, eyeV=0, hOff=0, hVel=0, odo=0; const vel=new THREE.Vector3(), eyeBuf=[], lastXZ=new THREE.Vector2();
+let eyeY=0, eyeV=0, eyeCmd=null, eyePrev=0, eyeMark=null, hOff=0, hVel=0, odo=0;
+const vel=new THREE.Vector3(), eyeBuf=[], lastXZ=new THREE.Vector2();
 function med(a){ a=a.slice().sort((x,y)=>x-y); return a[a.length>>1]; }
 function floorCeil(x,z,yRef){ const F=[],C=[];
  for(const [dx,dz] of EYE_COLS){ const cx=x+dx, cz=z+dz; let f=null, free=false;
@@ -318,30 +319,59 @@ function pointFC(x,z){ const ix=Math.round(x/FCELL), iz=Math.round(z/FCELL);
 function fcAt(x,z,yRef){ return pointFC(x,z)||stationFC(x,z)||floorCeil(x,z,yRef); }
 function eyeFrom(floor,ceil){ let y=floor+EYE_HEIGHT; if(ceil!==null) y=Math.min(y,ceil-HEAD_CLEAR); return Math.max(y,floor+EYE_MIN); }
 function eyeTarget(x,z,yRef){ const fc=fcAt(x,z,yRef); return fc?eyeFrom(fc.floor,fc.ceil):null; }
-// Standing height is floor + 1.70, raised early when the floor ahead is higher, ducked when either roof is low.
-function glideTarget(x,z,yRef,ax,az){ const fc=fcAt(x,z,yRef), fa=ax==null?null:fcAt(ax,az,yRef);
- if(!fc&&!fa) return null;
- let floor=fc?fc.floor:fa.floor, ceil=fc?fc.ceil:null;
- if(fa){ if(fa.floor>floor) floor=fa.floor;
-  if(fa.ceil!==null && Math.abs(fa.floor-(fc?fc.floor:fa.floor))<0.8) ceil=ceil===null?fa.ceil:Math.min(ceil,fa.ceil); }
- return eyeFrom(floor, ceil); }
-function snapEye(){ eyeBuf.length=0; eyeV=0; hOff=0; hVel=0; vel.set(0,0,0); eyeY=camera.position.y; lastXZ.set(camera.position.x,camera.position.z); }
+// A one-foot notch in the roof is not a duck: require several samples in the travel window.
+function sustainedCeil(s){ let n=0, c=null;
+ for(const b of eyeBuf){ if(Math.abs(b.s-s)>0.55||b.c===null||b.c-b.f>=1.85) continue; n++; c=c===null?b.c:Math.min(c,b.c); }
+ return n>=3?c:null; }
+// Box average of the floor (and the roof) over the last/next half of FLOOR_SPAN. A step in the raw floor
+// becomes a ramp about 8 ft long.
+function avgNear(s){ const half=FLOOR_SPAN*0.5; let sf=0,nf=0,sc=0,nc=0;
+ for(const b of eyeBuf){ if(Math.abs(b.s-s)>half) continue; sf+=b.f; nf++; if(b.c!==null){ sc+=b.c; nc++; } }
+ if(!nf) return null; return {floor:sf/nf, ceil:nc?sc/nc:null}; }
+function feedPoints(pts, sNow){
+ for(const p of pts){ let have=false; for(const b of eyeBuf) if(Math.abs(b.s-p.s)<0.12){ have=true; break; } if(have) continue;
+  const fc=fcAt(p.x,p.z,p.y); if(fc) eyeBuf.push({s:p.s,f:fc.floor,c:fc.ceil}); }
+ eyeBuf.sort((a,b)=>a.s-b.s);
+ while(eyeBuf.length&&eyeBuf[0].s<sNow-FLOOR_SPAN) eyeBuf.shift(); }
+function spanPoints(s,x,z,dx,dz,yRef){ const half=FLOOR_SPAN*0.5, pts=[];
+ for(let d=-half;d<=half+1e-9;d+=0.28) pts.push({s:s+d,x:x+dx*d,z:z+dz*d,y:yRef}); return pts; }
+// Rate-limit the smoothed standing height. A low roof may pull the command down immediately.
+function commandEye(travelS, moved, x, z, yRef){
+ const sm=avgNear(travelS), now=fcAt(x,z,yRef);
+ if(!sm&&!now) return {cmd:eyeCmd, duck:false, now};
+ const floor=sm?sm.floor:now.floor;
+ let stand=floor+EYE_HEIGHT;
+ const lowC=sustainedCeil(travelS);
+ const here=now&&now.ceil!==null&&now.ceil-now.floor<1.85;
+ const duck=!!(here&&lowC!==null);   // only while actually under a roof that stays low, not one noisy foot
+ if(duck) stand=Math.min(stand, lowC-HEAD_CLEAR);
+ let cmd=eyeCmd===null?stand:eyeCmd;
+ const allow=EYE_RATE*Math.max(0,moved);
+ if(duck && stand<cmd) cmd=stand;   // a real low roof may pull the eye down faster than the ramp
+ else if(stand>cmd) cmd=Math.min(stand, cmd+allow);
+ else cmd=Math.max(stand, cmd-allow);
+ if(!duck && now) cmd=Math.max(cmd, now.floor+1.40);
+ if(duck && now && now.ceil!==null) cmd=Math.min(cmd, now.ceil-0.05);
+ eyeCmd=cmd; return {cmd, duck, now}; }
+function glideTo(cmd, dt, moved, duck){
+ if(cmd===null) return;
+ if(dt>0){ eyeV+=(EYE_OMEGA*EYE_OMEGA*(cmd-eyeY)-2*EYE_OMEGA*eyeV)*dt; eyeY+=eyeV*dt; }
+ else { eyeY=cmd; eyeV=0; }
+ if(!duck && moved>0){ const cap=EYE_RATE*moved+1e-4, lo=eyePrev-cap, hi=eyePrev+cap;
+  if(eyeY>hi){ eyeY=hi; eyeV=Math.min(eyeV,0); } if(eyeY<lo){ eyeY=lo; eyeV=Math.max(eyeV,0); } }
+ eyePrev=eyeY; }
+function snapEye(){ eyeBuf.length=0; eyeV=0; eyeCmd=null; eyeMark=null; hOff=0; hVel=0; vel.set(0,0,0);
+ eyeY=camera.position.y; eyePrev=eyeY; lastXZ.set(camera.position.x,camera.position.z); }
 function followEye(dt){
- const p=camera.position; odo+=lastXZ.distanceTo(new THREE.Vector2(p.x,p.z)); lastXZ.set(p.x,p.z);
- const fc=fcAt(p.x,p.z,eyeY);
- if(fc){ const b=eyeBuf[eyeBuf.length-1]; if(!b||odo-b.s>=0.05||(b.t+=dt)>0.25) eyeBuf.push({s:odo,f:fc.floor,c:fc.ceil,t:0}); }
- while(eyeBuf.length>1&&eyeBuf[0].s<odo-FLOOR_WIN) eyeBuf.shift();
- if(eyeBuf.length){
-  let f=med(eyeBuf.map(b=>b.f)), cs=eyeBuf.filter(b=>b.c!==null).map(b=>b.c); let c=cs.length?med(cs):null;
-  if(fc.floor>f) f=fc.floor;   // the floor underfoot wins over an older, lower median
-  const sp=Math.hypot(vel.x,vel.z);
-  const ah=sp>0.2?fcAt(p.x+vel.x/sp*FLOOR_AHEAD,p.z+vel.z/sp*FLOOR_AHEAD,eyeY):null;
-  if(ah&&ah.floor>f) f=ah.floor;   // start the glide up before a rising floor is under the eye
-  if(ah&&ah.ceil!==null&&Math.abs(ah.floor-fc.floor)<0.8) c=c===null?ah.ceil:Math.min(c,ah.ceil);
-  const t=eyeFrom(f,c);
-  if(dt>0){ eyeV+=(EYE_OMEGA*EYE_OMEGA*(t-eyeY)-2*EYE_OMEGA*eyeV)*dt; eyeY+=eyeV*dt; } else { eyeY=t; eyeV=0; }
-  if(fc&&fc.ceil!==null&&eyeY>fc.ceil-0.05){ eyeY=fc.ceil-0.05; eyeV=Math.min(eyeV,0); }   // never poke through the rock
- }
+ const p=camera.position, step=lastXZ.distanceTo(new THREE.Vector2(p.x,p.z));
+ odo+=step; lastXZ.set(p.x,p.z);
+ const sp=Math.hypot(vel.x,vel.z);
+ const dx=sp>0.15?vel.x/sp:-Math.sin(lookYaw), dz=sp>0.15?vel.z/sp:-Math.cos(lookYaw);
+ feedPoints(spanPoints(odo,p.x,p.z,dx,dz,eyeY), odo);
+ const moved=eyeMark===null?0:Math.max(0,odo-eyeMark); eyeMark=odo;
+ const r=commandEye(odo, moved, p.x, p.z, eyeY);
+ glideTo(r.cmd, dt, moved, r.duck);
+ if(r.now&&r.now.ceil!==null&&r.duck&&eyeY>r.now.ceil-0.05){ eyeY=r.now.ceil-0.05; eyeV=Math.min(eyeV,0); eyePrev=eyeY; }
  p.y=eyeY+hOff; }
 function poseAt(t){ const p=path.getPointAt(Math.min(t,1)); const q=path.getPointAt(Math.min(t+3.0/pathLen,1));
  if(t>=1){const a=path.getPointAt(0.995);q.copy(p).add(p.clone().sub(a).normalize());}
@@ -353,8 +383,8 @@ function easeLook(dt,rate){ if(!(dt>0)){ snapLook(); return; } const k=1-Math.ex
 
 // ---------- P fly-through: portal -> far north chamber -> back to the portal ----------
 // Uses CALICO.tunnel (data/tunnel.js, from eyeheight/tunnel.py): a smoothed centreline through the main drift and the
-// connecting passage to the northernmost chamber. Its height is the same floor + 1.70 m as walking: the up-facing points
-// directly under the camera, gliding on the steadicam spring, and ducked only when the roof is lower. The stored polyline
+// connecting passage to the northernmost chamber. Its height is the same smoothed floor + 1.70 m as walking: a moving
+// average over about 8 ft, then the steadicam spring, ducked only when the roof is too low. The stored polyline
 // was generated at TUN.eye (1.66 m) and is only a fallback where those points are missing. Speed eases
 // in and out (FLY_ACC), slows to a stop at the chamber, pauses while the view pans round, then returns.
 // Without tunnel.js it falls back to the old meta.js path (raised to eye height).
@@ -366,7 +396,8 @@ let flyD=0, flyV=0, flyDwell=0, flyBlend=1; const flyFrom=new THREE.Vector3(), f
 function nearestFlyD(p){ let best=0,bd=1e18; for(let i=0;i<=600;i++){ const q=flyAt(i/600*FLY_LEN), d=(q.x-p.x)**2+(q.z-p.z)**2+0.3*(q.y-p.y)**2; if(d<bd){bd=d;best=i/600*FLY_LEN;} } return best; }
 function startAuto(){ auto=true; if(!FLY){ autoT=nearestT(); return; }
  flyD=nearestFlyD(camera.position); if(flyD>FLY_LEN-1) flyD=2*FLY_LEN-flyD;   // at the chamber already: head back
- flyV=0; flyDwell=0; flyBlend=0; flyFrom.copy(camera.position); }
+ flyV=0; flyDwell=0; flyBlend=0; flyFrom.copy(camera.position);
+ eyeBuf.length=0; eyeMark=null; eyeV=0; }   // fresh travel window; keep the current eye height
 function stopAuto(){ auto=false; snapEye(); }
 function flyStep(dt){
  const L=FLY_LEN, out=flyD<L, stopAt=out?L:2*L;
@@ -376,17 +407,19 @@ function flyStep(dt){
  const back=flyD>L||(flyD>=L-0.02&&flyDwell>=FLY_DWELL*0.25), s=flyD>L?2*L-flyD:flyD;
  const p=flyAt(s);
  const gen=(TUN&&typeof TUN.eye==='number')?TUN.eye:EYE_HEIGHT, yRef=p.y+(EYE_HEIGHT-gen);
- const pa=flyAt(Math.max(0,Math.min(L,s+(back?-1:1)*FLOOR_AHEAD)));
- const tg=glideTarget(p.x,p.z,yRef,pa.x,pa.z);
- if(tg===null) p.y+=EYE_HEIGHT-gen;   // no floor points here: keep the centreline, shifted up to 1.70 m
- else { // glide onto floor + 1.70 (ducked only under the roof). Do not stay on the baked line if the floor has risen.
-  if(dt>0){ eyeV+=(EYE_OMEGA*EYE_OMEGA*(tg-eyeY)-2*EYE_OMEGA*eyeV)*dt; eyeY+=eyeV*dt; } else eyeY=tg;
-  p.y=eyeY; }
+ const half=FLOOR_SPAN*0.5, pts=[];
+ for(let d=-half;d<=half+1e-9;d+=0.28){ const fd=flyD+d; if(fd<0||fd>2*L) continue;
+  const along=fd>L?2*L-fd:fd, q=flyAt(along); pts.push({s:fd,x:q.x,z:q.z,y:yRef}); }
+ feedPoints(pts, flyD);
+ const moved=eyeMark===null?0:Math.max(0,flyD-eyeMark); eyeMark=flyD;
+ const r=commandEye(flyD, moved, p.x, p.z, yRef);
+ if(r.cmd===null) p.y+=EYE_HEIGHT-gen;   // no floor points here: keep the centreline, shifted up to 1.70 m
+ else { glideTo(r.cmd, dt, moved, r.duck); if(r.duck&&r.now&&r.now.ceil!==null&&eyeY>r.now.ceil-0.05){ eyeY=r.now.ceil-0.05; eyeV=Math.min(eyeV,0); eyePrev=eyeY; } p.y=eyeY; }
  let qs=back?s-3:s+3; flyQ.copy(flyAt(qs));
  if(flyQ.distanceTo(p)<0.5){ const a=flyAt(back?s+1:s-1); flyQ.copy(p).add(p.clone().sub(a).normalize()); }
  flyQ.y=p.y-0.15;
- if(flyBlend<1){ flyBlend=Math.min(1,flyBlend+dt/2.0); const e=flyBlend*flyBlend*(3-2*flyBlend); p.lerpVectors(flyFrom,p,e); }
- camera.position.copy(p); lookAt(flyQ); eyeY=p.y; hOff=0; eyeBuf.length=0; if(tg===null) eyeV=0; vel.set(0,0,0);
+ if(flyBlend<1){ flyBlend=Math.min(1,flyBlend+dt/2.0); const e=flyBlend*flyBlend*(3-2*flyBlend); const y=p.y; p.lerpVectors(flyFrom,p,e); p.y=y; }
+ camera.position.copy(p); lookAt(flyQ); eyeY=p.y; hOff=0; if(r.cmd===null){ eyeV=0; eyePrev=eyeY; } vel.set(0,0,0);
  if(flyD>=2*L-0.01){ auto=false; snapEye(); flash('Fly-through finished, back at the portal'); } }
 reset();
 
@@ -416,7 +449,7 @@ function update(dt){
   }
   // gentle acceleration / deceleration (exponential approach to the key velocity)
   const k=1-Math.exp(-dt*ACCEL_RATE); vel.x+=(mv.x-vel.x)*k; vel.z+=(mv.z-vel.z)*k; hVel+=(mv.y-hVel)*k;
-  if(pull){ vel.set(0,0,0); hVel=0; eyeY=camera.position.y; hOff=0; eyeBuf.length=0; eyeV=0; }
+  if(pull){ vel.set(0,0,0); hVel=0; eyeY=camera.position.y; eyePrev=eyeY; eyeCmd=null; eyeMark=null; hOff=0; eyeBuf.length=0; eyeV=0; }
   else { camera.position.x+=vel.x*dt; camera.position.z+=vel.z*dt; hOff+=hVel*dt; followEye(dt); }   // eye = floor + 1.70 m (+ Space/Shift offset)
   guard(dt);
  }
