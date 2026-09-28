@@ -1,12 +1,13 @@
 (function(){
 'use strict';
-const M=CALICO.meta, qs=new URLSearchParams(location.search);
+const M=CALICO.meta, qs=new URLSearchParams(location.search), LD=window.LOADER;
 const W=()=>innerWidth, Hh=()=>innerHeight;
 const renderer=new THREE.WebGLRenderer({antialias:false,preserveDrawingBuffer:qs.has('capture'),powerPreference:'high-performance'});
 renderer.setPixelRatio(Math.min(devicePixelRatio,qs.has('capture')?1:2));
 renderer.setSize(W(),Hh()); renderer.setClearColor(0x050403,1);
 document.body.appendChild(renderer.domElement);
 const scene=new THREE.Scene();
+LD.log('WebGL renderer created ('+(renderer.capabilities.isWebGL2?'WebGL 2':'WebGL 1')+').','ok');
 const camera=new THREE.PerspectiveCamera(72,W()/Hh(),0.05,400);
 camera.rotation.order='YXZ';
 
@@ -83,12 +84,11 @@ function decodeFile(fi){
   for(let i=0;i<n;i++) occ.add(okey(bmin.x+pos[3*i]/65535*ext.x,bmin.y+pos[3*i+1]/65535*ext.y,bmin.z+pos[3*i+2]/65535*ext.z));
   loadedPts+=n; });
  delete CALICO.files[fi]; loadedFiles++;
- document.querySelector('#bar div').style.width=(100*loadedFiles/M.files.length)+'%';
- document.getElementById('status').textContent=`Loading point cloud… ${(loadedPts/1e6).toFixed(2)} M points`;
+ LD.sectionAdded(fi,loadedPts);
  if(loadedFiles===M.files.length) onLoaded();
 }
-CALICO.onFile=fi=>setTimeout(()=>decodeFile(fi),0);
-M.files.forEach(f=>{const s=document.createElement('script');s.src=f;document.body.appendChild(s);});
+// data files are fetched as text by the loader in index.html (byte-accurate progress) and evaluated in order
+CALICO.onFile=fi=>decodeFile(fi);
 
 // ---------- optional mesh ----------
 let mesh=null;
@@ -108,15 +108,24 @@ function loadMesh(cb){
   g.setAttribute('nrm',new THREE.BufferAttribute(nrm,3,true)); g.setAttribute('tone',new THREE.BufferAttribute(tone,1,true));
   g.setIndex(new THREE.BufferAttribute(idx,1));
   mesh=new THREE.Mesh(g,mmat); mesh.frustumCulled=false; mesh.position.copy(bmin); mesh.scale.copy(ext); mesh.visible=false; scene.add(mesh); cb&&cb();};
- const s=document.createElement('script'); s.src=M.mesh; document.body.appendChild(s);
+ if(meshLoading) return; meshLoading=true;
+ const tot=LD.SIZES[M.mesh]||18783875, t0=performance.now();
+ LD.log('Surface mesh: downloading '+LD.fmtMB(tot)+' MB…');
+ LD.fetchText(M.mesh,(n,done)=>{ msg=done?'Surface mesh downloaded — building…':`Loading surface mesh… ${Math.min(100,100*n/tot).toFixed(0)}%  (${LD.fmtMB(n)} / ${LD.fmtMB(tot)} MB)`; msgT=done?5:1e9; })
+  .then(t=>{ LD.log('Surface mesh downloaded ('+LD.fmtMB(t.length)+' MB, '+((performance.now()-t0)/1000).toFixed(1)+' s).','ok');
+   setTimeout(()=>{ LD.evalScript(t,M.mesh); LD.log('Surface mesh built ('+M.mesh_tris.toLocaleString()+' triangles).','ok'); meshLoading=false; },20); })
+  .catch(e=>{ meshLoading=false; LD.log('ERROR: surface mesh failed — '+e.message,'err'); msg='Surface mesh failed to load: '+e.message+' (press M to retry)'; msgT=6; });
 }
+let meshLoading=false;
 
 // ---------- controls ----------
 const keys={}; let yaw=0,pitch=0,speed=2.0,collide=true,lampOn=true,auto=false,autoT=0,msgT=0,msg='';
 const path=new THREE.CatmullRomCurve3(M.path.map(p=>new THREE.Vector3().fromArray(p)),false,'centripetal');
 const pathLen=path.getLength();
 function lookAt(p){const d=new THREE.Vector3().subVectors(p,camera.position);yaw=Math.atan2(-d.x,-d.z);pitch=Math.atan2(d.y,Math.hypot(d.x,d.z));}
-function reset(){camera.position.fromArray(M.start.pos); camera.position.y+=0.05; lookAt(new THREE.Vector3().fromArray(M.start.look)); pitch-=0.04;}
+// start ~6 m along the survey path: just inside the portal (past the entrance clutter), looking down the tunnel
+const START_D=6.0;
+function reset(){ const t=Math.min(START_D/pathLen,1); camera.position.copy(path.getPointAt(t)); lookAt(path.getPointAt(Math.min(t+3.0/pathLen,1))); pitch-=0.05; }
 reset();
 function flash(t){msg=t;msgT=2.5;}
 addEventListener('keydown',e=>{keys[e.code]=true;
@@ -133,10 +142,14 @@ addEventListener('keydown',e=>{keys[e.code]=true;
  if(e.code==='Space'||e.code.startsWith('Arrow'))e.preventDefault();});
 addEventListener('keyup',e=>{keys[e.code]=false;});
 addEventListener('wheel',e=>{speed=Math.min(40,Math.max(0.2,speed*(e.deltaY<0?1.12:1/1.12)));flash('Speed '+speed.toFixed(1)+' m/s');},{passive:true});
-const ov=document.getElementById('overlay');
+const ov=document.getElementById('overlay'), hint=document.getElementById('hint'); let entered=false, hintTimer=0;
 ov.addEventListener('click',()=>{ if(ov.dataset.ready) renderer.domElement.requestPointerLock(); });
-renderer.domElement.addEventListener('click',()=>renderer.domElement.requestPointerLock());
-document.addEventListener('pointerlockchange',()=>{const L=document.pointerLockElement===renderer.domElement; ov.style.display=L||!ov.dataset.ready?(L?'none':'flex'):'flex'; if(!L&&ov.dataset.ready){document.getElementById('status').textContent='Paused — click to continue';}});
+renderer.domElement.addEventListener('click',()=>{ if(ov.dataset.ready) renderer.domElement.requestPointerLock(); });
+function showHint(html,ms){ hint.innerHTML=html; hint.classList.add('show'); clearTimeout(hintTimer); hintTimer=setTimeout(()=>hint.classList.remove('show'),ms); }
+document.addEventListener('pointerlockchange',()=>{const L=document.pointerLockElement===renderer.domElement;
+ if(L){ ov.style.display='none';
+  if(!entered){ entered=true; showHint("You're just inside the mine portal, facing into the tunnel.<br><b>W</b> to walk forward · mouse to look · <b>P</b> for an automatic fly-through",6000); } }
+ else if(ov.dataset.ready){ ov.style.display='flex'; document.querySelector('#enter .big').textContent='▶ Paused — click to continue'; LD.status('Paused. Click anywhere to continue.'); hint.classList.remove('show'); }});
 addEventListener('mousemove',e=>{ if(document.pointerLockElement!==renderer.domElement) return;
  yaw-=e.movementX*0.0022; pitch=Math.max(-1.5,Math.min(1.5,pitch-e.movementY*0.0022)); });
 function blocked(p){ const R=0.22; for(let dx=-R;dx<=R+1e-6;dx+=0.1)for(let dy=-R;dy<=R+1e-6;dy+=0.1)for(let dz=-R;dz<=R+1e-6;dz+=0.1){
@@ -145,7 +158,7 @@ function nearestT(){let best=0,bd=1e9;for(let i=0;i<=400;i++){const d=path.getPo
 function poseAt(t){ const p=path.getPointAt(Math.min(t,1)); const q=path.getPointAt(Math.min(t+3.0/pathLen,1));
  if(t>=1){const a=path.getPointAt(0.995);q.copy(p).add(p.clone().sub(a).normalize());}
  camera.position.copy(p); lookAt(q); pitch-=0.05; }
-CALICO.poseAt=poseAt; CALICO.pathLen=pathLen;
+CALICO.poseAt=poseAt; CALICO.pathLen=pathLen; CALICO.reset=reset; CALICO.blockedHere=()=>blocked(camera.position);
 CALICO.setPose=(p,l)=>{camera.position.fromArray(p);lookAt(new THREE.Vector3().fromArray(l));};
 CALICO.renderNow=()=>{update(0);renderer.render(scene,camera);};
 CALICO.toggleMesh=(on,cb)=>loadMesh(()=>{mesh.visible=on;group.visible=!on;cb&&cb();});
@@ -176,7 +189,11 @@ function update(dt){
  for(const o of chunkObjs) o.visible=o.userData.c.distanceTo(camera.position)-o.userData.r<fd;
 }
 function onLoaded(){
- ov.dataset.ready=1; document.getElementById('status').textContent=`${(loadedPts/1e6).toFixed(2)} M points loaded — click to enter`;
+ LD.done(); update(0); renderer.render(scene,camera);
+ LD.log(`Headlamp on, scene ready — ${(loadedPts/1e6).toFixed(2)} M points, first frame rendered just inside the portal.`,'ok');
+ LD.log('Ready — click to enter.','ok');
+ LD.status(`All ${M.files.length} tunnel sections loaded (${(loadedPts/1e6).toFixed(2)} M points). Click anywhere to enter.`);
+ ov.dataset.ready=1; ov.classList.add('ready');
  CALICO.ready=true; if(qs.has('capture')){ov.style.display='none';document.getElementById('help').style.display='none';document.getElementById('hud').style.display='none';}
 }
 addEventListener('resize',()=>{camera.aspect=W()/Hh();camera.updateProjectionMatrix();renderer.setSize(W(),Hh());U.uScreen.value=Hh()*renderer.getPixelRatio();});
