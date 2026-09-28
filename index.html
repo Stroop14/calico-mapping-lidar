@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<title>Calico Mine Tunnel — LiDAR Walkthrough</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+html,body{margin:0;height:100%;background:#050403;overflow:hidden;font-family:system-ui,Segoe UI,Helvetica,Arial,sans-serif;color:#e8d8c4}
+canvas{display:block}
+#hud{position:fixed;left:12px;bottom:10px;font-size:12px;line-height:1.5;background:rgba(10,7,5,.55);padding:6px 10px;border-radius:6px;pointer-events:none;white-space:pre}
+#help{position:fixed;right:12px;top:12px;font-size:12.5px;line-height:1.55;background:rgba(10,7,5,.72);padding:10px 14px;border-radius:8px;max-width:330px}
+#help b{color:#f0b27a}
+#overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;background:rgba(5,4,3,.72);cursor:pointer;text-align:center}
+#overlay h1{font-weight:600;font-size:26px;margin:0 0 8px;color:#f3c79a}
+#overlay p{margin:4px;opacity:.85}
+#bar{width:320px;height:6px;background:#2a1d14;border-radius:3px;margin-top:14px;overflow:hidden}
+#bar div{height:100%;width:0;background:#d9894e}
+body.hidehelp #help{display:none}
+</style></head>
+<body>
+<div id="overlay"><h1>Calico Mine Tunnel</h1>
+<p>GeoSLAM handheld LiDAR · CSUSB geology field class · 24 March 2019</p>
+<p id="status">Loading point cloud…</p><div id="bar"><div></div></div>
+<p style="margin-top:16px;font-size:13px">Click to enter (mouse-look). Esc to release. First load downloads ~85 MB.</p><p style="font-size:12px;opacity:.7">Colours are artistic, not true colour.</p></div>
+<div id="help"><b>Move</b> W A S D / arrow keys<br><b>Look</b> mouse (click to lock pointer)<br>
+<b>Up / Down</b> E or Space / Q or Shift<br><b>Speed</b> mouse wheel or + / −<br>
+<b>C</b> collision on/off &nbsp; <b>L</b> headlamp on/off<br><b>M</b> surface mesh (if built) &nbsp; <b>[ ]</b> point size<br>
+<b>B</b> back-face point culling on/off<br><b>P</b> auto fly-through along the tunnel<br><b>R</b> reset to portal &nbsp; <b>H</b> hide this help<br><span style="opacity:.75;font-size:11.5px">Colours are artistic/synthetic (the scans have no RGB or intensity). <a href="https://github.com/Stroop14/calico-mapping-lidar/releases/download/walkthrough-v1/calico-walkthrough.zip" style="color:#f0b27a">Offline copy + fly-through video</a> · <a href="https://github.com/Stroop14/calico-mapping-lidar" style="color:#f0b27a">Repo</a></span></div>
+<div id="hud"></div>
+<script>window.CALICO={files:{},addFile:function(i,a){CALICO.files[i]=a;if(CALICO.onFile)CALICO.onFile(i);}};</script>
+<script src="lib/three.min.js"></script>
+<script src="data/meta.js"></script>
+<script src="app.js"></script>
+</body></html>
