@@ -15,12 +15,13 @@ Source: two LAS files from github.com/Stroop14/calico-mapping-lidar, release v1.
 | W A S D / arrow keys | move |
 | E or Space / Q or Shift | up / down |
 | Mouse wheel or + / − | change speed (0.2–40 m/s, default 2 m/s) |
-| C | turn collision on/off (on by default; uses a 10 cm occupancy grid built from the points) |
+| C | keep-inside pull-back on/off (on by default). Movement is never blocked, so you can walk through walls and stray scan points. If you stay outside the mine or inside the rock for about 2 s, you are eased back to the last spot inside the tunnel. "Inside" is worked out from a 10 cm occupancy grid built from the points: only dense surfaces count as walls, so isolated noise points are ignored. |
 | L | headlamp on/off (off gives flat light) |
 | M | switch to the Poisson surface mesh and back |
 | B | turn back-face point culling on/off |
 | [ ] | point size |
 | P | auto fly-through along the tunnel centreline |
+| HUD (top centre) | Silver King Mine title, distance from the portal along the tunnel centreline (ft · m · mi), a compass strip, the portal's lat/lon (34.95117, −116.86307) and your approximate lat/lon. True north is approximate. It is set from the adit bearing of about N17.5°E (Mike Murrey's figure, N15–20°E) applied to the first 10 m of the centreline: `TUNNEL_BEARING_DEG` in app.js. H hides it. |
 | R | reset to the portal · H hides the help panel |
 
 ## What's inside
