@@ -256,9 +256,10 @@ ${msg}`:'');}
 // first 10 m of the centreline from the portal, and derive the north offset from it. NORTH_OFFSET_DEG is the
 // scene bearing of true north, measured clockwise from scene -Z (LAS +Y) seen from above.
 // It works out to about 280°, so true north is roughly scene -X, turned about 10° toward -Z.
-// Terrain check (USGS 3DEP 1/3" DEM around the portal): the hillside 25-60 m out faces about 232° (SW), which would put
-// the into-hill direction at about 52°. That is more than 10° from 17.5°, so we keep Mike's 17.5° and the 'approx.' label.
-const TUNNEL_BEARING_DEG=17.5, PORTAL_LAT=34.95135819429888, PORTAL_LON=-116.8630954253439;   // WGS84, portal = scene origin
+// Terrain check (USGS 3DEP 1/3" DEM at the corrected portal 34.951171,-116.863070): the face right at the portal
+// (8-15 m) rises toward about 25-30° at a 17-24° slope. The wider hillside (40-60 m) rises toward about 57°. The local face
+// roughly agrees with 17.5°, so we keep 17.5° and the 'approx.' label.
+const TUNNEL_BEARING_DEG=17.5, PORTAL_LAT=34.951171, PORTAL_LON=-116.863070;   // WGS84, portal = scene origin
 const sceneBearing=(x,z)=>(Math.atan2(x,-z)*180/Math.PI+360)%360;
 const NORTH_OFFSET_DEG=(()=>{ const a=path.getPointAt(0), b=path.getPointAt(Math.min(1,10/pathLen)); return (sceneBearing(b.x-a.x,b.z-a.z)-TUNNEL_BEARING_DEG+360)%360; })();
 function sceneToLatLon(p){ const d=Math.hypot(p.x,p.z), t=(sceneBearing(p.x,p.z)-NORTH_OFFSET_DEG)*Math.PI/180, n=d*Math.cos(t), e=d*Math.sin(t);
