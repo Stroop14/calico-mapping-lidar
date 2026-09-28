@@ -33,9 +33,30 @@ canvas{display:block}
 #retry{display:none;margin-top:8px;background:#b8452f;color:#fff;border:0;border-radius:6px;padding:7px 14px;font-size:14px;cursor:pointer}
 #credits{margin:8px 0 4px;text-align:center;font-size:11px;line-height:1.45;color:#f0d2b0;opacity:.82}
 #credits .place{display:block;margin-bottom:2px;font-size:12px;font-weight:600;letter-spacing:.04em;color:#f3c79a;opacity:1}
-#hint{position:fixed;left:50%;top:38%;transform:translate(-50%,-50%);background:rgba(10,7,5,.78);border:1px solid #e9a066;border-radius:10px;padding:14px 22px;font-size:17px;text-align:center;line-height:1.5;opacity:0;transition:opacity .6s;pointer-events:none;z-index:8}
+#hint{position:fixed;left:50%;top:38%;transform:translate(-50%,-50%);background:rgba(10,7,5,.78);border:1px solid #e9a066;border-radius:10px;padding:14px 22px;font-size:17px;text-align:center;line-height:1.5;opacity:0;transition:opacity .6s;pointer-events:none;z-index:8;max-width:92vw;box-sizing:border-box}
 #hint.show{opacity:1}
 body.hidehelp #help{display:none}
+body.touch{touch-action:none}
+body.touch #help{display:none!important}
+#touchui{display:none}
+body.touch #touchui{display:block}
+#stick{position:fixed;left:max(14px,env(safe-area-inset-left));bottom:max(18px,env(safe-area-inset-bottom));width:118px;height:118px;z-index:6;touch-action:none}
+#stick .pad{position:absolute;inset:0;border-radius:50%;border:2px solid #e9a066;background:rgba(10,7,5,.38);box-sizing:border-box}
+#stick .knob{position:absolute;left:50%;top:50%;width:48px;height:48px;margin:-24px 0 0 -24px;border-radius:50%;background:rgba(233,160,102,.9);box-shadow:0 0 0 2px rgba(10,7,5,.35)}
+#tbtns{position:fixed;right:max(10px,env(safe-area-inset-right));bottom:max(16px,env(safe-area-inset-bottom));z-index:6;display:flex;gap:6px;touch-action:none}
+#tbtns button{appearance:none;background:rgba(10,7,5,.62);color:#ffd2a6;border:1px solid #e9a066;border-radius:8px;padding:7px 9px;font:600 12.5px/1.2 system-ui,Segoe UI,Helvetica,Arial,sans-serif;letter-spacing:.01em}
+#tbtns button.off{opacity:.55}
+@media (max-width:700px){
+ #navhud{top:6px;padding:3px 8px 4px;max-width:94vw;font-size:11px;line-height:1.3}
+ #navhud canvas{width:168px;height:22px}
+ #navhud .ttl{font-size:11px}
+ #navhud .hd{font-size:10px}
+ #navhud .dist{font-size:12px}
+ #navhud .ll{display:none}
+ #hud{left:8px;top:76px;bottom:auto;max-width:46vw;font-size:10px;line-height:1.3;white-space:pre-wrap;padding:3px 6px}
+ #tunpanel{right:8px;bottom:54px;max-width:min(200px,48vw);font-size:11px;line-height:1.3;padding:4px 7px}
+ #hint{font-size:15px;padding:12px 14px}
+}
 </style></head>
 <body>
 <div id="overlay"><div id="card">
@@ -65,7 +86,7 @@ Walkthrough rendered by Mike Murrey, field camp class of 2019
 <div id="help"><b>Move</b> W A S D / arrow keys<br><b>Look</b> mouse (click to lock pointer)<br>
 <b>Up / Down</b> E or Space / Q or Shift<br><b>Speed</b> mouse wheel or + / −<br>
 <b>C</b> keep-inside pull-back on/off (you can walk through anything) &nbsp; <b>L</b> headlamp on/off<br><b>M</b> surface mesh (if built) &nbsp; <b>[ ]</b> point size<br>
-<b>B</b> back-face point culling on/off<br><b>P</b> auto fly-through along the tunnel<br><b>R</b> reset to portal &nbsp; <b>H</b> hide this help and the compass/distance overlay<br><span style="opacity:.75;font-size:11.5px">Colours are artistic/synthetic (the scans have no RGB or intensity). <a href="https://github.com/Stroop14/calico-mapping-lidar/releases/download/walkthrough-v1/calico-walkthrough.zip" style="color:#f0b27a">Offline copy + fly-through video</a> · <a href="https://github.com/Stroop14/calico-mapping-lidar" style="color:#f0b27a">Repo</a></span></div>
+<b>B</b> back-face point culling on/off<br><b>P</b> auto fly-through (to the far north chamber and back)<br><b>R</b> reset to portal &nbsp; <b>H</b> hide this help and the compass/distance overlay<br><span style="opacity:.75;font-size:11.5px">Colours are artistic/synthetic (the scans have no RGB or intensity). <a href="https://github.com/Stroop14/calico-mapping-lidar/releases/download/walkthrough-v1/calico-walkthrough.zip" style="color:#f0b27a">Offline copy + fly-through video</a> · <a href="https://github.com/Stroop14/calico-mapping-lidar" style="color:#f0b27a">Repo</a></span></div>
 <div id="hud"></div>
 <script>
 // ---------- byte-accurate loader with live event log ----------
@@ -138,9 +159,12 @@ var appReady=new Promise(function(resolve,reject){
   evalScript(t[1],'meta.js');
   var M=CALICO.meta;L.filePts=M.files.map(function(_,fi){return M.chunks.reduce(function(a,c){return a+(c.f===fi?c.n:0);},0);});
   log('Scan index loaded: '+(M.count/1e6).toFixed(2)+' M points in '+M.chunks.length+' blocks.','ok');
-  var s=document.createElement('script');s.src='app.js';
+  var tj=document.createElement('script');tj.src='data/tunnel.js';   // tunnel callouts + fly-through path (optional)
+  tj.onerror=function(){log('Tunnel callouts (data/tunnel.js) not available — continuing without them.');};
+  var go=function(){var s=document.createElement('script');s.src='app.js';
   s.onload=function(){resolve();};s.onerror=function(){reject(new Error('app.js could not be loaded'));};
-  document.body.appendChild(s);
+  document.body.appendChild(s);};
+  tj.addEventListener('load',go);tj.addEventListener('error',go);document.body.appendChild(tj);
  }).catch(reject);});
 appReady.catch(function(e){fail('viewer engine',e);});
 
