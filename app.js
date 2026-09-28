@@ -130,11 +130,11 @@ function reset(){ const t=Math.min(START_D/pathLen,1); poseAt(t); }
 function flash(t){msg=t;msgT=2.5;}
 addEventListener('keydown',e=>{keys[e.code]=true;
  if(e.code==='KeyC'){keepIn=!keepIn;outT=0;flash('Keep-inside pull-back '+(keepIn?'ON':'OFF (free flight)'));}
- if(e.code==='KeyL'){lampOn=!lampOn;flash('Headlamp '+(lampOn?'ON':'OFF (flat light)'));}
- if(e.code==="KeyR"){reset();auto=false;resetGuard();snapLook();}
+ if(e.code==='KeyL'){lampOn=!lampOn;flash('Headlamp '+(lampOn?'ON':'OFF (flat light)')); if(CALICO.syncTouchBtns) CALICO.syncTouchBtns();}
+ if(e.code==="KeyR"){reset();auto=false;resetGuard();snapLook(); if(CALICO.syncTouchBtns) CALICO.syncTouchBtns();}
  if(e.code==='KeyB'){U.uCull.value=1-U.uCull.value;flash('Back-face point culling '+(U.uCull.value?'ON':'OFF'));}
  if(e.code==='KeyH'){document.body.classList.toggle('hidehelp');}
- if(e.code==='KeyP'){ if(auto) stopAuto(); else startAuto(); flash(auto?(FLY?'Auto fly-through to the far north chamber and back (P to stop)':'Auto fly-through (P to stop)'):'Manual'); }
+ if(e.code==='KeyP'){ if(auto) stopAuto(); else startAuto(); flash(auto?(FLY?'Auto fly-through to the far north chamber and back (P to stop)':'Auto fly-through (P to stop)'):'Manual'); if(CALICO.syncTouchBtns) CALICO.syncTouchBtns(); }
  if(e.code==='KeyM'){loadMesh(()=>{mesh.visible=!mesh.visible;group.visible=!mesh.visible;flash(mesh.visible?'Surface mesh':'Points');});}
  if(e.code==='BracketRight')U.uSize.value*=1.15; if(e.code==='BracketLeft')U.uSize.value/=1.15;
  if(e.code==='Equal'||e.code==='NumpadAdd'){speed=Math.min(speed*1.25,40);flash('Speed '+speed.toFixed(1)+' m/s');}
@@ -143,8 +143,8 @@ addEventListener('keydown',e=>{keys[e.code]=true;
 addEventListener('keyup',e=>{keys[e.code]=false;});
 addEventListener('wheel',e=>{speed=Math.min(40,Math.max(0.2,speed*(e.deltaY<0?1.12:1/1.12)));flash('Speed '+speed.toFixed(1)+' m/s');},{passive:true});
 const ov=document.getElementById('overlay'), hint=document.getElementById('hint'); let entered=false, hintTimer=0;
-ov.addEventListener('click',()=>{ if(ov.dataset.ready) renderer.domElement.requestPointerLock(); });
-renderer.domElement.addEventListener('click',()=>{ if(ov.dataset.ready) renderer.domElement.requestPointerLock(); });
+ov.addEventListener('click',()=>{ if(!ov.dataset.ready) return; if(TOUCH) enterTouch(); else renderer.domElement.requestPointerLock(); });
+renderer.domElement.addEventListener('click',()=>{ if(TOUCH||!ov.dataset.ready) return; renderer.domElement.requestPointerLock(); });
 function showHint(html,ms){ hint.innerHTML=html; hint.classList.add('show'); clearTimeout(hintTimer); hintTimer=setTimeout(()=>hint.classList.remove('show'),ms); }
 document.addEventListener('pointerlockchange',()=>{const L=document.pointerLockElement===renderer.domElement;
  if(L){ ov.style.display='none';
@@ -152,6 +152,66 @@ document.addEventListener('pointerlockchange',()=>{const L=document.pointerLockE
  else if(ov.dataset.ready){ ov.style.display='flex'; document.querySelector('#enter .big').textContent='▶ Paused — click to continue'; LD.status('Paused. Click anywhere to continue.'); hint.classList.remove('show'); }});
 addEventListener('mousemove',e=>{ if(document.pointerLockElement!==renderer.domElement) return;
  yaw-=e.movementX*0.0022; pitch=Math.max(-1.5,Math.min(1.5,pitch-e.movementY*0.0022)); });
+// ---------- touch: virtual joystick + drag look (no pointer lock) ----------
+// Phones never get a locked pointer. A coarse pointer or a real touch surface turns on on-screen controls.
+// The left thumb drives a joystick (forward/back/strafe). One finger on the right half of the screen looks around.
+// Walking still goes through the same update() path, so the eye stays floor + EYE_HEIGHT with the steadicam spring.
+const TOUCH=matchMedia('(pointer: coarse)').matches||('ontouchstart' in window);
+let stickX=0, stickY=0;   // -1..1, x = strafe right, y = forward
+function enterTouch(){
+ ov.style.display='none';
+ if(!entered){ entered=true; showHint('Left thumb: move · Drag: look · ▶ fly-through',7000); }
+}
+if(TOUCH){
+ document.body.classList.add('touch');
+ const big=document.querySelector('#enter .big'), ctl=document.querySelector('#enter .ctl');
+ if(big) big.textContent='▶ Tap to enter';
+ if(ctl) ctl.textContent='Left thumb: move · Drag: look · ▶ fly-through';
+ const ui=document.createElement('div'); ui.id='touchui';
+ ui.innerHTML='<div id="stick"><div class="pad"><div class="knob"></div></div></div>'+
+  '<div id="tbtns"><button type="button" id="tFly">▶ Fly-through</button><button type="button" id="tReset">Reset</button><button type="button" id="tLamp">Lamp</button></div>';
+ document.body.appendChild(ui);
+ const stick=ui.querySelector('#stick'), knob=ui.querySelector('.knob'), flyBtn=ui.querySelector('#tFly'), lampBtn=ui.querySelector('#tLamp');
+ const STICK_R=36;
+ let stickTid=null;
+ const setKnob=(x,y)=>{ knob.style.transform=`translate(${x.toFixed(1)}px,${y.toFixed(1)}px)`; };
+ function applyStick(t){
+  const b=stick.getBoundingClientRect(), cx=b.left+b.width/2, cy=b.top+b.height/2;
+  let dx=t.clientX-cx, dy=t.clientY-cy; const d=Math.hypot(dx,dy)||1, m=Math.min(STICK_R,d);
+  const nx=dx/d*m, ny=dy/d*m; setKnob(nx,ny); stickX=nx/STICK_R; stickY=-ny/STICK_R;
+ }
+ function endStick(id){ if(id!==stickTid) return; stickTid=null; stickX=0; stickY=0; setKnob(0,0); }
+ stick.addEventListener('touchstart',e=>{ if(!entered) return; e.preventDefault(); const t=e.changedTouches[0]; stickTid=t.identifier; applyStick(t); },{passive:false});
+ stick.addEventListener('touchmove',e=>{ for(const t of e.changedTouches) if(t.identifier===stickTid){ e.preventDefault(); applyStick(t); } },{passive:false});
+ stick.addEventListener('touchend',e=>{ for(const t of e.changedTouches) endStick(t.identifier); },{passive:true});
+ stick.addEventListener('touchcancel',e=>{ for(const t of e.changedTouches) endStick(t.identifier); },{passive:true});
+ let lookTid=null, lookX=0, lookY=0;
+ const onLookStart=e=>{
+  if(!entered) return;
+  for(const t of e.changedTouches){
+   if(lookTid!==null||t.clientX<innerWidth*0.5) continue;   // right half only; the joystick owns the left thumb
+   lookTid=t.identifier; lookX=t.clientX; lookY=t.clientY; e.preventDefault();
+  }
+ };
+ const onLookMove=e=>{
+  if(lookTid===null) return;
+  for(const t of e.changedTouches) if(t.identifier===lookTid){
+   yaw-=(t.clientX-lookX)*0.005; pitch=Math.max(-1.2,Math.min(1.2,pitch-(t.clientY-lookY)*0.005));
+   lookX=t.clientX; lookY=t.clientY; e.preventDefault();
+  }
+ };
+ const onLookEnd=e=>{ for(const t of e.changedTouches) if(t.identifier===lookTid) lookTid=null; };
+ renderer.domElement.addEventListener('touchstart',onLookStart,{passive:false});
+ renderer.domElement.addEventListener('touchmove',onLookMove,{passive:false});
+ renderer.domElement.addEventListener('touchend',onLookEnd,{passive:true});
+ renderer.domElement.addEventListener('touchcancel',onLookEnd,{passive:true});
+ function syncTouchBtns(){ flyBtn.textContent=auto?'■ Stop':'▶ Fly-through'; lampBtn.classList.toggle('off',!lampOn); }
+ flyBtn.addEventListener('click',()=>{ if(auto) stopAuto(); else startAuto();
+  flash(auto?(FLY?'Auto fly-through to the far north chamber and back':'Auto fly-through'):'Manual'); syncTouchBtns(); });
+ ui.querySelector('#tReset').addEventListener('click',()=>{ reset(); auto=false; resetGuard(); snapLook(); syncTouchBtns(); });
+ lampBtn.addEventListener('click',()=>{ lampOn=!lampOn; flash('Headlamp '+(lampOn?'ON':'OFF (flat light)')); syncTouchBtns(); });
+ CALICO.syncTouchBtns=syncTouchBtns;
+}
 function nearestT(){let best=0,bd=1e9;for(let i=0;i<=400;i++){const d=path.getPointAt(i/400).distanceTo(camera.position);if(d<bd){bd=d;best=i/400;}}return best;}
 // ---------- soft noclip ----------
 // Movement is never hard-blocked. Before this change, a few stray LiDAR noise points stopped the player dead.
@@ -292,6 +352,7 @@ reset();
 CALICO.poseAt=t=>{poseAt(t);}; CALICO.pathLen=pathLen; CALICO.reset=reset; CALICO.validHere=()=>inValidSpace(camera.position);
 CALICO.setPose=(p,l)=>{camera.position.fromArray(p);lookAt(new THREE.Vector3().fromArray(l));snapEye();snapLook();};
 CALICO.eye={floorCeil:(x,z,y)=>floorCeil(x,z,y),target:(x,z,y)=>eyeTarget(x,z,y),state:()=>({eyeY,eyeV,hOff,flyD,flyV,auto}),EYE_HEIGHT,HEAD_CLEAR,flyLen:FLY_LEN};
+CALICO.touch={on:TOUCH,stick:()=>({x:stickX,y:stickY}),look:()=>({yaw,pitch})};
 CALICO.renderNow=()=>{update(0);renderer.render(scene,camera);};
 CALICO.toggleMesh=(on,cb)=>loadMesh(()=>{mesh.visible=on;group.visible=!on;cb&&cb();});
 CALICO.setLamp=v=>{lampOn=v;};
@@ -305,8 +366,13 @@ function update(dt){
   fwd.set(-Math.sin(lookYaw),0,-Math.cos(lookYaw)); right.set(Math.cos(lookYaw),0,-Math.sin(lookYaw)); mv.set(0,0,0);
   if(keys.KeyW||keys.ArrowUp)mv.add(fwd); if(keys.KeyS||keys.ArrowDown)mv.sub(fwd);
   if(keys.KeyD||keys.ArrowRight)mv.add(right); if(keys.KeyA||keys.ArrowLeft)mv.sub(right);
+  const sm=Math.hypot(stickX,stickY);   // joystick: same floor-following walk, scaled by how far the thumb pushes
+  if(sm>0.16){ const a=Math.min(1,(sm-0.16)/0.84); mv.addScaledVector(fwd,stickY/sm*a); mv.addScaledVector(right,stickX/sm*a); }
   if(keys.KeyE||keys.Space)mv.y+=1; if(keys.KeyQ||keys.ShiftLeft||keys.ShiftRight)mv.y-=1;
-  if(mv.lengthSq()>0) mv.normalize().multiplyScalar(speed);
+  if(mv.lengthSq()>0){
+   const keyed=keys.KeyW||keys.ArrowUp||keys.KeyS||keys.ArrowDown||keys.KeyA||keys.ArrowLeft||keys.KeyD||keys.ArrowRight||keys.KeyE||keys.Space||keys.KeyQ||keys.ShiftLeft||keys.ShiftRight;
+   mv.normalize().multiplyScalar(speed*(keyed?1:Math.min(1,sm)));
+  }
   // gentle acceleration / deceleration (exponential approach to the key velocity)
   const k=1-Math.exp(-dt*ACCEL_RATE); vel.x+=(mv.x-vel.x)*k; vel.z+=(mv.z-vel.z)*k; hVel+=(mv.y-hVel)*k;
   if(pull){ vel.set(0,0,0); hVel=0; eyeY=camera.position.y; hOff=0; eyeBuf.length=0; eyeV=0; }
@@ -327,8 +393,8 @@ function update(dt){
 function onLoaded(){
  LD.done(); if(!entered) reset(); update(0); renderer.render(scene,camera);
  LD.log(`Headlamp on, scene ready — ${(loadedPts/1e6).toFixed(2)} M points, first frame rendered just inside the portal.`,'ok');
- LD.log('Ready — click to enter.','ok');
- LD.status(`All ${M.files.length} tunnel sections loaded (${(loadedPts/1e6).toFixed(2)} M points). Click anywhere to enter.`);
+ LD.log(TOUCH?'Ready — tap to enter.':'Ready — click to enter.','ok');
+ LD.status(`All ${M.files.length} tunnel sections loaded (${(loadedPts/1e6).toFixed(2)} M points). ${TOUCH?'Tap':'Click'} anywhere to enter.`);
  ov.dataset.ready=1; ov.classList.add('ready');
  CALICO.ready=true; if(qs.has('capture')){ov.style.display='none';document.getElementById('help').style.display='none';document.getElementById('hud').style.display='none';}
 }
