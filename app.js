@@ -468,26 +468,31 @@ function routeLenM(){ return FLYS.length?FLYS[FLYS.length-1]:0; }
 function yawToward(ax,az,bx,bz){ return Math.atan2(-(bx-ax),-(bz-az)); }
 function clearRay(x,y,z,yw,max){ const fx=-Math.sin(yw), fz=-Math.cos(yw);
  for(let r=0.2;r<=max;r+=0.1) if(isWall(x+fx*r,y,z+fz*r)) return r; return max; }
-// Same idea as the fly-through: look a few metres ahead along the polyline. If that ray meets rock,
-// shorten the look-ahead until the hallway is open. In the last few metres, turn to face back into
-// the chamber instead of into the end wall.
+// Same idea as the fly-through: look ahead along the polyline. A chord through a bend can point at
+// rock, so small (then larger) yaw offsets are tried until the hallway in front is open. In the last
+// few metres a clear look back into the chamber is preferred over the end wall.
 function guideYawAt(s, eyeY){
  const L=routeLenM(); if(!(L>1)) return yaw;
  const y=eyeY!=null?eyeY:camera.position.y;
- const key=Math.round(s*5)+'|'+Math.round(y*4)+'|'+(L-s<7?1:0);
+ const key=Math.round(s*5)+'|'+Math.round(y*4);
  if(key===yawKey) return yawVal;
  const here=routeAt(Math.max(0,Math.min(L,s)));
- let bestY=yaw, bestC=-1, bestPrefer=-1;
- const consider=(q, prefer)=>{
-  if(Math.hypot(q.x-here.x,q.z-here.z)<0.35) return;
-  const yw=yawToward(here.x,here.z,q.x,q.z);
-  const c=clearRay(here.x,y,here.z,yw,8);
-  const better=c>bestC+0.4||(c>=1.6&&c>=bestC-0.4&&prefer>bestPrefer);
-  if(better){ bestC=c; bestY=yw; bestPrefer=prefer; }
- };
- if(L-s<7){ for(const back of [3,5,8,12]) consider(routeAt(Math.max(0,s-back)), back); }
- else { for(const ahead of [3.2,2.2,1.3,0.55]) consider(routeAt(Math.min(L,s+ahead)), ahead); }
- if(bestC<0) bestY=yawToward(here.x,here.z,routeAt(Math.min(L,s+0.8)).x,routeAt(Math.min(L,s+0.8)).z);
+ const tang=yawToward(here.x,here.z,routeAt(Math.min(L,s+0.8)).x,routeAt(Math.min(L,s+0.8)).z);
+ const aims=[tang];
+ for(const ahead of [2.2,3.2]){ const q=routeAt(Math.min(L,s+ahead));
+  if(Math.hypot(q.x-here.x,q.z-here.z)>0.35) aims.push(yawToward(here.x,here.z,q.x,q.z)); }
+ const near=L-s<6;
+ if(near){ for(const back of [2.5,4.5,7]){ const q=routeAt(Math.max(0,s-back));
+  if(Math.hypot(q.x-here.x,q.z-here.z)>0.35) aims.push(yawToward(here.x,here.z,q.x,q.z)); } }
+ const offs=[0,0.14,-0.14,0.28,-0.28,0.5,-0.5,0.75,-0.75,1.05,-1.05,1.25,-1.25];
+ let bestY=tang, bestS=-1e9;
+ for(const aim of aims) for(const off of offs){
+  const yw=aim+off, c=clearRay(here.x,y,here.z,yw,5);
+  let d=yw-tang; d=Math.abs(Math.atan2(Math.sin(d),Math.cos(d)));
+  const back=near&&L-s<3.5&&d>1.15&&c>=1.7?4:0;
+  const sc=(c>=1.65?12+Math.min(c,4):c)-d*1.35+back-Math.abs(off)*0.25;
+  if(sc>bestS){ bestS=sc; bestY=yw; }
+ }
  yawKey=key; yawVal=bestY; return bestY; }
 function setGuided(on){
  guided=!!on; document.body.classList.toggle('guided', guided); document.body.classList.toggle('freeview', !guided);
@@ -521,10 +526,15 @@ function guidedStep(dt){
  const k=1-Math.exp(-dt*ACCEL_RATE);
  guideV+=(along*sp-guideV)*k;
  guideS=Math.max(0,Math.min(L, guideS+guideV*dt));
- guideOff+=(nudge*GUIDE_NUDGE-guideOff)*(1-Math.exp(-dt*4));
  const c=routeAt(guideS), a=routeAt(Math.min(L, guideS+0.8));
  let tx=a.x-c.x, tz=a.z-c.z; const tl=Math.hypot(tx,tz)||1; tx/=tl; tz/=tl;
  const rx=-tz, rz=tx;   // camera-right of the route tangent
+ const ty=Math.atan2(-tx,-tz), yEye=camera.position.y;
+ const openL=clearRay(c.x,yEye,c.z,ty+Math.PI/2,1.2), openR=clearRay(c.x,yEye,c.z,ty-Math.PI/2,1.2);
+ let bias=0;
+ if(openL<0.45&&openR>openL+0.2) bias=Math.min(0.35,0.45-openL);
+ else if(openR<0.45&&openL>openR+0.2) bias=-Math.min(0.35,0.45-openR);
+ guideOff+=(nudge*GUIDE_NUDGE+bias-guideOff)*(1-Math.exp(-dt*4));
  const desX=c.x+rx*guideOff, desZ=c.z+rz*guideOff;
  const pull=1-Math.exp(-dt*3.5);
  camera.position.x+=(desX-camera.position.x)*pull;
@@ -694,7 +704,7 @@ function sceneToLatLon(p){ const d=Math.hypot(p.x,p.z), t=(sceneBearing(p.x,p.z)
  return [PORTAL_LAT+n/111320, PORTAL_LON+e/(111320*Math.cos(PORTAL_LAT*Math.PI/180))]; }
 // Top-down map, north up. Footprint is the floor bins; the route, entrance, and northwest end sit on top.
 // Open on a desktop, collapsed to a button on a phone so it stays clear of the sticks.
-let mapOpen=false, mapReady=false, mapCtx=null, mapBase=null, mapXY=null;
+let mapOpen=false, mapReady=false, mapCtx=null, mapBase=null, mapXY=null, mapDest=null;
 function neOf(x,z){ const d=Math.hypot(x,z); if(d<1e-6) return {e:0,n:0};
  const t=(sceneBearing(x,z)-NORTH_OFFSET_DEG)*Math.PI/180; return {e:d*Math.sin(t),n:d*Math.cos(t)}; }
 function drawMini(){
@@ -709,6 +719,10 @@ function drawMini(){
  mapCtx.fillStyle='rgba(255,214,170,.95)'; mapCtx.fill();
  mapCtx.beginPath(); mapCtx.arc(0,0,5,0,Math.PI*2); mapCtx.fillStyle='#fff'; mapCtx.fill();
  mapCtx.restore();
+ if(mapDest){ const xy=mapXY(mapDest.e, mapDest.n);
+  mapCtx.beginPath(); mapCtx.arc(xy[0],xy[1],8,0,Math.PI*2); mapCtx.strokeStyle='#ffd7a8'; mapCtx.lineWidth=3; mapCtx.stroke();
+  mapCtx.font='700 15px system-ui,Segoe UI,Helvetica,Arial,sans-serif'; mapCtx.fillStyle='#ffd7a8'; mapCtx.textAlign='left';
+  const ly=xy[1]<40?xy[1]+22:xy[1]-12; mapCtx.fillText('NW end', Math.min(xy[0]+12, mapCtx.canvas.width-78), ly); }
 }
 function buildMiniMap(){
  const wrap=document.createElement('div'); wrap.id='mapwrap';
@@ -739,7 +753,7 @@ function buildMiniMap(){
  const ent=mapXY(0,0);
  b.beginPath(); b.arc(ent[0],ent[1],6,0,Math.PI*2); b.fillStyle='#7dcea0'; b.fill();
  b.font='600 13px system-ui,Segoe UI,Helvetica,Arial,sans-serif'; b.fillStyle='#b7e6c8'; b.textAlign='left'; b.fillText('entrance', ent[0]+9, ent[1]+4);
- if(FLYP.length){ const end=FLYP[FLYP.length-1], ne=neOf(end.x,end.z), xy=mapXY(ne.e,ne.n);
+ if(FLYP.length){ const end=FLYP[FLYP.length-1], ne=neOf(end.x,end.z); mapDest=ne; const xy=mapXY(ne.e,ne.n);
   b.beginPath(); b.arc(xy[0],xy[1],7,0,Math.PI*2); b.strokeStyle='#f0b27a'; b.lineWidth=2.5; b.stroke();
   b.fillStyle='#f0b27a'; b.textAlign='left'; b.fillText('NW end', xy[0]+10, xy[1]+4); }
  b.fillStyle='#f3c79a'; b.font='700 14px system-ui,Segoe UI,Helvetica,Arial,sans-serif'; b.textAlign='center';
