@@ -114,7 +114,7 @@ function setQuality(high){
  flash((qualityHigh?'High':'Standard')+(shown?(' · '+(shown/1e6).toFixed(2)+' M points on screen'):''));
  if(CALICO.syncQuality) CALICO.syncQuality();
 }
-const OCC=0.1, occ=new Set(); const okey=(x,y,z)=>((Math.floor(x/OCC)+2000)*4096+(Math.floor(y/OCC)+2000))*4096+(Math.floor(z/OCC)+2000);
+const OCC=0.1, occ=new Set();
 // Up-facing / down-facing point counts, 25 cm in plan and 10 cm in height. The eye is measured from this grid
 // (lowest dense floor directly under the viewer). Keep the sizes in sync with test/eye-route.js.
 const FCELL=0.25, FY0=-4, FYN=120, fgrid=new Map();
@@ -123,6 +123,13 @@ function fbin(x,y,z,up){ const yi=Math.round((y-FY0)/0.1); if(yi<0||yi>=FYN) ret
  let h=fgrid.get(k); if(!h){ h=new Uint16Array(FYN*2); h.ix=ix; h.iz=iz; fgrid.set(k,h); }
  const i=yi+(up?0:FYN); if(h[i]<65535) h[i]++; }
 function b64(s){const bin=atob(s),n=bin.length,u=new Uint8Array(n);for(let i=0;i<n;i++)u[i]=bin.charCodeAt(i);return u;}
+// Wall voxels stay the previous 2 cm shell. The denser cloud fills air just inside that shell, and those
+// extra 10 cm cells were thick enough to count as rock and close the guided view.
+if(CALICO.wall){ const u=b64(CALICO.wall), n=u.length>>3;
+ for(let i=0;i<n;i++){ const o=i*8;
+  const lo=(u[o]+(u[o+1]<<8)+(u[o+2]<<16)+u[o+3]*16777216)>>>0;
+  const hi=u[o+4]+(u[o+5]<<8)+(u[o+6]<<16)+u[o+7]*16777216;
+  occ.add(hi*4294967296+lo); } }
 function decodeFile(fi){
  const arr=CALICO.files[fi];
  M.chunks.forEach(ch=>{ if(ch.f!==fi) return;
@@ -135,7 +142,7 @@ function decodeFile(fi){
   const src={pos,nrm,tone,n,c,r:ch.r,sphere};
   pointSrc.push(src); mountChunk(src);
   for(let i=0;i<n;i++){ const x=bmin.x+pos[3*i]/65535*ext.x, y=bmin.y+pos[3*i+1]/65535*ext.y, z=bmin.z+pos[3*i+2]/65535*ext.z;
-   occ.add(okey(x,y,z)); const ny=nrm[3*i+1]/127; if(ny>0.5||ny<-0.5) fbin(x,y,z,ny>0.5); }
+   const ny=nrm[3*i+1]/127; if(ny>0.5||ny<-0.5) fbin(x,y,z,ny>0.5); }
   loadedPts+=n; });
  delete CALICO.files[fi]; loadedFiles++;
  LD.sectionAdded(fi,loadedPts);
