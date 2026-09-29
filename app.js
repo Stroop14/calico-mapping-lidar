@@ -13,7 +13,7 @@ camera.rotation.order='YXZ';
 
 // ---------- shared uniforms / point material ----------
 const U={uCam:{value:new THREE.Vector3()},uDir:{value:new THREE.Vector3(0,0,-1)},uLamp:{value:1.0},
-  uSize:{value:0.03},uScreen:{value:Hh()},uFov:{value:1.0},uTime:{value:0},uFogDist:{value:38.0},uCull:{value:1.0}};
+  uSize:{value:0.011},uMaxPx:{value:7},uScreen:{value:Hh()},uFov:{value:1.0},uTime:{value:0},uFogDist:{value:38.0},uCull:{value:1.0}};
 const common=`
 uniform vec3 uCam; uniform vec3 uDir; uniform float uLamp; uniform float uTime; uniform float uFogDist;
 float h3(vec3 p){p=fract(p*0.3183099+0.1);p*=17.0;return fract(p.x*p.y*p.z*(p.x+p.y+p.z));}
@@ -49,15 +49,15 @@ vec3 light(vec3 wp, vec3 n, vec3 base){
  return col*fog;}
 `;
 const pmat=new THREE.ShaderMaterial({uniforms:U,vertexShader:common+`
-attribute vec3 nrm; attribute float tone; uniform float uSize; uniform float uScreen; uniform float uFov; uniform float uCull;
+attribute vec3 nrm; attribute float tone; uniform float uSize; uniform float uMaxPx; uniform float uScreen; uniform float uFov; uniform float uCull;
 varying vec3 vCol;
 void main(){ vec4 wp=modelMatrix*vec4(position,1.0); vec4 mv=viewMatrix*wp;
  float hgt=tone*2.6/0.902; if(tone>0.95) hgt=1.0;
  vec3 base=clayColor(wp.xyz,nrm,hgt,tone);
  vCol=light(wp.xyz,nrm,base);
  gl_Position=projectionMatrix*mv;
- float sz=uSize*(tone>0.985?0.6:1.0);
- gl_PointSize=clamp(sz*uScreen/(uFov*-mv.z),1.0,30.0);
+ float sz=uSize*(tone>0.985?0.65:1.0);
+ gl_PointSize=clamp(sz*uScreen/(uFov*-mv.z),1.0,uMaxPx);
  if(uCull>0.5 && tone<0.95 && dot(nrm,normalize(uCam-wp.xyz))<-0.3){gl_Position=vec4(2.0,2.0,2.0,1.0);gl_PointSize=0.0;}}`,
  fragmentShader:`varying vec3 vCol; void main(){ vec2 c=gl_PointCoord-0.5; if(dot(c,c)>0.25) discard;
  float lm=dot(vCol,vec3(0.3,0.55,0.15)); vec3 col=vCol*(1.9/(1.0+1.9*lm*0.75)); gl_FragColor=vec4(pow(col,vec3(1.0/2.2)),1.0);}`});
@@ -66,7 +66,54 @@ void main(){ vec4 wp=modelMatrix*vec4(position,1.0); vec4 mv=viewMatrix*wp;
 const bmin=new THREE.Vector3().fromArray(M.bmin), ext=new THREE.Vector3().fromArray(M.ext);
 const maxExt=Math.max(ext.x,ext.y,ext.z);
 const group=new THREE.Group(); group.position.copy(bmin); group.scale.copy(ext); scene.add(group);
-const chunkObjs=[]; let loadedFiles=0, loadedPts=0;
+const chunkObjs=[], pointSrc=[]; let loadedFiles=0, loadedPts=0;
+let qualityHigh=true, walkT=0;
+function pokeUi(){ walkT=0; document.body.classList.remove('uidim'); }
+function dprCap(){ if(qs.has('capture')&&!qs.has('dpr')) return 1; return qualityHigh?3:2; }
+function applyPixelRatio(){
+ renderer.setPixelRatio(Math.min(devicePixelRatio||1, dprCap()));
+ renderer.setSize(W(),Hh());
+ U.uScreen.value=Hh()*renderer.getPixelRatio();
+ U.uSize.value=qualityHigh?0.011:0.018;
+ U.uMaxPx.value=qualityHigh?7:12;
+}
+function keepPoint(pos,i){
+ if(qualityHigh) return true;
+ const h=(pos[3*i]*374761393 ^ pos[3*i+1]*668265263 ^ pos[3*i+2]*2146121005)>>>0;
+ return (h%5)<2;
+}
+function mountChunk(src){
+ const n=src.n; let p=src.pos, nn=src.nrm, tt=src.tone, cnt=n;
+ if(!qualityHigh){
+  let k=0; for(let i=0;i<n;i++) if(keepPoint(src.pos,i)) k++;
+  p=new Uint16Array(k*3); nn=new Int8Array(k*3); tt=new Uint8Array(k); let w=0;
+  for(let i=0;i<n;i++) if(keepPoint(src.pos,i)){
+   p[3*w]=src.pos[3*i]; p[3*w+1]=src.pos[3*i+1]; p[3*w+2]=src.pos[3*i+2];
+   nn[3*w]=src.nrm[3*i]; nn[3*w+1]=src.nrm[3*i+1]; nn[3*w+2]=src.nrm[3*i+2];
+   tt[w]=src.tone[i]; w++;
+  }
+  cnt=w;
+ }
+ const g=new THREE.BufferGeometry();
+ g.setAttribute('position',new THREE.BufferAttribute(p,3,true));
+ g.setAttribute('nrm',new THREE.BufferAttribute(nn,3,true));
+ g.setAttribute('tone',new THREE.BufferAttribute(tt,1,true));
+ g.boundingSphere=src.sphere;
+ const o=new THREE.Points(g,pmat); o.userData.c=src.c; o.userData.r=src.r; group.add(o); chunkObjs.push(o);
+ return cnt;
+}
+function rebuildPoints(){
+ for(const o of chunkObjs){ group.remove(o); o.geometry.dispose(); }
+ chunkObjs.length=0;
+ let shown=0; for(const s of pointSrc) shown+=mountChunk(s);
+ return shown;
+}
+function setQuality(high){
+ qualityHigh=!!high; applyPixelRatio();
+ const shown=pointSrc.length?rebuildPoints():0;
+ flash((qualityHigh?'High':'Standard')+(shown?(' · '+(shown/1e6).toFixed(2)+' M points on screen'):''));
+ if(CALICO.syncQuality) CALICO.syncQuality();
+}
 const OCC=0.1, occ=new Set(); const okey=(x,y,z)=>((Math.floor(x/OCC)+2000)*4096+(Math.floor(y/OCC)+2000))*4096+(Math.floor(z/OCC)+2000);
 // Up-facing / down-facing point counts, 25 cm in plan and 10 cm in height. The eye is measured from this grid
 // (lowest dense floor directly under the viewer). Keep the sizes in sync with test/eye-route.js.
@@ -80,14 +127,13 @@ function decodeFile(fi){
  const arr=CALICO.files[fi];
  M.chunks.forEach(ch=>{ if(ch.f!==fi) return;
   const u=b64(arr[ch.i]), n=ch.n;
-  const pos=new Uint16Array(u.buffer,0,n*3), nrm=new Int8Array(u.buffer,n*6,n*3), tone=new Uint8Array(u.buffer,n*9,n);
-  const g=new THREE.BufferGeometry();
-  g.setAttribute('position',new THREE.BufferAttribute(pos,3,true));
-  g.setAttribute('nrm',new THREE.BufferAttribute(nrm,3,true));
-  g.setAttribute('tone',new THREE.BufferAttribute(tone,1,true));
+  const pos=new Uint16Array(new Uint16Array(u.buffer,0,n*3));
+  const nrm=new Int8Array(new Int8Array(u.buffer,n*6,n*3));
+  const tone=new Uint8Array(new Uint8Array(u.buffer,n*9,n));
   const c=new THREE.Vector3().fromArray(ch.c);
-  g.boundingSphere=new THREE.Sphere(c.clone().sub(bmin).divide(ext),ch.r/maxExt+1e-4);
-  const o=new THREE.Points(g,pmat); o.userData.c=c; o.userData.r=ch.r; group.add(o); chunkObjs.push(o);
+  const sphere=new THREE.Sphere(c.clone().sub(bmin).divide(ext),ch.r/maxExt+1e-4);
+  const src={pos,nrm,tone,n,c,r:ch.r,sphere};
+  pointSrc.push(src); mountChunk(src);
   for(let i=0;i<n;i++){ const x=bmin.x+pos[3*i]/65535*ext.x, y=bmin.y+pos[3*i+1]/65535*ext.y, z=bmin.z+pos[3*i+2]/65535*ext.z;
    occ.add(okey(x,y,z)); const ny=nrm[3*i+1]/127; if(ny>0.5||ny<-0.5) fbin(x,y,z,ny>0.5); }
   loadedPts+=n; });
@@ -95,6 +141,7 @@ function decodeFile(fi){
  LD.sectionAdded(fi,loadedPts);
  if(loadedFiles===M.files.length) onLoaded();
 }
+CALICO.setQuality=on=>{ setQuality(on); }; CALICO.quality=()=>qualityHigh;
 // data files are fetched as text by the loader in index.html (byte-accurate progress) and evaluated in order
 CALICO.onFile=fi=>decodeFile(fi);
 
@@ -173,6 +220,8 @@ addEventListener('mousemove',e=>{ if(document.pointerLockElement!==renderer.domE
 // stick on the left and a look stick on the right (the old free roam). F or 4× quadruples walk speed.
 // Walking still goes through update(), so the eye stays floor + EYE_HEIGHT.
 const TOUCH=matchMedia('(pointer: coarse)').matches||('ontouchstart' in window);
+qualityHigh=!TOUCH;
+applyPixelRatio();
 guided=TOUCH;
 document.body.classList.toggle('guided', guided);
 document.body.classList.toggle('freeview', !guided);
@@ -189,11 +238,12 @@ if(TOUCH){
  const ui=document.createElement('div'); ui.id='touchui';
  ui.innerHTML='<div id="stick"><div class="pad"><div class="knob"></div></div></div>'+
   '<div id="lookstick"><div class="pad"><div class="knob"></div></div></div>'+
-  '<div id="tbtns"><button type="button" id="tFly">▶ Fly</button><div id="trow"><button type="button" id="tReset">Reset</button><button type="button" id="tLamp">Lamp</button></div>'+
-  '<div id="tbig"><button type="button" id="tFast">4×</button><button type="button" id="tMode">Guided<small>tap for Free View</small></button></div></div>';
+  '<div id="tbtns"><button type="button" id="tFly" title="Fly">▶</button>'+
+  '<button type="button" id="tReset" title="Reset">↺</button><button type="button" id="tLamp" title="Lamp">☀</button>'+
+  '<button type="button" id="tFast" title="Walk speed">4×</button><button type="button" id="tMode" title="Steering mode">Guided</button></div>';
  document.body.appendChild(ui);
  const flyBtn=ui.querySelector('#tFly'), lampBtn=ui.querySelector('#tLamp'), fastBtn=ui.querySelector('#tFast'), modeBtn=ui.querySelector('#tMode');
- const STICK_R=42;
+ const STICK_R=26;
  function bindStick(el, onChange){
   const knob=el.querySelector('.knob'); let tid=null;
   const setKnob=(x,y)=>{ knob.style.transform=`translate(${x.toFixed(1)}px,${y.toFixed(1)}px)`; };
@@ -231,10 +281,12 @@ if(TOUCH){
  renderer.domElement.addEventListener('touchmove',onLookMove,{passive:false});
  renderer.domElement.addEventListener('touchend',onLookEnd,{passive:true});
  renderer.domElement.addEventListener('touchcancel',onLookEnd,{passive:true});
- function syncTouchBtns(){ flyBtn.textContent=auto?'■ Stop':'▶ Fly'; lampBtn.classList.toggle('off',!lampOn);
-  fastBtn.classList.toggle('on',fastWalk); fastBtn.textContent=fastWalk?'4× ON':'4×';
+ function syncTouchBtns(){ flyBtn.textContent=auto?'■':'▶'; lampBtn.classList.toggle('off',!lampOn);
+  lampBtn.textContent=lampOn?'☀':'○';
+  fastBtn.classList.toggle('on',fastWalk); fastBtn.textContent=fastWalk?'4×':'4×';
   modeBtn.classList.toggle('on', guided); modeBtn.classList.toggle('free', !guided);
-  modeBtn.innerHTML=guided?'Guided<small>tap for Free View</small>':'Free View<small>tap for Guided</small>'; }
+  modeBtn.textContent=guided?'Guided':'Free'; }
+document.addEventListener('touchstart', pokeUi, {passive:true});
  flyBtn.addEventListener('click',()=>{ if(auto) stopAuto(); else startAuto();
   flash(auto?(FLY?'Auto fly-through to the northwest end and back':'Auto fly-through'):'Manual'); syncTouchBtns(); });
  ui.querySelector('#tReset').addEventListener('click',()=>{ reset(); auto=false; resetGuard(); snapLook(); syncTouchBtns(); });
@@ -575,6 +627,7 @@ function update(dt){
   else { camera.position.x+=vel.x*dt; camera.position.z+=vel.z*dt; hOff+=hVel*dt; followEye(dt); }   // eye = floor + 1.635 m (+ Space/Shift offset)
   guard(dt);
  }
+ if(TOUCH&&entered){ const moving=Math.hypot(vel.x,vel.z)>0.12||Math.abs(guideV)>0.12; if(moving) walkT+=dt; if(walkT>3.2) document.body.classList.add('uidim'); }
  tunnelPanel();
  U.uCam.value.copy(camera.position);
  camera.updateMatrixWorld();
@@ -714,21 +767,23 @@ function drawMini(){
  const ne=neOf(camera.position.x,camera.position.z), xy=mapXY(ne.e,ne.n);
  const fx=-Math.sin(lookYaw), fz=-Math.cos(lookYaw), Nr=NORTH_OFFSET_DEG*Math.PI/180;
  const fN=fx*Math.sin(Nr)+fz*(-Math.cos(Nr)), fE=fx*Math.cos(Nr)+fz*Math.sin(Nr);
+ const k=Math.max(0.45, W/360);
  mapCtx.save(); mapCtx.translate(xy[0],xy[1]); mapCtx.rotate(Math.atan2(fE,fN));
- mapCtx.beginPath(); mapCtx.moveTo(0,-18); mapCtx.lineTo(8,10); mapCtx.lineTo(-8,10); mapCtx.closePath();
+ mapCtx.beginPath(); mapCtx.moveTo(0,-18*k); mapCtx.lineTo(8*k,10*k); mapCtx.lineTo(-8*k,10*k); mapCtx.closePath();
  mapCtx.fillStyle='rgba(255,214,170,.95)'; mapCtx.fill();
- mapCtx.beginPath(); mapCtx.arc(0,0,5,0,Math.PI*2); mapCtx.fillStyle='#fff'; mapCtx.fill();
+ mapCtx.beginPath(); mapCtx.arc(0,0,5*k,0,Math.PI*2); mapCtx.fillStyle='#fff'; mapCtx.fill();
  mapCtx.restore();
  if(mapDest){ const xy=mapXY(mapDest.e, mapDest.n);
-  mapCtx.beginPath(); mapCtx.arc(xy[0],xy[1],8,0,Math.PI*2); mapCtx.strokeStyle='#ffd7a8'; mapCtx.lineWidth=3; mapCtx.stroke();
-  mapCtx.font='700 15px system-ui,Segoe UI,Helvetica,Arial,sans-serif'; mapCtx.fillStyle='#ffd7a8'; mapCtx.textAlign='left';
-  const ly=xy[1]<40?xy[1]+22:xy[1]-12; mapCtx.fillText('NW end', Math.min(xy[0]+12, mapCtx.canvas.width-78), ly); }
+  mapCtx.beginPath(); mapCtx.arc(xy[0],xy[1],8*k,0,Math.PI*2); mapCtx.strokeStyle='#ffd7a8'; mapCtx.lineWidth=Math.max(1.5,3*k); mapCtx.stroke();
+  mapCtx.font='700 '+Math.round(15*k)+'px system-ui,Segoe UI,Helvetica,Arial,sans-serif'; mapCtx.fillStyle='#ffd7a8'; mapCtx.textAlign='left';
+  const ly=xy[1]<40*k?xy[1]+22*k:xy[1]-12*k; mapCtx.fillText('NW', Math.min(xy[0]+12*k, mapCtx.canvas.width-28*k), ly); }
 }
 function buildMiniMap(){
  const wrap=document.createElement('div'); wrap.id='mapwrap';
- wrap.innerHTML='<button type="button" id="mapBtn">Map</button><canvas id="minimap" width="440" height="360"></canvas>';
+ wrap.innerHTML='<button type="button" id="mapBtn">Map</button><button type="button" id="qBtn">High</button><div id="qpop"><button type="button" data-q="0">Standard</button><button type="button" data-q="1">High</button></div><canvas id="minimap" width="360" height="300"></canvas>';
  document.body.appendChild(wrap);
- const btn=wrap.querySelector('#mapBtn'), cv=wrap.querySelector('#minimap'), ctx=cv.getContext('2d');
+ const btn=wrap.querySelector('#mapBtn'), qBtn=wrap.querySelector('#qBtn'), qpop=wrap.querySelector('#qpop'), cv=wrap.querySelector('#minimap'), ctx=cv.getContext('2d');
+ if(TOUCH){ cv.width=180; cv.height=148; } else { cv.width=360; cv.height=300; }
  const W=cv.width, H=cv.height, cells=[];
  let minE=0, maxE=1, minN=0, maxN=1, seen=false;
  function grow(e,n){ if(!seen){ minE=maxE=e; minN=maxN=n; seen=true; return; }
@@ -739,12 +794,12 @@ function buildMiniMap(){
  for(const p of FLYP){ const ne=neOf(p.x,p.z); grow(ne.e,ne.n); }
  const padE=Math.max(4,(maxE-minE)*0.08), padN=Math.max(4,(maxN-minN)*0.08);
  minE-=padE; maxE+=padE; minN-=padN; maxN+=padN;
- const pad=26, spanE=Math.max(8,maxE-minE), spanN=Math.max(8,maxN-minN);
+ const pad=TOUCH?12:22, spanE=Math.max(8,maxE-minE), spanN=Math.max(8,maxN-minN);
  const sc=Math.min((W-pad*2)/spanE,(H-pad*2)/spanN);
  const ox=pad+((W-pad*2)-spanE*sc)/2, oy=pad+((H-pad*2)-spanN*sc)/2;
  mapXY=(e,n)=>[ox+(e-minE)*sc, oy+(maxN-n)*sc];
  const base=document.createElement('canvas'); base.width=W; base.height=H; const b=base.getContext('2d');
- b.fillStyle='#120e0b'; b.fillRect(0,0,W,H);
+ b.fillStyle=TOUCH?'rgba(0,0,0,0.5)':'rgba(12,9,7,0.88)'; b.fillRect(0,0,W,H);
  b.fillStyle='rgba(196,154,122,.9)';
  const s=Math.max(1.6, sc*FCELL*0.95);
  for(const c of cells){ const xy=mapXY(c.e,c.n); b.fillRect(xy[0]-s*0.5, xy[1]-s*0.5, s, s); }
@@ -752,15 +807,21 @@ function buildMiniMap(){
   b.strokeStyle='#e9a066'; b.lineWidth=2.2; b.stroke(); }
  const ent=mapXY(0,0);
  b.beginPath(); b.arc(ent[0],ent[1],6,0,Math.PI*2); b.fillStyle='#7dcea0'; b.fill();
- b.font='600 13px system-ui,Segoe UI,Helvetica,Arial,sans-serif'; b.fillStyle='#b7e6c8'; b.textAlign='left'; b.fillText('entrance', ent[0]+9, ent[1]+4);
+ const lab=TOUCH?11:14;
+ b.font='600 '+lab+'px system-ui,Segoe UI,Helvetica,Arial,sans-serif'; b.fillStyle='#b7e6c8'; b.textAlign='left'; b.fillText(TOUCH?'in':'entrance', ent[0]+8, ent[1]+4);
  if(FLYP.length){ const end=FLYP[FLYP.length-1], ne=neOf(end.x,end.z); mapDest=ne; const xy=mapXY(ne.e,ne.n);
   b.beginPath(); b.arc(xy[0],xy[1],7,0,Math.PI*2); b.strokeStyle='#f0b27a'; b.lineWidth=2.5; b.stroke();
-  b.fillStyle='#f0b27a'; b.textAlign='left'; b.fillText('NW end', xy[0]+10, xy[1]+4); }
+  b.fillStyle='#f0b27a'; b.font='700 '+lab+'px system-ui,Segoe UI,Helvetica,Arial,sans-serif'; b.textAlign='left'; b.fillText(TOUCH?'NW':'NW end', xy[0]+8, xy[1]+4); }
  b.fillStyle='#f3c79a'; b.font='700 14px system-ui,Segoe UI,Helvetica,Arial,sans-serif'; b.textAlign='center';
  b.fillText('N', W/2, 16);
  mapBase=base; mapCtx=ctx; mapReady=true; mapOpen=!TOUCH;
- function sync(){ document.body.classList.toggle('mapopen', mapOpen); btn.textContent=mapOpen?'Hide map':'Map'; btn.classList.toggle('on', mapOpen); if(mapOpen) drawMini(); }
- btn.addEventListener('click',()=>{ mapOpen=!mapOpen; sync(); });
+ function sync(){ document.body.classList.toggle('mapopen', mapOpen); btn.textContent=mapOpen?'Hide':'Map'; btn.classList.toggle('on', mapOpen); if(mapOpen) drawMini(); }
+ btn.addEventListener('click',()=>{ mapOpen=!mapOpen; sync(); pokeUi(); });
+ function syncQ(){ qBtn.textContent=qualityHigh?'High':'Std'; qBtn.classList.toggle('on', qualityHigh);
+  qpop.querySelectorAll('button').forEach(b=>b.classList.toggle('on', (b.dataset.q==='1')===qualityHigh)); }
+ qBtn.addEventListener('click',()=>{ qpop.classList.toggle('open'); pokeUi(); });
+ qpop.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{ setQuality(b.dataset.q==='1'); qpop.classList.remove('open'); pokeUi(); }));
+ CALICO.syncQuality=syncQ; syncQ();
  CALICO.toggleMap=on=>{ mapOpen=on==null?!mapOpen:!!on; sync(); };
  sync();
 }

@@ -49,7 +49,7 @@ function fbin(x, y, z, up) {
 
 function binFile(fi, meta) {
   const CALICO = { addFile(i, a) { this.a = a; } };
-  const file = path.join(ROOT, `data/pts_00${fi}.js`);
+  const file = path.join(ROOT, `data/pts_${String(fi).padStart(3, '0')}.js`);
   process.stdout.write(`binning ${path.basename(file)} … `);
   vm.runInNewContext(fs.readFileSync(file, 'utf8'), { CALICO }, { filename: file });
   const bmin = meta.bmin, ext = meta.ext;
@@ -366,13 +366,13 @@ async function main() {
   const t0 = Date.now();
   const meta = loadMeta();
   loadTunnel();
-  for (let fi = 0; fi < 9; fi++) binFile(fi, meta);
+  for (let fi = 0; fi < meta.files.length; fi++) binFile(fi, meta);
   console.log('floor cells', fgrid.size.toLocaleString(), 'in', ((Date.now() - t0) / 1000).toFixed(1) + 's');
   const srv = await startServer();
   const browser = await cdp();
   try {
     let ready = false;
-    for (let i = 0; i < 120; i++) {
+    for (let i = 0; i < 300; i++) {
       const v = await browser.evalJs('!!(window.CALICO && CALICO.ready && CALICO.eye && CALICO.sim && CALICO.sim.routeLen>0)');
       if (v) { ready = true; break; }
       await sleep(1000);

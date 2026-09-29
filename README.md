@@ -25,7 +25,7 @@ Source: two LAS files from github.com/Stroop14/calico-mapping-lidar, release v1.
 | R | reset to the portal · H hides the help panel |
 
 ## What's inside
-* `data/pts_*.js`: 5,359,712 points (the merged cloud at a 2 cm voxel). Each chunk is 4 m and stores base64 uint16 positions, int8 normals and a uint8 "height above floor / material" byte.
+* `data/pts_*.js`: 13,657,307 points (the merged cloud at a 1.25 cm voxel, about 2.5× the earlier 2 cm cloud). Each chunk is 4 m and stores base64 uint16 positions, int8 normals and a uint8 "height above floor / material" byte. Normals and material bytes are copied from the 2 cm cloud so the floor stays oriented the same way.
 * `data/mesh.js`: Poisson surface mesh (depth 11, built from a 4 cm cloud, trimmed and decimated to about 824k triangles).
 * `data/meta.js`: chunk index, bounds, centreline path, and start pose.
 * `lib/three.min.js`: three.js r149 (MIT).
