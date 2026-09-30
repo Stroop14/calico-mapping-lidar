@@ -4,7 +4,8 @@ GeoSLAM handheld scans from a CSUSB geology field class, 24 March 2019, inside t
 Source: two LAS files from github.com/Stroop14/calico-mapping-lidar, release v1.0.0.
 
 ## Open it
-* **Easiest:** double-click `index.html`. It works over file:// because all data is loaded with classic `<script>` tags.
+* **Landing page:** `index.html` — the link to send. The walkthrough button opens `walk.html`.
+* **Walkthrough:** double-click `walk.html`. It works over file:// because all data is loaded with classic `<script>` tags.
 * **Or:** in this folder run `python3 -m http.server 8000`, then open http://localhost:8000/
 * You need a desktop browser with WebGL. The first load decodes about 5.4 M points, which takes a few seconds.
 

@@ -1,0 +1,145 @@
+{
+ "pairs": [
+  {
+   "id": "pair01",
+   "old_source": "IMG_2995.JPG",
+   "new_source": "IMG_3026.JPG",
+   "old_exif": {
+    "exif_datetime": "2019-03-25 11:13:49",
+    "lat": "34.9487833",
+    "lon": "-116.8653722"
+   },
+   "new_exif": {
+    "exif_datetime": "2019-03-25 12:34:13",
+    "lat": "34.9500611",
+    "lon": "-116.8638694"
+   },
+   "caption": "Elevated view over the Calico buildings toward the tilted rock ridge and the valley beyond. Old: black-and-white print (photographed lying on gravel, rotated 90 degrees in the original file). New: colour photo from the ghost-town overlook.",
+   "alignment_method": "Deep feature matching (LoFTR, multi-scale) on the print crop vs the modern photo, RANSAC similarity transform (uniform scale + rotation + shift, ~0.3 deg rotation); print cropped and perspective-rectified by a 4-point homography and rotated upright.",
+   "alignment_quality": "good",
+   "alignment_note": "Ridge line, rock layers and main buildings coincide in the overlay; ~65% of matched features within 8 px (1600 px wide). Slight ghosting on near-field buildings/trees (vegetation and building changes, small viewpoint offset).",
+   "files": {
+    "old": "pair01_old.jpg",
+    "new": "pair01_new.jpg",
+    "overlay": "pair01_overlay.jpg"
+   },
+   "size": [
+    1600,
+    913
+   ]
+  },
+  {
+   "id": "pair02",
+   "old_source": "IMG_2996.JPG",
+   "new_source": "IMG_3019.JPG",
+   "old_exif": {
+    "exif_datetime": "2019-03-25 11:13:56",
+    "lat": "34.9488",
+    "lon": "-116.8653722"
+   },
+   "new_exif": {
+    "exif_datetime": "2019-03-25 12:14:43",
+    "lat": "34.9505389",
+    "lon": "-116.8642278"
+   },
+   "caption": "Overlook with a dark foreground rock outcrop with a small natural opening at its top on the left, buildings below, and the wide valley and distant mountains beyond. Old: black-and-white print (rotated 90 degrees in the original file). New: colour photo from the ghost-town overlook.",
+   "alignment_method": "LoFTR multi-scale matching + RANSAC similarity transform (~4 deg rotation, ~0.8x zoom crop); print cropped and rectified by 4-point homography.",
+   "alignment_quality": "good",
+   "alignment_note": "Foreground rock outcrop, horizon and mountain ridges line up (median match error ~3 px at 1600 px wide); nearby foreground and the buildings are offset by a few pixels because the camera positions differ slightly (parallax), and the building changes are real changes.",
+   "files": {
+    "old": "pair02_old.jpg",
+    "new": "pair02_new.jpg",
+    "overlay": "pair02_overlay.jpg"
+   },
+   "size": [
+    1600,
+    1273
+   ]
+  },
+  {
+   "id": "pair03",
+   "old_source": "IMG_2997.JPG",
+   "new_source": "IMG_3036.JPG",
+   "old_exif": {
+    "exif_datetime": "2019-03-25 11:14:04",
+    "lat": "34.9488139",
+    "lon": "-116.8653861"
+   },
+   "new_exif": {
+    "exif_datetime": "2019-03-25 13:43:06",
+    "lat": "34.9493333",
+    "lon": "-116.8640833"
+   },
+   "caption": "Long low building with signs against a rocky hillside, with a wooden headframe behind it. Old: black-and-white print (rotated 90 degrees in the original file) showing the building with signs reading MAGGIE MINING Co., GLORY TUNNEL and COMMISSARY, two ore carts and a man standing at the right. New: colour photo of the Maggie Mine building with its current sign, rail track and fence.",
+   "alignment_method": "LoFTR multi-scale matching + RANSAC similarity transform (~-1.7 deg rotation, ~1.09x zoom); print cropped and rectified by 4-point homography. Note: the man in the old print is a historical figure, not a modern person.",
+   "alignment_quality": "good",
+   "alignment_note": "Roofline, headframe and hillside coincide; ~58% of matched features within 8 px. Some doubling on foreground track/fence (different camera position/height) and the different sign/paint.",
+   "files": {
+    "old": "pair03_old.jpg",
+    "new": "pair03_new.jpg",
+    "overlay": "pair03_overlay.jpg"
+   },
+   "size": [
+    1600,
+    1012
+   ]
+  },
+  {
+   "id": "pair04",
+   "old_source": "IMG_5923.JPG",
+   "new_source": "IMG_3002.JPG",
+   "old_exif": {
+    "exif_datetime": "2019-03-25 09:23:28",
+    "lat": null,
+    "lon": null
+   },
+   "new_exif": {
+    "exif_datetime": "2019-03-25 11:16:42",
+    "lat": "34.9488139",
+    "lon": "-116.8653861"
+   },
+   "caption": "Looking down a small wash between hills toward the flat valley floor and a distant flat-topped hill, with a large hillside of steeply tilted rock layers on the right. Old: black-and-white print. New: colour photo from the top of a wooden walkway, with a lamp pole and wooden walkway not present in the print.",
+   "alignment_method": "LoFTR multi-scale matching + RANSAC similarity transform (~1.3 deg rotation, ~0.59x scale of the modern frame, i.e. the modern photo is a wider view so only a central crop is used); print cropped by 4-point homography. Common area is cropped so both outputs are identical size.",
+   "alignment_quality": "good",
+   "alignment_note": "Tilted rock layers, ridge and distant hill coincide (~1200 RANSAC inliers). Median match error is ~10 px at 1600 px wide, and the near field (walkway, pole) does not exist in the print. Alternative candidates IMG_2994 and IMG_2999/3001 also match but with fewer inliers (IMG_3002 chosen for having the best inlier count).",
+   "files": {
+    "old": "pair04_old.jpg",
+    "new": "pair04_new.jpg",
+    "overlay": "pair04_overlay.jpg"
+   },
+   "size": [
+    1600,
+    930
+   ]
+  },
+  {
+   "id": "pair05",
+   "old_source": "IMG_2998.JPG",
+   "new_source": "IMG_3002.JPG",
+   "old_exif": {
+    "exif_datetime": "2019-03-25 11:14:12",
+    "lat": "34.9488056",
+    "lon": "-116.8654167"
+   },
+   "new_exif": {
+    "exif_datetime": "2019-03-25 11:16:42",
+    "lat": "34.9488139",
+    "lon": "-116.8653861"
+   },
+   "caption": "Old print of a small cluster of low buildings with vehicles parked on a flat clearing, beside a large hillside of tilted rock layers on the right, with a flat valley floor and distant mountains behind. New: colour photo of what appears to be the same hillside and valley view, with the buildings absent and a wooden walkway in the foreground.",
+   "alignment_method": "LoFTR multi-scale matching + RANSAC similarity transform (~2-4 deg rotation, ~0.35-0.38x scale, so only a cropped region of the modern photo is used); only a partial overlap (~0.53 of the print area) is common to both frames, and the print is cropped to that area. Few reliable matches (~100 inliers).",
+   "alignment_quality": "rough",
+   "alignment_note": "Only the tilted rock layers and general hill silhouette correspond; the buildings in the print are gone, foreground differs, and the modern view is from a different (higher/more distant) position, so ghosting is visible on the valley floor/horizon (median feature error ~22 px at 1600 px wide). Best of several tested candidates (IMG_2994, 2999, 3001, 3002, 3004-3008), but the match is not confident; do not rely on it without visual confirmation.",
+   "files": {
+    "old": "pair05_old.jpg",
+    "new": "pair05_new.jpg",
+    "overlay": "pair05_overlay.jpg"
+   },
+   "size": [
+    1600,
+    1106
+   ]
+  }
+ ],
+ "unmatched_or_other_old_prints": []
+}

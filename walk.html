@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<title>Calico Mine Tunnel — LiDAR Walkthrough</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+html,body{margin:0;height:100%;background:#050403;overflow:hidden;font-family:system-ui,Segoe UI,Helvetica,Arial,sans-serif;color:#e8d8c4}
+canvas{display:block}
+#hud{position:fixed;left:12px;bottom:10px;font-size:12px;line-height:1.5;background:rgba(10,7,5,.55);padding:6px 10px;border-radius:6px;pointer-events:none;white-space:pre;z-index:5}
+#help{position:fixed;right:12px;top:12px;font-size:12.5px;line-height:1.55;background:rgba(10,7,5,.72);padding:10px 14px;border-radius:8px;max-width:330px;z-index:5}
+#help b{color:#f0b27a}
+#overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(5,4,3,.80);cursor:default;z-index:10;overflow:auto}
+#overlay.ready{cursor:pointer}
+#card{width:min(720px,94vw);padding:18px 22px;box-sizing:border-box}
+#card h1{font-weight:600;font-size:28px;margin:0 0 4px;color:#f3c79a}
+.sub{margin:2px 0;opacity:.88;font-size:14px}
+.about{margin:10px 0 12px;font-size:13.5px;line-height:1.5;opacity:.9}
+#bar{width:100%;height:10px;background:#2a1d14;border-radius:5px;overflow:hidden}
+#bar div{height:100%;width:0;background:linear-gradient(90deg,#b86a35,#e9a066);transition:width .15s linear}
+#stats{display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px 14px;font-size:13px;margin:6px 0 2px;font-variant-numeric:tabular-nums}
+#pct{font-size:22px;font-weight:600;color:#f3c79a}
+#status{font-size:14px;margin:4px 0 8px;color:#f0d2b0}
+#log{height:210px;overflow-y:auto;background:rgba(0,0,0,.45);border:1px solid #3a2a1e;border-radius:6px;padding:6px 9px;font:12px/1.45 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:left}
+#log div{white-space:pre-wrap}
+#log .t{color:#8f7a66}
+#log .ok{color:#9fd49a}
+#log .err{color:#ff7b6b;font-weight:600}
+#log .info{color:#e8d8c4}
+#enter{display:none;margin:14px 0 10px;padding:14px;border:2px solid #e9a066;border-radius:10px;background:rgba(233,160,102,.10);text-align:center}
+#overlay.ready #enter{display:block}
+#enter .big{font-size:30px;font-weight:700;color:#ffd2a6;letter-spacing:.5px}
+#enter .ctl{margin-top:8px;font-size:14px;line-height:1.7}
+#enter kbd{display:inline-block;background:#2a1d14;border:1px solid #6b4a33;border-radius:4px;padding:0 6px;font:12.5px ui-monospace,Menlo,Consolas,monospace;color:#ffe3c7}
+#retry{display:none;margin-top:8px;background:#b8452f;color:#fff;border:0;border-radius:6px;padding:7px 14px;font-size:14px;cursor:pointer}
+#credits{margin:8px 0 4px;text-align:center;font-size:11px;line-height:1.45;color:#f0d2b0;opacity:.82}
+#credits .place{display:block;margin-bottom:2px;font-size:12px;font-weight:600;letter-spacing:.04em;color:#f3c79a;opacity:1}
+#hint{position:fixed;left:50%;top:38%;transform:translate(-50%,-50%);background:rgba(10,7,5,.78);border:1px solid #e9a066;border-radius:10px;padding:14px 22px;font-size:17px;text-align:center;line-height:1.5;opacity:0;transition:opacity .6s;pointer-events:none;z-index:8;max-width:92vw;box-sizing:border-box}
+#hint.show{opacity:1}
+#keyhint{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:7;pointer-events:none;opacity:0;transition:opacity .7s ease;text-align:center;color:#f4efe8}
+#keyhint.show{opacity:1}
+#keyhint .row{display:flex;justify-content:center;gap:6px}
+#keyhint .wrow{margin-bottom:6px}
+#keyhint .key{width:58px;height:42px;box-sizing:border-box;border-radius:8px;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.16);display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1}
+#keyhint .key b{font-size:15px;font-weight:750;color:#fff}
+#keyhint .key span{margin-top:3px;font-size:9px;font-weight:650;letter-spacing:.02em;color:#f4efe8;opacity:.88}
+#keyhint .mouse{margin-top:6px;font-size:11px;font-weight:650;letter-spacing:.01em;color:#f4efe8;opacity:.9}
+body.touch #keyhint{display:none!important}
+#homelink{position:fixed;z-index:8;top:8px;left:10px;padding:5px 9px;border-radius:6px;background:rgba(10,7,5,.88);border:1px solid rgba(233,160,102,.75);color:#ffd2a6;font:700 12px/1 system-ui,Segoe UI,Helvetica,Arial,sans-serif;text-decoration:none}
+#homelink:hover{background:rgba(233,160,102,.24)}
+body.touch #homelink{top:8px;left:max(8px,env(safe-area-inset-left));font-size:11px;padding:4px 7px}
+body.hidehelp #help{display:none}
+body.touch{touch-action:none}
+body.touch #help{display:none!important}
+#touchui{display:none}
+body.touch #touchui{display:block}
+#stick{position:fixed;right:max(10px,env(safe-area-inset-right));bottom:max(8px,env(safe-area-inset-bottom));width:88px;height:88px;z-index:6;touch-action:none;opacity:.82;transition:opacity .5s}
+#stick .pad{position:absolute;inset:0;border-radius:50%;border:1px solid rgba(233,160,102,.55);background:rgba(10,7,5,.22);box-sizing:border-box}
+#stick .knob{position:absolute;left:50%;top:50%;width:34px;height:34px;margin:-17px 0 0 -17px;border-radius:50%;background:rgba(233,160,102,.55);box-shadow:0 0 0 1px rgba(10,7,5,.25)}
+#lookstick{display:none;position:fixed;right:max(10px,env(safe-area-inset-right));bottom:max(8px,env(safe-area-inset-bottom));width:88px;height:88px;z-index:6;touch-action:none;opacity:.82;transition:opacity .5s}
+#lookstick .pad{position:absolute;inset:0;border-radius:50%;border:1px solid rgba(233,160,102,.55);background:rgba(10,7,5,.22);box-sizing:border-box}
+#lookstick .knob{position:absolute;left:50%;top:50%;width:34px;height:34px;margin:-17px 0 0 -17px;border-radius:50%;background:rgba(243,226,200,.5);box-shadow:0 0 0 1px rgba(10,7,5,.25)}
+body.freeview #lookstick{display:block}
+body.freeview #stick{left:max(10px,env(safe-area-inset-left));right:auto}
+#tbtns{position:fixed;left:50%;right:auto;transform:translateX(-50%);bottom:calc(88px + 8px + max(8px,env(safe-area-inset-bottom)));z-index:6;display:flex;flex-direction:row;gap:5px;align-items:center;justify-content:center;touch-action:none;max-width:calc(100vw - 16px)}
+#tbtns button{appearance:none;width:40px;height:40px;min-height:0;padding:0;background:rgba(10,7,5,.38);color:#ffd2a6;border:1px solid rgba(233,160,102,.7);border-radius:8px;font:700 12px/1 system-ui,Segoe UI,Helvetica,Arial,sans-serif;letter-spacing:0}
+#tFast{font-size:13px;font-weight:800}
+#tFast.on{background:rgba(233,160,102,.85);color:#1c1008;border-color:#ffe0bf}
+#tMode{width:auto;min-width:52px;padding:0 7px;font-size:11px;font-weight:750}
+#tMode.on{background:rgba(233,160,102,.82);color:#1c1008;border-color:#ffe0bf}
+#tMode.free{background:rgba(243,226,200,.78);color:#1c1008;border-color:#fff}
+#tbtns button.off{opacity:.5}
+#mapwrap{position:fixed;left:10px;top:54px;z-index:6;display:flex;flex-direction:row;flex-wrap:wrap;align-items:flex-start;gap:4px;pointer-events:none;max-width:220px}
+#mapBtn,#qBtn{pointer-events:auto;appearance:none;cursor:pointer;background:rgba(10,7,5,.55);color:#ffd2a6;border:1px solid rgba(233,160,102,.75);border-radius:6px;padding:5px 8px;font:700 12px/1 system-ui,Segoe UI,Helvetica,Arial,sans-serif}
+#mapBtn.on,#qBtn.on{background:rgba(233,160,102,.85);color:#1c1008;border-color:#ffe0bf}
+#minimap{display:none;width:180px;height:150px;border-radius:8px;border:1px solid rgba(233,160,102,.55);background:rgba(8,6,4,.72);box-shadow:0 4px 16px rgba(0,0,0,.28)}
+body.mapopen #minimap{display:block}
+#qpop{display:none;pointer-events:auto;flex-direction:column;gap:3px;background:rgba(10,7,5,.78);border:1px solid rgba(233,160,102,.7);border-radius:6px;padding:4px}
+#qpop.open{display:flex}
+#qpop button{appearance:none;cursor:pointer;background:transparent;color:#ffd2a6;border:0;border-radius:4px;padding:5px 8px;font:650 12px/1 system-ui,Segoe UI,Helvetica,Arial,sans-serif;text-align:left}
+#qpop button.on{background:rgba(233,160,102,.85);color:#1c1008}
+body.touch #mapwrap{left:max(8px,env(safe-area-inset-left));top:46px;max-width:120px}
+body.touch #mapBtn,body.touch #qBtn{padding:4px 6px;font-size:10px}
+body.touch #minimap{width:90px;height:74px;background:rgba(0,0,0,.45);border-color:rgba(233,160,102,.4);box-shadow:none}
+body.touch.mapopen #hud{display:none!important}
+body.uidim #stick,body.uidim #lookstick,body.uidim #tFly,body.uidim #tReset,body.uidim #tLamp,body.uidim #tFast,body.uidim #mapwrap{opacity:.16}
+body.uidim #tMode{opacity:.78}
+#stick,#lookstick,#tbtns button,#mapwrap{transition:opacity .55s}
+@media (max-width:700px){
+ #navhud{top:6px;padding:3px 8px 4px;max-width:94vw;font-size:11px;line-height:1.3}
+ #navhud canvas{width:168px;height:22px}
+ #navhud .ttl{font-size:11px}
+ #navhud .hd{font-size:10px}
+ #navhud .dist{font-size:12px}
+ #navhud .ll{display:none}
+ #hud{left:8px;top:76px;bottom:auto;max-width:46vw;font-size:10px;line-height:1.3;white-space:pre-wrap;padding:3px 6px}
+ #tunpanel{right:8px;bottom:54px;max-width:min(200px,48vw);font-size:11px;line-height:1.3;padding:4px 7px}
+ #hint{font-size:15px;padding:12px 14px}
+}
+</style></head>
+<body>
+<div id="overlay"><div id="card">
+<h1>Calico Mine Tunnel — LiDAR Walkthrough</h1>
+<p class="sub">GeoSLAM handheld LiDAR · CSUSB geology field class · 24 March 2019</p>
+<div id="credits">
+<span class="place">SILVER KING MINE · CALICO HILLS, CA</span>
+CSUSB Geology Field Camp · 24 March 2019<br>
+Led by Dr. Erik Melchiorre, CSUSB Department of Geological Sciences<br>
+Field data: Dr. Melchiorre's field camp group<br>
+Handheld GeoSLAM LiDAR · 5,359,712 points<br>
+Portal 34.95117° N, 116.86307° W<br>
+Walkthrough rendered by Mike Murrey, field camp class of 2019
+</div>
+<p class="about">A walk-through of a real 3-D laser scan of the Silver King Mine tunnel in the Calico Hills, captured with a handheld GeoSLAM scanner during the 2019 CSUSB geology field camp led by Dr. Erik Melchiorre. Field camp is the capstone of a geology education: days of nonstop fieldwork in the heat, and here, underground in clay dust. About 13.7 million measured points are streamed into your browser (~185 MB uncompressed on first visit), then you can walk the tunnel with a virtual headlamp. Colours are artistic, not true colour &mdash; the scanner recorded shape only.</p>
+<p class="sub" style="margin:0 0 12px;font-size:13px"><a href="index.html" style="color:#f0b27a">Home</a> &nbsp;·&nbsp; <a href="maps.html" style="color:#f0b27a">Maps &amp; measurements</a></p>
+<div id="enter"><div class="big">▶ Click to enter</div>
+<div class="ctl"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> move &nbsp;·&nbsp; <b>mouse</b> look &nbsp;·&nbsp; <kbd>Space</kbd> / <kbd>Shift</kbd> up / down &nbsp;·&nbsp; <kbd>F</kbd> walk 4× &nbsp;·&nbsp; <kbd>G</kbd> guided &nbsp;·&nbsp; <kbd>Esc</kbd> release the mouse<br>
+<span style="opacity:.8;font-size:13px"><kbd>P</kbd> auto fly-through · <kbd>M</kbd> surface mesh · <kbd>L</kbd> headlamp · <kbd>R</kbd> back to portal · <kbd>H</kbd> help panel</span></div></div>
+<div id="status">Starting…</div>
+<div id="bar"><div></div></div>
+<div id="stats"><span id="pct">0%</span><span id="mb">0.0 / 185.0 MB</span><span id="speed">— MB/s</span><span id="eta">time left: estimating…</span></div>
+<div id="log"></div>
+<button id="retry" onclick="location.reload()">Retry (reload page)</button>
+</div></div>
+<a id="homelink" href="index.html">Home</a>
+<div id="hint"></div>
+<div id="help"><a href="index.html" style="color:#f0b27a">Home</a><br><b>Move</b> W A S D / arrow keys<br><b>Look</b> mouse (click to lock pointer)<br>
+<b>Up / Down</b> E or Space / Q or Shift<br><b>Speed</b> mouse wheel or + / − &nbsp; <b>F</b> walk 4× faster (tap again for normal)<br>
+<b>G</b> guided steering along the tunnel (on by default on a phone; WASD stays free until you turn it on)<br>
+<b>C</b> keep-inside pull-back on/off (you can walk through anything) &nbsp; <b>L</b> headlamp on/off<br><b>M</b> surface mesh (if built) &nbsp; <b>[ ]</b> point size<br>
+<b>B</b> back-face point culling on/off<br><b>P</b> auto fly-through (to the northwest end and back)<br><b>Map</b> button (top left) shows a top-down tunnel map, north up. On a phone it starts hidden.<br>
+<b>Std / High</b> point density. High is the default on a desktop; a phone starts on Standard.<br><b>R</b> reset to portal &nbsp; <b>H</b> hide this help and the compass/distance overlay<br><span style="opacity:.75;font-size:11.5px">Colours are artistic/synthetic (the scans have no RGB or intensity). <a href="https://github.com/Stroop14/calico-mapping-lidar/releases/download/walkthrough-v1/calico-walkthrough.zip" style="color:#f0b27a">Offline copy + fly-through video</a> · <a href="https://github.com/Stroop14/calico-mapping-lidar" style="color:#f0b27a">Repo</a></span></div>
+<div id="hud"></div>
+<script>
+// ---------- byte-accurate loader with live event log ----------
+window.CALICO={files:{},addFile:function(i,a){CALICO.files[i]=a;if(CALICO.onFile)CALICO.onFile(i);}};
+(function(){
+'use strict';
+// Uncompressed sizes (what a streaming reader counts; GitHub Pages gzips on the wire, so Content-Length can't be used).
+var NPTS=14;
+function ptsName(i){var s=String(i);while(s.length<3)s='0'+s;return 'data/pts_'+s+'.js';}
+var SIZES={'lib/three.min.js':608081,'data/meta.js':2328299,
+ 'data/pts_000.js':13749372,'data/pts_001.js':12724470,'data/pts_002.js':13338945,'data/pts_003.js':13076863,
+ 'data/pts_004.js':13604857,'data/pts_005.js':13492108,'data/pts_006.js':13154035,'data/pts_007.js':13348513,
+ 'data/pts_008.js':13250570,'data/pts_009.js':12782222,'data/pts_010.js':13562270,'data/pts_011.js':13656695,
+ 'data/pts_012.js':12922386,'data/pts_013.js':9435338,
+ 'data/mesh.js':18783875};
+var PTS=[];for(var i=0;i<NPTS;i++)PTS.push(ptsName(i));
+var START=['lib/three.min.js','data/meta.js'].concat(PTS);
+var T0=performance.now(), $=function(id){return document.getElementById(id);};
+var logEl=$('log'), bar=$('bar').firstChild;
+function fmtMB(b){return (b/1e6).toFixed(1);}
+function stamp(){var d=new Date(),p=function(n){return (n<10?'0':'')+n;};
+ return p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds())+'  +'+((performance.now()-T0)/1000).toFixed(1)+'s';}
+function log(msg,cls){var d=document.createElement('div');d.className=cls||'info';
+ var t=document.createElement('span');t.className='t';t.textContent=stamp()+'  ';d.appendChild(t);d.appendChild(document.createTextNode(msg));
+ logEl.appendChild(d);logEl.scrollTop=logEl.scrollHeight;try{console.log('[load] '+msg);}catch(e){}}
+function status(s,force){if(L.errors&&!force)return;$('status').textContent=s;}
+var L=window.LOADER={log:log,status:status,fmtMB:fmtMB,SIZES:SIZES,errors:0};
+
+// --- aggregate progress (start set only) ---
+var expected={},got={};START.forEach(function(f){expected[f]=SIZES[f];got[f]=0;});
+var samples=[[performance.now(),0]],finished=false;
+function totals(){var t=0,g=0;for(var f in expected){t+=Math.max(expected[f],got[f]);g+=got[f];}return [g,t];}
+function paint(){var gt=totals(),g=gt[0],t=gt[1],pct=t?100*g/t:0;if(finished)pct=100;
+ bar.style.width=pct.toFixed(2)+'%';$('pct').textContent=(pct>=100?'100':pct.toFixed(1))+'%';
+ $('mb').textContent=fmtMB(g)+' / '+fmtMB(t)+' MB';
+ var now=performance.now();samples.push([now,g]);while(samples.length>2&&now-samples[0][0]>3000)samples.shift();
+ var s0=samples[0],dt=(now-s0[0])/1000,sp=dt>0.25?(g-s0[1])/dt:0;
+ if(L.errors){$('speed').textContent='—';$('eta').textContent='stopped (error)';}
+ else if(finished){$('speed').textContent='avg '+(g/1e6/((now-T0)/1000)).toFixed(2)+' MB/s';$('eta').textContent='download complete';}
+ else if(sp>0){$('speed').textContent=(sp/1e6).toFixed(2)+' MB/s';var r=(t-g)/sp;
+  $('eta').textContent='time left: '+(r<60?Math.ceil(r)+' s':Math.floor(r/60)+' min '+Math.round(r%60)+' s');}
+ else{$('speed').textContent='— MB/s';$('eta').textContent=g?'time left: stalled…':'time left: estimating…';}}
+var paintTimer=setInterval(paint,250);
+L.paint=paint;
+
+// --- fetch a file as text with a streaming reader, reporting bytes ---
+function fetchText(url,onBytes){
+ return fetch(url,{cache:'default'}).then(function(res){
+  if(!res.ok)throw new Error('HTTP '+res.status+' '+res.statusText);
+  if(!res.body||!res.body.getReader||!window.TextDecoder)return res.text().then(function(t){onBytes(t.length,true);return t;});
+  var rd=res.body.getReader(),dec=new TextDecoder('utf-8'),parts=[],n=0;
+  function pump(){return rd.read().then(function(r){
+   if(r.done){parts.push(dec.decode());onBytes(n,true);return parts.join('');}
+   n+=r.value.byteLength;parts.push(dec.decode(r.value,{stream:true}));onBytes(n,false);return pump();});}
+  return pump();});}
+L.fetchText=fetchText;
+var doneFiles=0;
+function fetchTracked(f){return fetchText(f,function(n,done){got[f]=n;if(done){expected[f]=n;doneFiles++;
+ if(doneFiles===START.length){finished=true;paint();var el=((performance.now()-T0)/1000).toFixed(1);setTimeout(function(){log('All data downloaded: '+fmtMB(totals()[0])+' MB in '+el+' s.','ok');},0);}}});}
+function evalScript(text,name){var s=document.createElement('script');s.text=text+'\n//# sourceURL='+name;document.head.appendChild(s);s.remove();}
+L.evalScript=evalScript;
+function fail(what,err){L.errors++;log('ERROR: '+what+' failed — '+(err&&err.message||err),'err');
+ status('Loading failed: '+what+'. Check your connection, then retry.',true);$('status').style.color='#ff7b6b';$('retry').style.display='inline-block';}
+L.fail=fail;
+
+log('Page started — loading viewer and '+PTS.length+' tunnel sections ('+fmtMB(totals()[1])+' MB).');
+status('Downloading 3-D viewer engine (three.js)…');
+
+// --- engine: three.js -> meta -> app.js ---
+var appReady=new Promise(function(resolve,reject){
+ Promise.all([fetchTracked('lib/three.min.js'),fetchTracked('data/meta.js')]).then(function(t){
+  evalScript(t[0],'three.min.js');if(!window.THREE)throw new Error('three.js did not initialise');
+  log('3-D engine (three.js r'+THREE.REVISION+') ready.','ok');
+  evalScript(t[1],'meta.js');
+  var M=CALICO.meta;L.filePts=M.files.map(function(_,fi){return M.chunks.reduce(function(a,c){return a+(c.f===fi?c.n:0);},0);});
+  log('Scan index loaded: '+(M.count/1e6).toFixed(2)+' M points in '+M.chunks.length+' blocks.','ok');
+  var tj=document.createElement('script');tj.src='data/tunnel.js';   // tunnel callouts + fly-through path (optional)
+  tj.onerror=function(){log('Tunnel callouts (data/tunnel.js) not available — continuing without them.');};
+  var go=function(){var s=document.createElement('script');s.src='app.js';
+  s.onload=function(){resolve();};s.onerror=function(){reject(new Error('app.js could not be loaded'));};
+  document.body.appendChild(s);};
+  tj.addEventListener('load',go);tj.addEventListener('error',go);document.body.appendChild(tj);
+ }).catch(reject);});
+appReady.catch(function(e){fail('viewer engine',e);});
+
+// --- point sections: 2 downloads at a time, in tunnel order; add to scene one by one ---
+var queue=[],texts={},nextAdd=0,nextFetch=0,active=0,dlCount=0,addBusy=false;
+function startNext(){while(active<2&&nextFetch<PTS.length){(function(fi){var f=PTS[fi];active++;
+  fetchTracked(f).then(function(t){active--;dlCount++;texts[fi]=t;
+   log('Tunnel section '+(fi+1)+' of '+PTS.length+' downloaded ('+fmtMB(t.length)+' MB).');
+   startNext();addNext();
+  }).catch(function(e){active--;fail('tunnel section '+(fi+1)+' ('+f+')',e);});})(nextFetch++);}}
+startNext();
+function addNext(){appReady.then(function(){
+ if(addBusy||!(nextAdd in texts))return;addBusy=true;var fi=nextAdd;
+ if(!finished)status('Downloading & building the tunnel… section '+(fi+1)+' of '+PTS.length+' going into the scene');
+ else status('Building the tunnel… adding section '+(fi+1)+' of '+PTS.length);
+ setTimeout(function(){ // let the status paint before the (blocking) decode
+  try{evalScript(texts[fi],PTS[fi]);delete texts[fi];}catch(e){fail('adding tunnel section '+(fi+1),e);return;}
+  nextAdd++;addBusy=false;setTimeout(addNext,30);},30);});}
+L.sectionAdded=function(fi,total){log('Tunnel section '+(fi+1)+' of '+PTS.length+' added to scene (running total '+total.toLocaleString()+' points).','ok');
+ if(!finished)status('Downloading… '+(fi+1)+' of '+PTS.length+' sections in the scene so far');};
+L.done=function(){clearInterval(paintTimer);finished=true;paint();};
+})();
+</script>
+</body></html>
