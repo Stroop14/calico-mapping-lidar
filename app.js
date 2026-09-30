@@ -13,7 +13,7 @@ camera.rotation.order='YXZ';
 
 // ---------- shared uniforms / point material ----------
 const U={uCam:{value:new THREE.Vector3()},uDir:{value:new THREE.Vector3(0,0,-1)},uLamp:{value:1.0},
-  uSize:{value:0.011},uMaxPx:{value:7},uScreen:{value:Hh()},uFov:{value:1.0},uTime:{value:0},uFogDist:{value:38.0},uCull:{value:1.0}};
+  uSize:{value:0.034},uMaxPx:{value:64},uMinPx:{value:2.2},uScreen:{value:Hh()},uFov:{value:1.0},uTime:{value:0},uFogDist:{value:38.0},uCull:{value:1.0}};
 const common=`
 uniform vec3 uCam; uniform vec3 uDir; uniform float uLamp; uniform float uTime; uniform float uFogDist;
 float h3(vec3 p){p=fract(p*0.3183099+0.1);p*=17.0;return fract(p.x*p.y*p.z*(p.x+p.y+p.z));}
@@ -49,18 +49,27 @@ vec3 light(vec3 wp, vec3 n, vec3 base){
  return col*fog;}
 `;
 const pmat=new THREE.ShaderMaterial({uniforms:U,vertexShader:common+`
-attribute vec3 nrm; attribute float tone; uniform float uSize; uniform float uMaxPx; uniform float uScreen; uniform float uFov; uniform float uCull;
+attribute vec3 nrm; attribute float tone; uniform float uSize; uniform float uMaxPx; uniform float uMinPx; uniform float uScreen; uniform float uFov; uniform float uCull;
 varying vec3 vCol;
 void main(){ vec4 wp=modelMatrix*vec4(position,1.0); vec4 mv=viewMatrix*wp;
  float hgt=tone*2.6/0.902; if(tone>0.95) hgt=1.0;
  vec3 base=clayColor(wp.xyz,nrm,hgt,tone);
  vCol=light(wp.xyz,nrm,base);
  gl_Position=projectionMatrix*mv;
- float sz=uSize*(tone>0.985?0.65:1.0);
- gl_PointSize=clamp(sz*uScreen/(uFov*-mv.z),1.0,uMaxPx);
+ // World size tracks distance. High is a hair over the old 3 cm sprite on the denser cloud;
+ // Standard is larger because it keeps about 40% of the points.
+ float sz=uSize*(tone>0.985?0.72:1.0);
+ gl_PointSize=clamp(sz*uScreen/(uFov*-mv.z),uMinPx,uMaxPx);
  if(uCull>0.5 && tone<0.95 && dot(nrm,normalize(uCam-wp.xyz))<-0.3){gl_Position=vec4(2.0,2.0,2.0,1.0);gl_PointSize=0.0;}}`,
- fragmentShader:`varying vec3 vCol; void main(){ vec2 c=gl_PointCoord-0.5; if(dot(c,c)>0.25) discard;
- float lm=dot(vCol,vec3(0.3,0.55,0.15)); vec3 col=vCol*(1.9/(1.0+1.9*lm*0.75)); gl_FragColor=vec4(pow(col,vec3(1.0/2.2)),1.0);}`});
+ fragmentShader:`varying vec3 vCol;
+void main(){ vec2 c=gl_PointCoord-0.5; float r2=dot(c,c);
+ // Almost the whole quad is kept (only the extreme corners drop) so neighbours overlap into a solid wall.
+ // The middle stays the bright chunky sprite; the rim is a darker opaque fill of the same colour.
+ if(r2>0.46) discard;
+ float core=smoothstep(0.40,0.22,r2);
+ vec3 fill=mix(vCol*0.78, vCol, core);
+ float lm=dot(fill,vec3(0.3,0.55,0.15)); vec3 col=fill*(1.9/(1.0+1.9*lm*0.75));
+ gl_FragColor=vec4(pow(max(col,vec3(0.0)),vec3(1.0/2.2)),1.0);}`});
 
 // ---------- load & decode chunks ----------
 const bmin=new THREE.Vector3().fromArray(M.bmin), ext=new THREE.Vector3().fromArray(M.ext);
@@ -74,8 +83,11 @@ function applyPixelRatio(){
  renderer.setPixelRatio(Math.min(devicePixelRatio||1, dprCap()));
  renderer.setSize(W(),Hh());
  U.uScreen.value=Hh()*renderer.getPixelRatio();
- U.uSize.value=qualityHigh?0.011:0.018;
- U.uMaxPx.value=qualityHigh?7:12;
+ // High: ~3.4 cm sprites on a 1.25 cm cloud. Standard keeps 40% of the points, so the
+ // sprite grows to ~5.2 cm and the pixel floor stays higher — distant walls stay opaque.
+ U.uSize.value=qualityHigh?0.034:0.052;
+ U.uMaxPx.value=qualityHigh?64:56;
+ U.uMinPx.value=qualityHigh?2.2:2.8;
 }
 function keepPoint(pos,i){
  if(qualityHigh) return true;
