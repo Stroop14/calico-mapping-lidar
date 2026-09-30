@@ -12,12 +12,8 @@ const camera=new THREE.PerspectiveCamera(72,W()/Hh(),0.05,400);
 camera.rotation.order='YXZ';
 
 // ---------- shared uniforms / point material ----------
-// 0 leaves the original clay. 1 is the tuned warm grade: a little more contrast and saturation,
-// a warmer lamp, and slightly richer clay and timber. This is the only colour knob.
-const GRADE=1;
 const U={uCam:{value:new THREE.Vector3()},uDir:{value:new THREE.Vector3(0,0,-1)},uLamp:{value:1.0},
-  uSize:{value:0.03},uScreen:{value:Hh()},uFov:{value:1.0},uTime:{value:0},uFogDist:{value:38.0},uCull:{value:1.0},
-  uGrade:{value:qs.has('grade')?Math.max(0,Math.min(1,parseFloat(qs.get('grade')))):GRADE}};
+  uSize:{value:0.034},uMaxPx:{value:64},uMinPx:{value:2.2},uScreen:{value:Hh()},uFov:{value:1.0},uTime:{value:0},uFogDist:{value:38.0},uCull:{value:1.0}};
 const common=`
 uniform vec3 uCam; uniform vec3 uDir; uniform float uLamp; uniform float uTime; uniform float uFogDist;
 float h3(vec3 p){p=fract(p*0.3183099+0.1);p*=17.0;return fract(p.x*p.y*p.z*(p.x+p.y+p.z));}
@@ -53,29 +49,26 @@ vec3 light(vec3 wp, vec3 n, vec3 base){
  return col*fog;}
 `;
 const pmat=new THREE.ShaderMaterial({uniforms:U,vertexShader:common+`
-attribute vec3 nrm; attribute float tone; uniform float uSize; uniform float uScreen; uniform float uFov; uniform float uCull;
+attribute vec3 nrm; attribute float tone; uniform float uSize; uniform float uMaxPx; uniform float uMinPx; uniform float uScreen; uniform float uFov; uniform float uCull;
 varying vec3 vCol;
 void main(){ vec4 wp=modelMatrix*vec4(position,1.0); vec4 mv=viewMatrix*wp;
  float hgt=tone*2.6/0.902; if(tone>0.95) hgt=1.0;
  vec3 base=clayColor(wp.xyz,nrm,hgt,tone);
  vCol=light(wp.xyz,nrm,base);
  gl_Position=projectionMatrix*mv;
- float sz=uSize*(tone>0.985?0.6:1.0);
- gl_PointSize=clamp(sz*uScreen/(uFov*-mv.z),1.0,30.0);
+ // World size tracks distance. High is a hair over the old 3 cm sprite on the denser cloud;
+ // Standard is larger because it keeps about 40% of the points.
+ float sz=uSize*(tone>0.985?0.72:1.0);
+ gl_PointSize=clamp(sz*uScreen/(uFov*-mv.z),uMinPx,uMaxPx);
  if(uCull>0.5 && tone<0.95 && dot(nrm,normalize(uCam-wp.xyz))<-0.3){gl_Position=vec4(2.0,2.0,2.0,1.0);gl_PointSize=0.0;}}`,
- fragmentShader:`uniform float uGrade; varying vec3 vCol;
-vec3 gradeClay(vec3 c){
- vec3 warm=c*vec3(1.035,1.005,0.975);
- float y=dot(warm,vec3(0.30,0.59,0.11));
- vec3 sat=mix(vec3(y),warm,1.10);
- vec3 con=(sat-y)*1.05+y;
- float clay=smoothstep(0.02,0.22,con.r-con.b);
- con.r+=0.018*clay;
- con.g+=0.005*clay;
- return max(con,vec3(0.0));}
-void main(){ vec2 q=gl_PointCoord-0.5; if(dot(q,q)>0.25) discard;
- float lm=dot(vCol,vec3(0.3,0.55,0.15)); vec3 col=vCol*(1.9/(1.0+1.9*lm*0.75));
- col=mix(col,gradeClay(col),uGrade);
+ fragmentShader:`varying vec3 vCol;
+void main(){ vec2 c=gl_PointCoord-0.5; float r2=dot(c,c);
+ // Almost the whole quad is kept (only the extreme corners drop) so neighbours overlap into a solid wall.
+ // The middle stays the bright chunky sprite; the rim is a darker opaque fill of the same colour.
+ if(r2>0.46) discard;
+ float core=smoothstep(0.40,0.22,r2);
+ vec3 fill=mix(vCol*0.78, vCol, core);
+ float lm=dot(fill,vec3(0.3,0.55,0.15)); vec3 col=fill*(1.9/(1.0+1.9*lm*0.75));
  gl_FragColor=vec4(pow(max(col,vec3(0.0)),vec3(1.0/2.2)),1.0);}`});
 
 // ---------- load & decode chunks ----------
@@ -85,11 +78,16 @@ const group=new THREE.Group(); group.position.copy(bmin); group.scale.copy(ext);
 const chunkObjs=[], pointSrc=[]; let loadedFiles=0, loadedPts=0;
 let qualityHigh=true, walkT=0;
 function pokeUi(){ walkT=0; document.body.classList.remove('uidim'); }
-function dprCap(){ if(qs.has('capture')&&!qs.has('dpr')) return 1; return 2; }
+function dprCap(){ if(qs.has('capture')&&!qs.has('dpr')) return 1; return qualityHigh?3:2; }
 function applyPixelRatio(){
  renderer.setPixelRatio(Math.min(devicePixelRatio||1, dprCap()));
  renderer.setSize(W(),Hh());
  U.uScreen.value=Hh()*renderer.getPixelRatio();
+ // High: ~3.4 cm sprites on a 1.25 cm cloud. Standard keeps 40% of the points, so the
+ // sprite grows to ~5.2 cm and the pixel floor stays higher — distant walls stay opaque.
+ U.uSize.value=qualityHigh?0.034:0.052;
+ U.uMaxPx.value=qualityHigh?64:56;
+ U.uMinPx.value=qualityHigh?2.2:2.8;
 }
 function keepPoint(pos,i){
  if(qualityHigh) return true;
@@ -129,7 +127,6 @@ function setQuality(high){
  if(CALICO.syncQuality) CALICO.syncQuality();
 }
 const OCC=0.1, occ=new Set();
-const okey=(x,y,z)=>((Math.floor(x/OCC)+2000)*4096+(Math.floor(y/OCC)+2000))*4096+(Math.floor(z/OCC)+2000);
 // Up-facing / down-facing point counts, 25 cm in plan and 10 cm in height. The eye is measured from this grid
 // (lowest dense floor directly under the viewer). Keep the sizes in sync with test/eye-route.js.
 const FCELL=0.25, FY0=-4, FYN=120, fgrid=new Map();
@@ -138,6 +135,13 @@ function fbin(x,y,z,up){ const yi=Math.round((y-FY0)/0.1); if(yi<0||yi>=FYN) ret
  let h=fgrid.get(k); if(!h){ h=new Uint16Array(FYN*2); h.ix=ix; h.iz=iz; fgrid.set(k,h); }
  const i=yi+(up?0:FYN); if(h[i]<65535) h[i]++; }
 function b64(s){const bin=atob(s),n=bin.length,u=new Uint8Array(n);for(let i=0;i<n;i++)u[i]=bin.charCodeAt(i);return u;}
+// Wall voxels stay the previous 2 cm shell. The denser cloud fills air just inside that shell, and those
+// extra 10 cm cells were thick enough to count as rock and close the guided view.
+if(CALICO.wall){ const u=b64(CALICO.wall), n=u.length>>3;
+ for(let i=0;i<n;i++){ const o=i*8;
+  const lo=(u[o]+(u[o+1]<<8)+(u[o+2]<<16)+u[o+3]*16777216)>>>0;
+  const hi=u[o+4]+(u[o+5]<<8)+(u[o+6]<<16)+u[o+7]*16777216;
+  occ.add(hi*4294967296+lo); } }
 function decodeFile(fi){
  const arr=CALICO.files[fi];
  M.chunks.forEach(ch=>{ if(ch.f!==fi) return;
@@ -150,7 +154,7 @@ function decodeFile(fi){
   const src={pos,nrm,tone,n,c,r:ch.r,sphere};
   pointSrc.push(src); mountChunk(src);
   for(let i=0;i<n;i++){ const x=bmin.x+pos[3*i]/65535*ext.x, y=bmin.y+pos[3*i+1]/65535*ext.y, z=bmin.z+pos[3*i+2]/65535*ext.z;
-   occ.add(okey(x,y,z)); const ny=nrm[3*i+1]/127; if(ny>0.5||ny<-0.5) fbin(x,y,z,ny>0.5); }
+   const ny=nrm[3*i+1]/127; if(ny>0.5||ny<-0.5) fbin(x,y,z,ny>0.5); }
   loadedPts+=n; });
  delete CALICO.files[fi]; loadedFiles++;
  LD.sectionAdded(fi,loadedPts);

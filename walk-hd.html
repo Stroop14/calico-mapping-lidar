@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8">
-<title>Calico Mine Tunnel — LiDAR Walkthrough</title>
+<title>Calico Mine Tunnel — high-detail LiDAR</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
 html,body{margin:0;height:100%;background:#050403;overflow:hidden;font-family:system-ui,Segoe UI,Helvetica,Arial,sans-serif;color:#e8d8c4}
@@ -109,14 +109,14 @@ Handheld GeoSLAM LiDAR · 5,359,712 points<br>
 Portal 34.95117° N, 116.86307° W<br>
 Walkthrough rendered by Mike Murrey, field camp class of 2019
 </div>
-<p class="about">A walk-through of a real 3-D laser scan of the Silver King Mine tunnel in the Calico Hills, captured with a handheld GeoSLAM scanner during the 2019 CSUSB geology field camp led by Dr. Erik Melchiorre. Field camp is the capstone of a geology education: days of nonstop fieldwork in the heat, and here, underground in clay dust. About 5.36 million measured points are streamed into your browser (~71 MB uncompressed on first visit), then you can walk the tunnel with a virtual headlamp. Colours are artistic, not true colour &mdash; the scanner recorded shape only.</p>
+<p class="about">A walk-through of a real 3-D laser scan of the Silver King Mine tunnel in the Calico Hills, captured with a handheld GeoSLAM scanner during the 2019 CSUSB geology field camp led by Dr. Erik Melchiorre. Field camp is the capstone of a geology education: days of nonstop fieldwork in the heat, and here, underground in clay dust. About 13.7 million measured points are streamed into your browser (~185 MB uncompressed on first visit), then you can walk the tunnel with a virtual headlamp. Colours are artistic, not true colour &mdash; the scanner recorded shape only.</p>
 <p class="sub" style="margin:0 0 12px;font-size:13px"><a href="index.html" style="color:#f0b27a">Home</a> &nbsp;·&nbsp; <a href="maps.html" style="color:#f0b27a">Maps &amp; measurements</a></p>
 <div id="enter"><div class="big">▶ Click to enter</div>
 <div class="ctl"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> move &nbsp;·&nbsp; <b>mouse</b> look &nbsp;·&nbsp; <kbd>Space</kbd> / <kbd>Shift</kbd> up / down &nbsp;·&nbsp; <kbd>F</kbd> walk 4× &nbsp;·&nbsp; <kbd>G</kbd> guided &nbsp;·&nbsp; <kbd>Esc</kbd> release the mouse<br>
 <span style="opacity:.8;font-size:13px"><kbd>P</kbd> auto fly-through · <kbd>M</kbd> surface mesh · <kbd>L</kbd> headlamp · <kbd>R</kbd> back to portal · <kbd>H</kbd> help panel</span></div></div>
 <div id="status">Starting…</div>
 <div id="bar"><div></div></div>
-<div id="stats"><span id="pct">0%</span><span id="mb">0.0 / 72.1 MB</span><span id="speed">— MB/s</span><span id="eta">time left: estimating…</span></div>
+<div id="stats"><span id="pct">0%</span><span id="mb">0.0 / 185.0 MB</span><span id="speed">— MB/s</span><span id="eta">time left: estimating…</span></div>
 <div id="log"></div>
 <button id="retry" onclick="location.reload()">Retry (reload page)</button>
 </div></div>
@@ -135,15 +135,16 @@ window.CALICO={files:{},addFile:function(i,a){CALICO.files[i]=a;if(CALICO.onFile
 (function(){
 'use strict';
 // Uncompressed sizes (what a streaming reader counts; GitHub Pages gzips on the wire, so Content-Length can't be used).
-var NPTS=9;
-function ptsName(i){var s=String(i);while(s.length<3)s='0'+s;return 'data/pts_'+s+'.js';}
-var SIZES={'lib/three.min.js':608081,'data/meta.js':16629,
- 'data/pts_000.js':8185591,'data/pts_001.js':8118086,'data/pts_002.js':9435752,'data/pts_003.js':9210115,
- 'data/pts_004.js':8685753,'data/pts_005.js':8903545,'data/pts_006.js':8144089,'data/pts_007.js':8346578,
- 'data/pts_008.js':2434038,
+var NPTS=14;
+function ptsName(i){var s=String(i);while(s.length<3)s='0'+s;return 'data-hd/pts_'+s+'.js';}
+var SIZES={'lib/three.min.js':608081,'data-hd/meta.js':2328341,
+ 'data-hd/pts_000.js':13749372,'data-hd/pts_001.js':12724470,'data-hd/pts_002.js':13338945,'data-hd/pts_003.js':13076863,
+ 'data-hd/pts_004.js':13604857,'data-hd/pts_005.js':13492108,'data-hd/pts_006.js':13154035,'data-hd/pts_007.js':13348513,
+ 'data-hd/pts_008.js':13250570,'data-hd/pts_009.js':12782222,'data-hd/pts_010.js':13562270,'data-hd/pts_011.js':13656695,
+ 'data-hd/pts_012.js':12922386,'data-hd/pts_013.js':9435338,
  'data/mesh.js':18783875};
 var PTS=[];for(var i=0;i<NPTS;i++)PTS.push(ptsName(i));
-var START=['lib/three.min.js','data/meta.js'].concat(PTS);
+var START=['lib/three.min.js','data-hd/meta.js'].concat(PTS);
 var T0=performance.now(), $=function(id){return document.getElementById(id);};
 var logEl=$('log'), bar=$('bar').firstChild;
 function fmtMB(b){return (b/1e6).toFixed(1);}
@@ -197,7 +198,7 @@ status('Downloading 3-D viewer engine (three.js)…');
 
 // --- engine: three.js -> meta -> app.js ---
 var appReady=new Promise(function(resolve,reject){
- Promise.all([fetchTracked('lib/three.min.js'),fetchTracked('data/meta.js')]).then(function(t){
+ Promise.all([fetchTracked('lib/three.min.js'),fetchTracked('data-hd/meta.js')]).then(function(t){
   evalScript(t[0],'three.min.js');if(!window.THREE)throw new Error('three.js did not initialise');
   log('3-D engine (three.js r'+THREE.REVISION+') ready.','ok');
   evalScript(t[1],'meta.js');
@@ -205,8 +206,8 @@ var appReady=new Promise(function(resolve,reject){
   log('Scan index loaded: '+(M.count/1e6).toFixed(2)+' M points in '+M.chunks.length+' blocks.','ok');
   var tj=document.createElement('script');tj.src='data/tunnel.js';   // tunnel callouts + fly-through path (optional)
   tj.onerror=function(){log('Tunnel callouts (data/tunnel.js) not available — continuing without them.');};
-  var go=function(){var s=document.createElement('script');s.src='app.js';
-  s.onload=function(){resolve();};s.onerror=function(){reject(new Error('app.js could not be loaded'));};
+  var go=function(){var s=document.createElement('script');s.src='app-hd.js';
+  s.onload=function(){resolve();};s.onerror=function(){reject(new Error('app-hd.js could not be loaded'));};
   document.body.appendChild(s);};
   tj.addEventListener('load',go);tj.addEventListener('error',go);document.body.appendChild(tj);
  }).catch(reject);});
