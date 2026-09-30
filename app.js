@@ -215,7 +215,7 @@ renderer.domElement.addEventListener('click',()=>{ if(TOUCH||!ov.dataset.ready) 
 function showHint(html,ms){ hint.innerHTML=html; hint.classList.add('show'); clearTimeout(hintTimer); hintTimer=setTimeout(()=>hint.classList.remove('show'),ms); }
 document.addEventListener('pointerlockchange',()=>{const L=document.pointerLockElement===renderer.domElement;
  if(L){ ov.style.display='none';
-  if(!entered){ entered=true; showHint("You're just inside the mine portal, facing into the tunnel.<br><b>W</b> to walk forward · mouse to look · <b>P</b> for an automatic fly-through",6000); } }
+  if(!entered){ entered=true; showHint("You're just inside the mine portal, facing into the tunnel.<br><b>W</b> to walk forward · mouse to look · <b>P</b> for an automatic fly-through",6000); showKeyHint(4500); } }
  else if(ov.dataset.ready){ ov.style.display='flex'; document.querySelector('#enter .big').textContent='▶ Paused — click to continue'; LD.status('Paused. Click anywhere to continue.'); hint.classList.remove('show'); }});
 addEventListener('mousemove',e=>{ if(document.pointerLockElement!==renderer.domElement) return;
  if(guided){ peekYaw=Math.max(-1,Math.min(1,peekYaw-e.movementX*0.0022)); peekPitch=Math.max(-0.6,Math.min(0.6,peekPitch-e.movementY*0.0022));
@@ -232,6 +232,22 @@ applyPixelRatio();
 guided=TOUCH;
 document.body.classList.toggle('guided', guided);
 document.body.classList.toggle('freeview', !guided);
+let keyTimer=0;
+function showKeyHint(ms){
+ if(TOUCH) return;
+ let el=document.getElementById('keyhint');
+ if(!el){
+  el=document.createElement('div'); el.id='keyhint';
+  el.innerHTML='<div class="row wrow"><div class="key"><b>W</b><span>forward</span></div></div>'
+   +'<div class="row"><div class="key"><b>A</b><span>left</span></div><div class="key"><b>S</b><span>back</span></div><div class="key"><b>D</b><span>right</span></div></div>'
+   +'<div class="mouse">Mouse: look</div>';
+  document.body.appendChild(el);
+ }
+ el.classList.add('show');
+ clearTimeout(keyTimer);
+ keyTimer=setTimeout(()=>{ el.classList.remove('show'); }, ms==null?4500:ms);
+}
+CALICO.showKeyHint=showKeyHint;
 let stickX=0, stickY=0;   // -1..1, x = strafe right, y = forward
 function enterTouch(){
  ov.style.display='none';
@@ -554,7 +570,9 @@ function guideYawAt(s, eyeY){
  }
  yawKey=key; yawVal=bestY; return bestY; }
 function setGuided(on){
+ const prev=guided;
  guided=!!on; document.body.classList.toggle('guided', guided); document.body.classList.toggle('freeview', !guided);
+ if(!TOUCH && entered && prev!==guided) showKeyHint(2600);
  stickX=0; stickY=0; lookAxisX=0; lookAxisY=0; yawKey='';
  if(guided){ guideInited=false; guideOff=0; guideV=0; peekYaw=0; peekPitch=0; peekHold=false;
   flash('Guided: forward follows the tunnel'); }
