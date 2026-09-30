@@ -65,15 +65,14 @@ void main(){ vec4 wp=modelMatrix*vec4(position,1.0); vec4 mv=viewMatrix*wp;
  if(uCull>0.5 && tone<0.95 && dot(nrm,normalize(uCam-wp.xyz))<-0.3){gl_Position=vec4(2.0,2.0,2.0,1.0);gl_PointSize=0.0;}}`,
  fragmentShader:`uniform float uGrade; varying vec3 vCol;
 vec3 gradeClay(vec3 c){
- c*=vec3(1.045,0.995,0.905);
- float y=dot(c,vec3(0.30,0.59,0.11));
- c=mix(vec3(y),c,1.18);
- c=(c-0.45)*1.10+0.45;
- float warm=smoothstep(0.0,0.18,c.r-c.b);
- float shade=smoothstep(0.55,0.12,y);
- c.r+=0.035*warm*(0.45+shade);
- c.g+=0.012*warm;
- return max(c,vec3(0.0));}
+ vec3 warm=c*vec3(1.035,1.005,0.975);
+ float y=dot(warm,vec3(0.30,0.59,0.11));
+ vec3 sat=mix(vec3(y),warm,1.10);
+ vec3 con=(sat-y)*1.05+y;
+ float clay=smoothstep(0.02,0.22,con.r-con.b);
+ con.r+=0.018*clay;
+ con.g+=0.005*clay;
+ return max(con,vec3(0.0));}
 void main(){ vec2 q=gl_PointCoord-0.5; if(dot(q,q)>0.25) discard;
  float lm=dot(vCol,vec3(0.3,0.55,0.15)); vec3 col=vCol*(1.9/(1.0+1.9*lm*0.75));
  col=mix(col,gradeClay(col),uGrade);
