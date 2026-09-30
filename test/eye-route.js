@@ -153,7 +153,7 @@ async function cdp() {
     catch { await sleep(200); }
   }
   if (!ver) { chrome.kill(); fail('Chrome DevTools did not come up'); }
-  const tab = await (await fetch(`http://127.0.0.1:${CDP}/json/new?${encodeURIComponent(`http://127.0.0.1:${PORT}/index.html?capture&hud`)}`, { method: 'PUT' })).json();
+  const tab = await (await fetch(`http://127.0.0.1:${CDP}/json/new?${encodeURIComponent(`http://127.0.0.1:${PORT}/walk.html?capture&hud`)}`, { method: 'PUT' })).json();
   const ws = new WebSocket(tab.webSocketDebuggerUrl);
   await new Promise((res, rej) => { ws.addEventListener('open', res); ws.addEventListener('error', rej); });
   let id = 0;

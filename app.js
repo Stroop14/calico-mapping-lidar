@@ -161,7 +161,7 @@ function decodeFile(fi){
  if(loadedFiles===M.files.length) onLoaded();
 }
 CALICO.setQuality=on=>{ setQuality(on); }; CALICO.quality=()=>qualityHigh;
-// data files are fetched as text by the loader in index.html (byte-accurate progress) and evaluated in order
+// data files are fetched as text by the loader in walk.html (byte-accurate progress) and evaluated in order
 CALICO.onFile=fi=>decodeFile(fi);
 
 // ---------- optional mesh ----------
