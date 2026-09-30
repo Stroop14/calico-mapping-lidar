@@ -35,40 +35,52 @@ canvas{display:block}
 #credits .place{display:block;margin-bottom:2px;font-size:12px;font-weight:600;letter-spacing:.04em;color:#f3c79a;opacity:1}
 #hint{position:fixed;left:50%;top:38%;transform:translate(-50%,-50%);background:rgba(10,7,5,.78);border:1px solid #e9a066;border-radius:10px;padding:14px 22px;font-size:17px;text-align:center;line-height:1.5;opacity:0;transition:opacity .6s;pointer-events:none;z-index:8;max-width:92vw;box-sizing:border-box}
 #hint.show{opacity:1}
+#keyhint{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:7;pointer-events:none;opacity:0;transition:opacity .7s ease;text-align:center;color:#f4efe8}
+#keyhint.show{opacity:1}
+#keyhint .row{display:flex;justify-content:center;gap:6px}
+#keyhint .wrow{margin-bottom:6px}
+#keyhint .key{width:58px;height:42px;box-sizing:border-box;border-radius:8px;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.16);display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1}
+#keyhint .key b{font-size:15px;font-weight:750;color:#fff}
+#keyhint .key span{margin-top:3px;font-size:9px;font-weight:650;letter-spacing:.02em;color:#f4efe8;opacity:.88}
+#keyhint .mouse{margin-top:6px;font-size:11px;font-weight:650;letter-spacing:.01em;color:#f4efe8;opacity:.9}
+body.touch #keyhint{display:none!important}
 body.hidehelp #help{display:none}
 body.touch{touch-action:none}
 body.touch #help{display:none!important}
 #touchui{display:none}
 body.touch #touchui{display:block}
-#stick{position:fixed;right:max(16px,env(safe-area-inset-right));bottom:max(16px,env(safe-area-inset-bottom));width:132px;height:132px;z-index:6;touch-action:none}
-#stick .pad{position:absolute;inset:0;border-radius:50%;border:2px solid #e9a066;background:rgba(10,7,5,.38);box-sizing:border-box}
-#stick .knob{position:absolute;left:50%;top:50%;width:54px;height:54px;margin:-27px 0 0 -27px;border-radius:50%;background:rgba(233,160,102,.9);box-shadow:0 0 0 2px rgba(10,7,5,.35)}
-#lookstick{display:none;position:fixed;right:max(16px,env(safe-area-inset-right));bottom:max(16px,env(safe-area-inset-bottom));width:132px;height:132px;z-index:6;touch-action:none}
-#lookstick .pad{position:absolute;inset:0;border-radius:50%;border:2px solid #e9a066;background:rgba(10,7,5,.38);box-sizing:border-box}
-#lookstick .knob{position:absolute;left:50%;top:50%;width:54px;height:54px;margin:-27px 0 0 -27px;border-radius:50%;background:rgba(243,226,200,.95);box-shadow:0 0 0 2px rgba(10,7,5,.35)}
+#stick{position:fixed;right:max(10px,env(safe-area-inset-right));bottom:max(8px,env(safe-area-inset-bottom));width:88px;height:88px;z-index:6;touch-action:none;opacity:.82;transition:opacity .5s}
+#stick .pad{position:absolute;inset:0;border-radius:50%;border:1px solid rgba(233,160,102,.55);background:rgba(10,7,5,.22);box-sizing:border-box}
+#stick .knob{position:absolute;left:50%;top:50%;width:34px;height:34px;margin:-17px 0 0 -17px;border-radius:50%;background:rgba(233,160,102,.55);box-shadow:0 0 0 1px rgba(10,7,5,.25)}
+#lookstick{display:none;position:fixed;right:max(10px,env(safe-area-inset-right));bottom:max(8px,env(safe-area-inset-bottom));width:88px;height:88px;z-index:6;touch-action:none;opacity:.82;transition:opacity .5s}
+#lookstick .pad{position:absolute;inset:0;border-radius:50%;border:1px solid rgba(233,160,102,.55);background:rgba(10,7,5,.22);box-sizing:border-box}
+#lookstick .knob{position:absolute;left:50%;top:50%;width:34px;height:34px;margin:-17px 0 0 -17px;border-radius:50%;background:rgba(243,226,200,.5);box-shadow:0 0 0 1px rgba(10,7,5,.25)}
 body.freeview #lookstick{display:block}
-body.freeview #stick{left:max(16px,env(safe-area-inset-left));right:auto}
-#tbtns{position:fixed;right:max(16px,env(safe-area-inset-right));bottom:calc(132px + 14px + max(16px,env(safe-area-inset-bottom)));width:min(276px,calc(100vw - 24px));z-index:6;display:flex;flex-direction:column;gap:8px;align-items:stretch;touch-action:none}
-#tbtns button{appearance:none;background:rgba(10,7,5,.72);color:#ffd2a6;border:2px solid #e9a066;border-radius:10px;padding:11px 8px;font:700 15px/1.15 system-ui,Segoe UI,Helvetica,Arial,sans-serif;letter-spacing:.01em}
-#trow{display:flex;gap:6px}
-#trow button{flex:1;padding:10px 4px;font-size:14px}
-#tbig{display:flex;gap:8px}
-#tbig button{flex:1;min-height:78px;padding:8px 4px}
-#tFast{font-size:28px;font-weight:800;letter-spacing:.04em;border-width:3px}
-#tFast.on{background:#e9a066;color:#1c1008;border-color:#ffe0bf;box-shadow:0 0 0 4px rgba(233,160,102,.45)}
-#tMode{font-size:18px;font-weight:800;line-height:1.05;letter-spacing:.01em;border-width:3px}
-#tMode small{display:block;margin-top:3px;font-size:11px;font-weight:650;letter-spacing:0;opacity:.88}
-#tMode.on{background:#e9a066;color:#1c1008;border-color:#ffe0bf;box-shadow:0 0 0 4px rgba(233,160,102,.45)}
-#tMode.free{background:#f3e2c8;color:#1c1008;border-color:#fff;box-shadow:0 0 0 4px rgba(243,226,200,.5)}
-#tbtns button.off{opacity:.55}
-#mapwrap{position:fixed;left:10px;top:54px;z-index:6;display:flex;flex-direction:column;align-items:flex-start;gap:4px;pointer-events:none}
-#mapBtn{pointer-events:auto;appearance:none;cursor:pointer;background:rgba(10,7,5,.78);color:#ffd2a6;border:2px solid #e9a066;border-radius:8px;padding:7px 12px;font:700 14px/1 system-ui,Segoe UI,Helvetica,Arial,sans-serif}
-#mapBtn.on{background:#e9a066;color:#1c1008;border-color:#ffe0bf}
-#minimap{display:none;width:220px;height:180px;border-radius:8px;border:1px solid rgba(233,160,102,.75);background:#120e0b;box-shadow:0 4px 16px rgba(0,0,0,.35)}
+body.freeview #stick{left:max(10px,env(safe-area-inset-left));right:auto}
+#tbtns{position:fixed;left:50%;right:auto;transform:translateX(-50%);bottom:calc(88px + 8px + max(8px,env(safe-area-inset-bottom)));z-index:6;display:flex;flex-direction:row;gap:5px;align-items:center;justify-content:center;touch-action:none;max-width:calc(100vw - 16px)}
+#tbtns button{appearance:none;width:40px;height:40px;min-height:0;padding:0;background:rgba(10,7,5,.38);color:#ffd2a6;border:1px solid rgba(233,160,102,.7);border-radius:8px;font:700 12px/1 system-ui,Segoe UI,Helvetica,Arial,sans-serif;letter-spacing:0}
+#tFast{font-size:13px;font-weight:800}
+#tFast.on{background:rgba(233,160,102,.85);color:#1c1008;border-color:#ffe0bf}
+#tMode{width:auto;min-width:52px;padding:0 7px;font-size:11px;font-weight:750}
+#tMode.on{background:rgba(233,160,102,.82);color:#1c1008;border-color:#ffe0bf}
+#tMode.free{background:rgba(243,226,200,.78);color:#1c1008;border-color:#fff}
+#tbtns button.off{opacity:.5}
+#mapwrap{position:fixed;left:10px;top:54px;z-index:6;display:flex;flex-direction:row;flex-wrap:wrap;align-items:flex-start;gap:4px;pointer-events:none;max-width:220px}
+#mapBtn,#qBtn{pointer-events:auto;appearance:none;cursor:pointer;background:rgba(10,7,5,.55);color:#ffd2a6;border:1px solid rgba(233,160,102,.75);border-radius:6px;padding:5px 8px;font:700 12px/1 system-ui,Segoe UI,Helvetica,Arial,sans-serif}
+#mapBtn.on,#qBtn.on{background:rgba(233,160,102,.85);color:#1c1008;border-color:#ffe0bf}
+#minimap{display:none;width:180px;height:150px;border-radius:8px;border:1px solid rgba(233,160,102,.55);background:rgba(8,6,4,.72);box-shadow:0 4px 16px rgba(0,0,0,.28)}
 body.mapopen #minimap{display:block}
-body.touch #mapwrap{left:max(8px,env(safe-area-inset-left));top:46px}
-body.touch #minimap{width:200px;height:164px}
-body.touch.mapopen #hud,body.touch.mapopen #navhud{display:none!important}
+#qpop{display:none;pointer-events:auto;flex-direction:column;gap:3px;background:rgba(10,7,5,.78);border:1px solid rgba(233,160,102,.7);border-radius:6px;padding:4px}
+#qpop.open{display:flex}
+#qpop button{appearance:none;cursor:pointer;background:transparent;color:#ffd2a6;border:0;border-radius:4px;padding:5px 8px;font:650 12px/1 system-ui,Segoe UI,Helvetica,Arial,sans-serif;text-align:left}
+#qpop button.on{background:rgba(233,160,102,.85);color:#1c1008}
+body.touch #mapwrap{left:max(8px,env(safe-area-inset-left));top:46px;max-width:120px}
+body.touch #mapBtn,body.touch #qBtn{padding:4px 6px;font-size:10px}
+body.touch #minimap{width:90px;height:74px;background:rgba(0,0,0,.45);border-color:rgba(233,160,102,.4);box-shadow:none}
+body.touch.mapopen #hud{display:none!important}
+body.uidim #stick,body.uidim #lookstick,body.uidim #tFly,body.uidim #tReset,body.uidim #tLamp,body.uidim #tFast,body.uidim #mapwrap{opacity:.16}
+body.uidim #tMode{opacity:.78}
+#stick,#lookstick,#tbtns button,#mapwrap{transition:opacity .55s}
 @media (max-width:700px){
  #navhud{top:6px;padding:3px 8px 4px;max-width:94vw;font-size:11px;line-height:1.3}
  #navhud canvas{width:168px;height:22px}
@@ -94,14 +106,14 @@ Handheld GeoSLAM LiDAR · 5,359,712 points<br>
 Portal 34.95117° N, 116.86307° W<br>
 Walkthrough rendered by Mike Murrey, field camp class of 2019
 </div>
-<p class="about">A walk-through of a real 3-D laser scan of the Silver King Mine tunnel in the Calico Hills, captured with a handheld GeoSLAM scanner during the 2019 CSUSB geology field camp led by Dr. Erik Melchiorre. Field camp is the capstone of a geology education: days of nonstop fieldwork in the heat, and here, underground in clay dust. About 5.4 million measured points are streamed into your browser (~72 MB on first visit), then you can walk the tunnel with a virtual headlamp. Colours are artistic, not true colour &mdash; the scanner recorded shape only.</p>
+<p class="about">A walk-through of a real 3-D laser scan of the Silver King Mine tunnel in the Calico Hills, captured with a handheld GeoSLAM scanner during the 2019 CSUSB geology field camp led by Dr. Erik Melchiorre. Field camp is the capstone of a geology education: days of nonstop fieldwork in the heat, and here, underground in clay dust. About 13.7 million measured points are streamed into your browser (~185 MB uncompressed on first visit), then you can walk the tunnel with a virtual headlamp. Colours are artistic, not true colour &mdash; the scanner recorded shape only.</p>
 <p class="sub" style="margin:0 0 12px;font-size:13px"><a href="maps.html" style="color:#f0b27a">Maps &amp; measurements</a></p>
 <div id="enter"><div class="big">▶ Click to enter</div>
 <div class="ctl"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> move &nbsp;·&nbsp; <b>mouse</b> look &nbsp;·&nbsp; <kbd>Space</kbd> / <kbd>Shift</kbd> up / down &nbsp;·&nbsp; <kbd>F</kbd> walk 4× &nbsp;·&nbsp; <kbd>G</kbd> guided &nbsp;·&nbsp; <kbd>Esc</kbd> release the mouse<br>
 <span style="opacity:.8;font-size:13px"><kbd>P</kbd> auto fly-through · <kbd>M</kbd> surface mesh · <kbd>L</kbd> headlamp · <kbd>R</kbd> back to portal · <kbd>H</kbd> help panel</span></div></div>
 <div id="status">Starting…</div>
 <div id="bar"><div></div></div>
-<div id="stats"><span id="pct">0%</span><span id="mb">0.0 / 72.1 MB</span><span id="speed">— MB/s</span><span id="eta">time left: estimating…</span></div>
+<div id="stats"><span id="pct">0%</span><span id="mb">0.0 / 185.0 MB</span><span id="speed">— MB/s</span><span id="eta">time left: estimating…</span></div>
 <div id="log"></div>
 <button id="retry" onclick="location.reload()">Retry (reload page)</button>
 </div></div>
@@ -110,7 +122,8 @@ Walkthrough rendered by Mike Murrey, field camp class of 2019
 <b>Up / Down</b> E or Space / Q or Shift<br><b>Speed</b> mouse wheel or + / − &nbsp; <b>F</b> walk 4× faster (tap again for normal)<br>
 <b>G</b> guided steering along the tunnel (on by default on a phone; WASD stays free until you turn it on)<br>
 <b>C</b> keep-inside pull-back on/off (you can walk through anything) &nbsp; <b>L</b> headlamp on/off<br><b>M</b> surface mesh (if built) &nbsp; <b>[ ]</b> point size<br>
-<b>B</b> back-face point culling on/off<br><b>P</b> auto fly-through (to the northwest end and back)<br><b>Map</b> button (top left) shows a top-down tunnel map, north up<br><b>R</b> reset to portal &nbsp; <b>H</b> hide this help and the compass/distance overlay<br><span style="opacity:.75;font-size:11.5px">Colours are artistic/synthetic (the scans have no RGB or intensity). <a href="https://github.com/Stroop14/calico-mapping-lidar/releases/download/walkthrough-v1/calico-walkthrough.zip" style="color:#f0b27a">Offline copy + fly-through video</a> · <a href="https://github.com/Stroop14/calico-mapping-lidar" style="color:#f0b27a">Repo</a></span></div>
+<b>B</b> back-face point culling on/off<br><b>P</b> auto fly-through (to the northwest end and back)<br><b>Map</b> button (top left) shows a top-down tunnel map, north up. On a phone it starts hidden.<br>
+<b>Std / High</b> point density. High is the default on a desktop; a phone starts on Standard.<br><b>R</b> reset to portal &nbsp; <b>H</b> hide this help and the compass/distance overlay<br><span style="opacity:.75;font-size:11.5px">Colours are artistic/synthetic (the scans have no RGB or intensity). <a href="https://github.com/Stroop14/calico-mapping-lidar/releases/download/walkthrough-v1/calico-walkthrough.zip" style="color:#f0b27a">Offline copy + fly-through video</a> · <a href="https://github.com/Stroop14/calico-mapping-lidar" style="color:#f0b27a">Repo</a></span></div>
 <div id="hud"></div>
 <script>
 // ---------- byte-accurate loader with live event log ----------
@@ -118,11 +131,15 @@ window.CALICO={files:{},addFile:function(i,a){CALICO.files[i]=a;if(CALICO.onFile
 (function(){
 'use strict';
 // Uncompressed sizes (what a streaming reader counts; GitHub Pages gzips on the wire, so Content-Length can't be used).
-var SIZES={'lib/three.min.js':608081,'data/meta.js':16629,
- 'data/pts_000.js':8185591,'data/pts_001.js':8118086,'data/pts_002.js':9435752,'data/pts_003.js':9210115,
- 'data/pts_004.js':8685753,'data/pts_005.js':8903545,'data/pts_006.js':8144089,'data/pts_007.js':8346578,'data/pts_008.js':2434038,
+var NPTS=14;
+function ptsName(i){var s=String(i);while(s.length<3)s='0'+s;return 'data/pts_'+s+'.js';}
+var SIZES={'lib/three.min.js':608081,'data/meta.js':2328299,
+ 'data/pts_000.js':13749372,'data/pts_001.js':12724470,'data/pts_002.js':13338945,'data/pts_003.js':13076863,
+ 'data/pts_004.js':13604857,'data/pts_005.js':13492108,'data/pts_006.js':13154035,'data/pts_007.js':13348513,
+ 'data/pts_008.js':13250570,'data/pts_009.js':12782222,'data/pts_010.js':13562270,'data/pts_011.js':13656695,
+ 'data/pts_012.js':12922386,'data/pts_013.js':9435338,
  'data/mesh.js':18783875};
-var PTS=[];for(var i=0;i<9;i++)PTS.push('data/pts_00'+i+'.js');
+var PTS=[];for(var i=0;i<NPTS;i++)PTS.push(ptsName(i));
 var START=['lib/three.min.js','data/meta.js'].concat(PTS);
 var T0=performance.now(), $=function(id){return document.getElementById(id);};
 var logEl=$('log'), bar=$('bar').firstChild;
@@ -172,7 +189,7 @@ function fail(what,err){L.errors++;log('ERROR: '+what+' failed — '+(err&&err.m
  status('Loading failed: '+what+'. Check your connection, then retry.',true);$('status').style.color='#ff7b6b';$('retry').style.display='inline-block';}
 L.fail=fail;
 
-log('Page started — loading viewer and 9 tunnel sections ('+fmtMB(totals()[1])+' MB).');
+log('Page started — loading viewer and '+PTS.length+' tunnel sections ('+fmtMB(totals()[1])+' MB).');
 status('Downloading 3-D viewer engine (three.js)…');
 
 // --- engine: three.js -> meta -> app.js ---
@@ -196,19 +213,19 @@ appReady.catch(function(e){fail('viewer engine',e);});
 var queue=[],texts={},nextAdd=0,nextFetch=0,active=0,dlCount=0,addBusy=false;
 function startNext(){while(active<2&&nextFetch<PTS.length){(function(fi){var f=PTS[fi];active++;
   fetchTracked(f).then(function(t){active--;dlCount++;texts[fi]=t;
-   log('Tunnel section '+(fi+1)+' of 9 downloaded ('+fmtMB(t.length)+' MB).');
+   log('Tunnel section '+(fi+1)+' of '+PTS.length+' downloaded ('+fmtMB(t.length)+' MB).');
    startNext();addNext();
   }).catch(function(e){active--;fail('tunnel section '+(fi+1)+' ('+f+')',e);});})(nextFetch++);}}
 startNext();
 function addNext(){appReady.then(function(){
  if(addBusy||!(nextAdd in texts))return;addBusy=true;var fi=nextAdd;
- if(!finished)status('Downloading & building the tunnel… section '+(fi+1)+' of 9 going into the scene');
- else status('Building the tunnel… adding section '+(fi+1)+' of 9');
+ if(!finished)status('Downloading & building the tunnel… section '+(fi+1)+' of '+PTS.length+' going into the scene');
+ else status('Building the tunnel… adding section '+(fi+1)+' of '+PTS.length);
  setTimeout(function(){ // let the status paint before the (blocking) decode
   try{evalScript(texts[fi],PTS[fi]);delete texts[fi];}catch(e){fail('adding tunnel section '+(fi+1),e);return;}
   nextAdd++;addBusy=false;setTimeout(addNext,30);},30);});}
-L.sectionAdded=function(fi,total){log('Tunnel section '+(fi+1)+' of 9 added to scene (running total '+total.toLocaleString()+' points).','ok');
- if(!finished)status('Downloading… '+(fi+1)+' of 9 sections in the scene so far');};
+L.sectionAdded=function(fi,total){log('Tunnel section '+(fi+1)+' of '+PTS.length+' added to scene (running total '+total.toLocaleString()+' points).','ok');
+ if(!finished)status('Downloading… '+(fi+1)+' of '+PTS.length+' sections in the scene so far');};
 L.done=function(){clearInterval(paintTimer);finished=true;paint();};
 })();
 </script>
