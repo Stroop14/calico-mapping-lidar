@@ -1,5 +1,5 @@
-/* Circular then-and-now lens shared by index.html and slider.html.
-   The colour photo fills the frame. A circle shows the older print and follows the pointer. */
+/* Full-width then-and-now divider shared by index.html and slider.html.
+   The older print is on the left of the line. The colour photo is on the right. */
 (function(){
 'use strict';
 var PAIRS=[
@@ -12,25 +12,20 @@ var PAIRS=[
  {id:'pair04',w:1600,h:1012,
   cap:'The Maggie Mine building against a rocky hillside, with a wooden headframe behind it. The old print shows signs for Maggie Mining Co., Glory Tunnel and Commissary, two ore carts, and a man standing at the right. The colour photo shows the building with its current sign, rail track and fence.'}
 ];
-function place(ba, cx, cy){
-  var w=ba.clientWidth, h=ba.clientHeight;
-  if(!(w>2&&h>2)) return;
-  var d=Math.min(w*0.38, h*0.92);
-  var m=d/2;
-  cx=Math.max(m, Math.min(w-m, cx));
-  cy=Math.max(m, Math.min(h-m, cy));
-  var lens=ba.querySelector('.lens');
-  var old=lens.querySelector('.old');
-  lens.style.width=d+'px';
-  lens.style.height=d+'px';
-  lens.style.left=cx+'px';
-  lens.style.top=cy+'px';
-  old.style.width=w+'px';
-  old.style.height=h+'px';
-  old.style.left=(-(cx-m))+'px';
-  old.style.top=(-(cy-m))+'px';
-  ba._cx=cx; ba._cy=cy; ba._fx=cx/w; ba._fy=cy/h;
-  ba.setAttribute('aria-valuetext', 'Circle at '+Math.round(cx/w*100)+' percent across and '+Math.round(cy/h*100)+' percent down');
+function layout(ba){
+  var old=ba.querySelector('.old');
+  old.style.width=ba.clientWidth+'px';
+  old.style.height=ba.clientHeight+'px';
+}
+function setSplit(ba, pct){
+  var w=ba.clientWidth;
+  if(!(w>2)) return;
+  pct=Math.max(0, Math.min(100, pct));
+  ba.style.setProperty('--pct', pct+'%');
+  ba._pct=pct;
+  ba.setAttribute('aria-valuenow', String(Math.round(pct)));
+  ba.setAttribute('aria-valuetext', 'Divider at '+Math.round(pct)+' percent. Then on the left, now on the right.');
+  layout(ba);
 }
 function mount(list){
   if(!list || list.dataset.mounted) return;
@@ -38,11 +33,12 @@ function mount(list){
   var sec=document.createElement('section');
   sec.className='pair';
   sec.innerHTML=
-    '<div class="lensbox" tabindex="0" role="application" aria-label="Then and now. The older photo is inside the circle. Arrow keys move the circle.">'+
-      '<img class="now" alt="Now: colour photo">'+
-      '<div class="lens" aria-hidden="true"><img class="old" alt=""></div>'+
-      '<span class="tag then">Then (inside the circle)</span>'+
-      '<span class="tag now">Now (outside)</span>'+
+    '<div class="ba" tabindex="0" role="slider" aria-label="Then and now. The older print is on the left of the line and the colour photo is on the right. Arrow keys move the line." aria-valuemin="0" aria-valuemax="100" aria-valuenow="50">'+
+      '<img class="now" alt="Now, on the right: colour photo">'+
+      '<div class="clip"><img class="old" alt="Then, on the left: black-and-white print"></div>'+
+      '<span class="tag then">Then (left)</span>'+
+      '<span class="tag now">Now (right)</span>'+
+      '<div class="handle" aria-hidden="true"><i></i><b></b></div>'+
     '</div>'+
     '<div class="row">'+
       '<button type="button" class="pairnav prevp">Previous pair</button>'+
@@ -51,7 +47,7 @@ function mount(list){
     '</div>'+
     '<p class="cap"></p>';
   list.appendChild(sec);
-  var ba=sec.querySelector('.lensbox');
+  var ba=sec.querySelector('.ba');
   var now=ba.querySelector('.now');
   var old=ba.querySelector('.old');
   var cap=sec.querySelector('.cap');
@@ -63,25 +59,18 @@ function mount(list){
     now.src='assets/pairs/'+p.id+'_new.jpg';
     now.width=p.w; now.height=p.h;
     old.src='assets/pairs/'+p.id+'_old.jpg';
-    old.alt='Then: black-and-white print';
     cap.textContent=p.cap;
     pairn.textContent='Pair '+(index+1)+' of '+PAIRS.length;
-    ba._fx=null;
-    if(now.complete && now.naturalWidth) center();
-  }
-  function center(){
-    place(ba, ba.clientWidth/2, ba.clientHeight/2);
-  }
-  function layout(){
-    if(ba._fx==null) center();
-    else place(ba, ba.clientWidth*ba._fx, ba.clientHeight*ba._fy);
+    ba._pct=50;
+    if(now.complete && now.naturalWidth) setSplit(ba, 50);
   }
   function atEvent(e){
     var r=ba.getBoundingClientRect();
-    place(ba, e.clientX-r.left, e.clientY-r.top);
+    setSplit(ba, (e.clientX-r.left)/Math.max(1, r.width)*100);
   }
-  now.addEventListener('load', center);
+  now.addEventListener('load', function(){ setSplit(ba, ba._pct==null?50:ba._pct); });
   ba.addEventListener('pointerdown', function(e){
+    if(e.button!=null && e.button!==0) return;
     dragging=true;
     ba.focus({preventScroll:true});
     try{ ba.setPointerCapture(e.pointerId); }catch(err){}
@@ -95,19 +84,16 @@ function mount(list){
   ba.addEventListener('pointerup', end);
   ba.addEventListener('pointercancel', end);
   ba.addEventListener('keydown', function(e){
-    var keys={ArrowLeft:[-1,0], ArrowRight:[1,0], ArrowUp:[0,-1], ArrowDown:[0,1]};
-    var dir=keys[e.key];
-    if(!dir) return;
+    if(e.key!=='ArrowLeft' && e.key!=='ArrowRight') return;
     e.preventDefault();
-    var step=Math.max(16, ba.clientWidth*0.04);
-    if(ba._cx==null) center();
-    place(ba, ba._cx+dir[0]*step, ba._cy+dir[1]*step);
+    var cur=ba._pct==null?50:ba._pct;
+    setSplit(ba, cur+(e.key==='ArrowLeft'?-4:4));
   });
   sec.querySelector('.prevp').addEventListener('click', function(){ show(index-1); });
   sec.querySelector('.nextp').addEventListener('click', function(){ show(index+1); });
-  addEventListener('resize', layout);
+  addEventListener('resize', function(){ setSplit(ba, ba._pct==null?50:ba._pct); });
   show(0);
-  if(now.complete) center();
+  if(now.complete && now.naturalWidth) setSplit(ba, 50);
 }
-window.THEN_NOW={mount:mount, place:place};
+window.THEN_NOW={mount:mount, setSplit:setSplit};
 })();
