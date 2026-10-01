@@ -268,8 +268,8 @@ function enterTouch(){
 if(TOUCH){
  document.body.classList.add('touch');
  const big=document.querySelector('#enter .big'), ctl=document.querySelector('#enter .ctl');
- if(big) big.textContent='The walk starts when loading finishes';
- if(ctl) ctl.innerHTML='The guided walk starts on its own · touch a joystick or drag to take over<br><b>Guided</b> follows the tunnel · <b>Free View</b> for two sticks · <b>4×</b> walks faster';
+ if(big) big.textContent='The stick guide appears when loading finishes';
+ if(ctl) ctl.innerHTML='Drag the bottom-right stick up to walk forward and down to walk back<br><b>Guided</b> follows the tunnel · <b>Free View</b> for two sticks · <b>4×</b> walks faster';
  const ui=document.createElement('div'); ui.id='touchui';
  ui.innerHTML='<div id="stick"><div class="pad"><div class="knob"></div></div></div>'+
   '<div id="lookstick"><div class="pad"><div class="knob"></div></div></div>'+
@@ -288,7 +288,7 @@ if(TOUCH){
    const nx=dx/d*m, ny=dy/d*m; setKnob(nx,ny); onChange(nx/STICK_R, -ny/STICK_R);
   }
   function end(id){ if(id!==tid) return; tid=null; setKnob(0,0); onChange(0,0); }
-  el.addEventListener('touchstart',e=>{ userTakeover(); if(!entered) return; e.preventDefault(); const t=e.changedTouches[0]; tid=t.identifier; apply(t); },{passive:false});
+  el.addEventListener('touchstart',e=>{ if(el.id==='stick') fadeStickCoach(); userTakeover(); if(!entered) return; e.preventDefault(); const t=e.changedTouches[0]; tid=t.identifier; apply(t); },{passive:false});
   el.addEventListener('touchmove',e=>{ for(const t of e.changedTouches) if(t.identifier===tid){ e.preventDefault(); apply(t); } },{passive:false});
   el.addEventListener('touchend',e=>{ for(const t of e.changedTouches) end(t.identifier); },{passive:true});
   el.addEventListener('touchcancel',e=>{ for(const t of e.changedTouches) end(t.identifier); },{passive:true});
@@ -514,14 +514,21 @@ function startAuto(){ auto=true; if(!FLY){ autoT=nearestT(); return; }
  eyeBuf.length=0; eyeMark=null; eyeV=0; }   // fresh travel window; keep the current eye height
 function stopAuto(){ auto=false; snapEye(); }
 function userTakeover(){ if(!auto) return; stopAuto(); snapLook(); if(CALICO.syncTouchBtns) CALICO.syncTouchBtns(); flash('You have control'); }
+function showStickCoach(){
+ const el=document.getElementById('stickcoach'); if(!el) return;
+ el.classList.add('show'); el.classList.remove('out'); el.setAttribute('aria-hidden','false');
+ document.body.classList.add('stickcoach');
+}
+function fadeStickCoach(){
+ const el=document.getElementById('stickcoach'); if(!el||!el.classList.contains('show')||el.classList.contains('out')) return;
+ el.classList.add('out'); el.setAttribute('aria-hidden','true'); document.body.classList.remove('stickcoach');
+ setTimeout(()=>{ el.classList.remove('show'); },520);
+}
 function startTour(){
  if(qs.has('capture')||entered) return;
  ov.style.display='none'; entered=true;
  if(!TOUCH){ startPanel.classList.add('show'); document.body.classList.add('deskstart'); return; }
- startAuto();
- if(CALICO.syncTouchBtns) CALICO.syncTouchBtns();
- flash(FLY?'Guided walk to the northwest end and back':'Auto fly-through');
- showHint('Guided walk is playing.<br>Touch a joystick or drag the view to take over.',5000);
+ showStickCoach();
 }
 function flyStep(dt){
  const L=FLY_LEN, out=flyD<L, stopAt=out?L:2*L;
@@ -771,7 +778,7 @@ function onLoaded(){
  if(CALICO.nw) LD.log('Fly-through retargeted to the northwest end: '+Math.round(CALICO.nw.routeFt)+' ft along the tunnel, '+Math.round(CALICO.nw.straightFt)+' ft from the portal at about N'+Math.round(CALICO.nw.bearing)+'°E.','ok');
  LD.done(); if(!entered) reset(); update(0); renderer.render(scene,camera);
  LD.log(`Headlamp on, scene ready — ${(loadedPts/1e6).toFixed(2)} M points, first frame rendered just inside the portal.`,'ok');
- LD.log(qs.has('capture')?'Ready.':(TOUCH?'Starting the guided walk.':'Controls ready.'),'ok');
+ LD.log(qs.has('capture')?'Ready.':(TOUCH?'Ready — use the stick to walk.':'Controls ready.'),'ok');
  LD.status(`All ${M.files.length} tunnel sections loaded (${(loadedPts/1e6).toFixed(2)} M points).`);
  ov.dataset.ready=1; ov.classList.add('ready');
  CALICO.ready=true; if(qs.has('capture')){ov.style.display='none';document.getElementById('help').style.display='none';document.getElementById('hud').style.display='none';}

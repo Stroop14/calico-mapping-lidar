@@ -58,6 +58,16 @@ body.touch #keyhint{display:none!important}
 #startpanel .go{margin:auto 0 0;padding-top:14px;text-align:center;font-size:18px;font-weight:750;color:#ffd2a6}
 body.deskstart #help{display:none}
 body.touch #startpanel{display:none!important}
+#stickcoach{display:none;position:fixed;inset:0;z-index:9;pointer-events:none;opacity:1;transition:opacity .5s ease}
+body.touch #stickcoach.show{display:block}
+#stickcoach.out{opacity:0}
+#stickcoach .scrim{position:absolute;inset:0;background:rgba(0,0,0,.55)}
+#stickcoach .copy{position:absolute;left:12px;right:12px;bottom:318px;background:#070605;color:#fff;border:3px solid #fff;border-radius:16px;padding:16px 16px 14px;box-shadow:0 16px 40px rgba(0,0,0,.7)}
+#stickcoach .copy b{display:block;font-size:30px;line-height:1.12;font-weight:800;letter-spacing:-.01em}
+#stickcoach .copy span{display:block;margin-top:8px;font-size:20px;line-height:1.25;font-weight:700;color:#ffd2a6}
+#stickcoach .arrow{position:absolute;right:54px;bottom:52px;width:210px;height:240px;animation:pointstick .85s ease-in-out infinite;filter:drop-shadow(0 4px 0 #000) drop-shadow(0 0 10px rgba(0,0,0,.8))}
+@keyframes pointstick{0%,100%{transform:translate(0,0)}50%{transform:translate(16px,20px)}}
+body.stickcoach #stick{z-index:11;opacity:1;border-radius:50%;box-shadow:0 0 0 5px #fff,0 0 0 12px #e9a066,0 0 28px rgba(255,255,255,.85)}
 body.touch #homelink{top:8px;left:max(8px,env(safe-area-inset-left));font-size:11px;padding:4px 7px}
 body.hidehelp #help{display:none}
 body.touch{touch-action:none}
@@ -146,6 +156,16 @@ Walkthrough rendered by Mike Murrey, field camp class of 2019
 <b>C</b> keep-inside pull-back · <b>M</b> surface mesh · <b>[ ]</b> point size · <b>B</b> back-face culling<br>
 <b>Map</b> (top left) is a north-up plan · <b>Std / High</b> sets point density</p>
 <p class="go">Click to start · Press any key to begin</p>
+</div>
+<div id="stickcoach" aria-hidden="true">
+<div class="scrim"></div>
+<div class="copy"><b>Use this stick to walk forward and back</b><span>Drag up to go forward · drag down to go back</span></div>
+<svg class="arrow" viewBox="0 0 210 240" aria-hidden="true">
+<path d="M20 12 L126 140" fill="none" stroke="#000" stroke-width="42" stroke-linecap="round"/>
+<path d="M20 12 L126 140" fill="none" stroke="#fff" stroke-width="26" stroke-linecap="round"/>
+<path d="M198 228 L112 176 L158 128 Z" fill="#000"/>
+<path d="M190 216 L122 174 L160 136 Z" fill="#fff"/>
+</svg>
 </div>
 <a id="homelink" href="index.html">Home</a>
 <div id="hint"></div>
