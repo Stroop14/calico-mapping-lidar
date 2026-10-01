@@ -63,11 +63,7 @@ body.freeview #stick{left:max(10px,env(safe-area-inset-left));right:auto}
 #tbtns{position:fixed;left:50%;right:auto;transform:translateX(-50%);bottom:calc(88px + 8px + max(8px,env(safe-area-inset-bottom)));z-index:6;display:flex;flex-direction:row;gap:5px;align-items:center;justify-content:center;touch-action:none;max-width:calc(100vw - 16px)}
 #tbtns button{appearance:none;width:40px;height:40px;min-height:0;padding:0;background:rgba(10,7,5,.38);color:#ffd2a6;border:1px solid rgba(233,160,102,.7);border-radius:8px;font:700 12px/1 system-ui,Segoe UI,Helvetica,Arial,sans-serif;letter-spacing:0}
 #tFast{font-size:13px;font-weight:800}
-#tFast.on,#tRails.on{background:rgba(233,160,102,.85);color:#1c1008;border-color:#ffe0bf}
-#tRails{width:auto;min-width:44px;padding:0 6px;font-size:10px;font-weight:750}
-#mapwrap #tRails{pointer-events:auto;width:auto;min-width:0;appearance:none;cursor:pointer;background:rgba(10,7,5,.55);color:#ffd2a6;border:1px solid rgba(233,160,102,.75);border-radius:6px;padding:5px 8px;font:700 12px/1 system-ui,Segoe UI,Helvetica,Arial,sans-serif}
-#mapwrap #tRails.on{background:rgba(233,160,102,.85);color:#1c1008;border-color:#ffe0bf}
-body.touch #mapwrap #tRails{display:none}
+#tFast.on{background:rgba(233,160,102,.85);color:#1c1008;border-color:#ffe0bf}
 #tMode{width:auto;min-width:52px;padding:0 7px;font-size:11px;font-weight:750}
 #tMode.on{background:rgba(233,160,102,.82);color:#1c1008;border-color:#ffe0bf}
 #tMode.free{background:rgba(243,226,200,.78);color:#1c1008;border-color:#fff}
@@ -85,7 +81,7 @@ body.touch #mapwrap{left:max(8px,env(safe-area-inset-left));top:46px;max-width:1
 body.touch #mapBtn,body.touch #qBtn{padding:4px 6px;font-size:10px}
 body.touch #minimap{width:90px;height:74px;background:rgba(0,0,0,.45);border-color:rgba(233,160,102,.4);box-shadow:none}
 body.touch.mapopen #hud{display:none!important}
-body.uidim #stick,body.uidim #lookstick,body.uidim #tFly,body.uidim #tReset,body.uidim #tLamp,body.uidim #tFast,body.uidim #tRails,body.uidim #mapwrap{opacity:.16}
+body.uidim #stick,body.uidim #lookstick,body.uidim #tFly,body.uidim #tReset,body.uidim #tLamp,body.uidim #tFast,body.uidim #mapwrap{opacity:.16}
 body.uidim #tMode{opacity:.78}
 #stick,#lookstick,#tbtns button,#mapwrap{transition:opacity .55s}
 @media (max-width:700px){
@@ -113,7 +109,7 @@ Handheld GeoSLAM LiDAR · 5,359,712 points<br>
 Portal 34.95117° N, 116.86307° W<br>
 Walkthrough rendered by Mike Murrey, field camp class of 2019
 </div>
-<p class="about">A walk-through of a real 3-D laser scan of the Silver King Mine tunnel in the Calico Hills, captured with a handheld GeoSLAM scanner during the 2019 CSUSB geology field camp led by Dr. Erik Melchiorre. Field camp is the capstone of a geology education: days of nonstop fieldwork in the heat, and here, underground in clay dust. About 5.36 million measured points are streamed into your browser (~71 MB uncompressed on first visit), then you can walk the tunnel with a virtual headlamp. Colours are artistic, not true colour &mdash; the scanner recorded shape only. Rails shown as a guide, based on photos from the trip; the scan itself does not resolve them.</p>
+<p class="about">A walk-through of a real 3-D laser scan of the Silver King Mine tunnel in the Calico Hills, captured with a handheld GeoSLAM scanner during the 2019 CSUSB geology field camp led by Dr. Erik Melchiorre. Field camp is the capstone of a geology education: days of nonstop fieldwork in the heat, and here, underground in clay dust. About 5.36 million measured points are streamed into your browser (~71 MB uncompressed on first visit), then you can walk the tunnel with a virtual headlamp. Colours are artistic, not true colour &mdash; the scanner recorded shape only.</p>
 <p class="sub" style="margin:0 0 12px;font-size:13px"><a href="index.html" style="color:#f0b27a">Home</a> &nbsp;·&nbsp; <a href="maps.html" style="color:#f0b27a">Maps &amp; measurements</a></p>
 <div id="enter"><div class="big">The walk starts when loading finishes</div>
 <div class="ctl"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> move &nbsp;·&nbsp; <b>mouse</b> look &nbsp;·&nbsp; <kbd>Space</kbd> / <kbd>Shift</kbd> up / down &nbsp;·&nbsp; <kbd>F</kbd> walk 4× &nbsp;·&nbsp; <kbd>G</kbd> guided &nbsp;·&nbsp; <kbd>Esc</kbd> release the mouse<br>
