@@ -201,7 +201,7 @@ function lookAt(p){const d=new THREE.Vector3().subVectors(p,camera.position);yaw
 const START_D=6.0;
 function reset(){ const t=Math.min(START_D/pathLen,1); poseAt(t); guideInited=false; guideOff=0; guideV=0; peekYaw=0; peekPitch=0; }
 function flash(t){msg=t;msgT=2.5;}
-addEventListener('keydown',e=>{ if(startPanelOpen()) dismissStart(); if(auto && e.code!=='KeyP') userTakeover(); keys[e.code]=true;
+addEventListener('keydown',e=>{ if(e.code==='KeyW'||e.code==='KeyA'||e.code==='KeyS'||e.code==='KeyD'||e.code.startsWith('Arrow')) fadeDeskKeys(); if(auto && e.code!=='KeyP') userTakeover(); keys[e.code]=true;
  if(e.code==='KeyC'){keepIn=!keepIn;outT=0;flash('Keep-inside pull-back '+(keepIn?'ON':'OFF (free flight)'));}
  if(e.code==='KeyL'){lampOn=!lampOn;flash('Headlamp '+(lampOn?'ON':'OFF (flat light)')); if(CALICO.syncTouchBtns) CALICO.syncTouchBtns();}
  if(e.code==="KeyR"){reset();auto=false;resetGuard();snapLook(); if(CALICO.syncTouchBtns) CALICO.syncTouchBtns();}
@@ -217,13 +217,16 @@ addEventListener('keydown',e=>{ if(startPanelOpen()) dismissStart(); if(auto && 
  if(e.code==='Space'||e.code.startsWith('Arrow'))e.preventDefault();});
 addEventListener('keyup',e=>{keys[e.code]=false;});
 addEventListener('wheel',e=>{speed=Math.min(40,Math.max(0.2,speed*(e.deltaY<0?1.12:1/1.12)));flash('Speed '+speed.toFixed(1)+' m/s');},{passive:true});
-const ov=document.getElementById('overlay'), hint=document.getElementById('hint'), startPanel=document.getElementById('startpanel'); let entered=false, hintTimer=0;
-function startPanelOpen(){ return !!(startPanel && startPanel.classList.contains('show')); }
-function dismissStart(){ if(!startPanelOpen()) return false; startPanel.classList.remove('show'); document.body.classList.remove('deskstart'); return true; }
+const ov=document.getElementById('overlay'), hint=document.getElementById('hint'), deskKeys=document.getElementById('deskkeys'); let entered=false, hintTimer=0;
+function fadeDeskKeys(){
+ if(!deskKeys||!deskKeys.classList.contains('show')||deskKeys.classList.contains('out')) return;
+ deskKeys.classList.add('out'); deskKeys.style.pointerEvents='none'; document.body.classList.remove('deskstart');
+ setTimeout(()=>{ deskKeys.classList.remove('show'); },520);
+}
 ov.addEventListener('click',()=>{ if(!ov.dataset.ready) return; if(TOUCH) enterTouch(); else renderer.domElement.requestPointerLock(); });
-renderer.domElement.addEventListener('click',()=>{ if(TOUCH||!ov.dataset.ready) return; dismissStart(); renderer.domElement.requestPointerLock(); });
-renderer.domElement.addEventListener('pointerdown',e=>{ if(!ov.dataset.ready||e.pointerType==='touch') return; if(startPanelOpen()) dismissStart(); userTakeover(); });
-document.addEventListener('click',e=>{ if(!startPanelOpen()||TOUCH) return; dismissStart(); if(!(e.target.closest&&e.target.closest('a'))) renderer.domElement.requestPointerLock(); });
+renderer.domElement.addEventListener('click',()=>{ if(TOUCH||!ov.dataset.ready) return; renderer.domElement.requestPointerLock(); });
+renderer.domElement.addEventListener('pointerdown',e=>{ if(!ov.dataset.ready||e.pointerType==='touch') return; userTakeover(); });
+document.addEventListener('click',e=>{ if(TOUCH||!deskKeys||!deskKeys.classList.contains('show')) return; if(e.target.closest&&e.target.closest('a')) return; renderer.domElement.requestPointerLock(); });
 function showHint(html,ms){ hint.innerHTML=html; hint.classList.add('show'); clearTimeout(hintTimer); hintTimer=setTimeout(()=>hint.classList.remove('show'),ms); }
 document.addEventListener('pointerlockchange',()=>{const L=document.pointerLockElement===renderer.domElement;
  if(L){ ov.style.display='none';
@@ -527,7 +530,7 @@ function fadeStickCoach(){
 function startTour(){
  if(qs.has('capture')||entered) return;
  ov.style.display='none'; entered=true;
- if(!TOUCH){ startPanel.classList.add('show'); document.body.classList.add('deskstart'); return; }
+ if(!TOUCH){ deskKeys.classList.add('show'); deskKeys.classList.remove('out'); deskKeys.style.pointerEvents=''; document.body.classList.add('deskstart'); return; }
  showStickCoach();
 }
 function flyStep(dt){
