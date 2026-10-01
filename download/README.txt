@@ -4,8 +4,7 @@ Calico / Silver King Mine - terrestrial LiDAR point clouds (download package)
 What this is
   Handheld/terrestrial LiDAR scans of the Silver King Mine tunnel at Calico Ghost Town,
   California (portal approx. 34.95117 N, 116.86307 W), collected on 24 March 2019 during the
-  CSUSB geology field camp led by Dr. Erik Melchiorre. Scans collected and processed by
-  Michael Murrey with the class.
+  Spring 2019 CSUSB geology field camp. Scans collected and processed by the class.
 
 Files
   calico_scan_a.laz   14,373,530 points   49.6 MB (49,629,151 bytes)   Scan A
@@ -32,5 +31,5 @@ How to open
   LAStools/laszip : laszip -i calico_scan_a.laz -o calico_scan_a.las
 
 Credit
-  CSUSB geology field camp, Dr. Erik Melchiorre. Data collected and processed by Michael Murrey.
+  Spring 2019 CSUSB geology field camp. Data collected and processed by the class.
   Website: https://stroop14.github.io/calico-mapping-lidar/

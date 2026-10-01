@@ -779,8 +779,8 @@ function loop(now){ requestAnimationFrame(loop); if(qs.has('capture')) return;
 Outside the tunnel: pulling you back in ${Math.max(0,OUT_GRACE-outT).toFixed(1)} s`:'')+(msgT>0?`
 ${msg}`:'');}
 // ---------- nav HUD: distance from the portal along the centreline + approximate compass ----------
-// Silver King Mine, Calico. The scan is in a local SLAM frame with no true north. Mike Murrey confirmed that
-// the adit runs into the hill at about N15-20°E, so we take TUNNEL_BEARING_DEG=17.5 as the true bearing of the
+// Silver King Mine, Calico. The scan is in a local SLAM frame with no true north. Field notes put
+// the adit into the hill at about N15-20°E, so we take TUNNEL_BEARING_DEG=17.5 as the true bearing of the
 // first 10 m of the centreline from the portal, and derive the north offset from it. NORTH_OFFSET_DEG is the
 // scene bearing of true north, measured clockwise from scene -Z (LAS +Y) seen from above.
 // It works out to about 280°, so true north is roughly scene -X, turned about 10° toward -Z.
