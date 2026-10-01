@@ -99,9 +99,9 @@
     "lon": "-116.8640833"
    },
    "caption": "Long low building with signs against a rocky hillside, with a wooden headframe behind it. Old: black-and-white print (rotated 90 degrees in the original file) showing the building with signs reading MAGGIE MINING Co., GLORY TUNNEL and COMMISSARY, two ore carts and a man standing at the right. New: colour photo of the Maggie Mine building with its current sign, rail track and fence.",
-   "alignment_method": "LoFTR multi-scale matching + RANSAC similarity transform (~-1.7 deg rotation, ~1.09x zoom); print cropped and rectified by 4-point homography. Note: the man in the old print is a historical figure, not a modern person.",
+   "alignment_method": "Uniform scale and translation only (no rotation, no perspective). Landmarks: the roof eave, including its high point, and the base of the front wall. The colour photo is sampled as new(1.02*x - 12, 1.02*y - 14) into the print's frame, which shrinks it slightly and shifts it so those landmarks share pixels. Both frames are then cropped to the shared area and resized to 1600x1012, the same aspect as before. The man in the old print is a historical figure, not a modern person.",
    "alignment_quality": "good",
-   "alignment_note": "Roofline, headframe and hillside coincide; ~58% of matched features within 8 px. Some doubling on foreground track/fence (different camera position/height) and the different sign/paint.",
+   "alignment_note": "After the scale and shift, the roof line matches within 0-2 px from the left of the building through the high point on the right (measured at x=650, 750, 850, 950, 1050 and 1150). The wall base matches within 1-2 px where the edge is the same board line. Foreground track, fence and the signs still double: those are real changes and a lower camera, not a scale error. The other three pairs were left as they were; their ridges and foreground rock already sit together, and the remaining building ghosting is parallax.",
    "files": {
     "old": "pair04_old.jpg",
     "new": "pair04_new.jpg",
