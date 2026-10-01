@@ -12,8 +12,12 @@ const camera=new THREE.PerspectiveCamera(72,W()/Hh(),0.05,400);
 camera.rotation.order='YXZ';
 
 // ---------- shared uniforms / point material ----------
+// 0 leaves the original clay. 1 is the tuned warm grade: a little more contrast and saturation,
+// a warmer lamp, and slightly richer clay and timber. This is the only colour knob.
+const GRADE=0;
 const U={uCam:{value:new THREE.Vector3()},uDir:{value:new THREE.Vector3(0,0,-1)},uLamp:{value:1.0},
-  uSize:{value:0.034},uMaxPx:{value:64},uMinPx:{value:2.2},uScreen:{value:Hh()},uFov:{value:1.0},uTime:{value:0},uFogDist:{value:38.0},uCull:{value:1.0}};
+  uSize:{value:0.03},uScreen:{value:Hh()},uFov:{value:1.0},uTime:{value:0},uFogDist:{value:38.0},uCull:{value:1.0},
+  uGrade:{value:qs.has('grade')?Math.max(0,Math.min(1,parseFloat(qs.get('grade')))):GRADE}};
 const common=`
 uniform vec3 uCam; uniform vec3 uDir; uniform float uLamp; uniform float uTime; uniform float uFogDist;
 float h3(vec3 p){p=fract(p*0.3183099+0.1);p*=17.0;return fract(p.x*p.y*p.z*(p.x+p.y+p.z));}
@@ -49,26 +53,31 @@ vec3 light(vec3 wp, vec3 n, vec3 base){
  return col*fog;}
 `;
 const pmat=new THREE.ShaderMaterial({uniforms:U,vertexShader:common+`
-attribute vec3 nrm; attribute float tone; uniform float uSize; uniform float uMaxPx; uniform float uMinPx; uniform float uScreen; uniform float uFov; uniform float uCull;
+attribute vec3 nrm; attribute float tone; uniform float uSize; uniform float uScreen; uniform float uFov; uniform float uCull;
 varying vec3 vCol;
 void main(){ vec4 wp=modelMatrix*vec4(position,1.0); vec4 mv=viewMatrix*wp;
  float hgt=tone*2.6/0.902; if(tone>0.95) hgt=1.0;
  vec3 base=clayColor(wp.xyz,nrm,hgt,tone);
  vCol=light(wp.xyz,nrm,base);
  gl_Position=projectionMatrix*mv;
- // World size tracks distance. High is a hair over the old 3 cm sprite on the denser cloud;
- // Standard is larger because it keeps about 40% of the points.
- float sz=uSize*(tone>0.985?0.72:1.0);
- gl_PointSize=clamp(sz*uScreen/(uFov*-mv.z),uMinPx,uMaxPx);
+ float dist=max(-mv.z,0.05);
+ float fill=mix(2.4,0.45,smoothstep(1.2,14.0,dist));
+ float sz=uSize*(tone>0.985?0.6:1.0)*fill;
+ gl_PointSize=clamp(sz*uScreen/(uFov*dist),1.0,48.0);
  if(uCull>0.5 && tone<0.95 && dot(nrm,normalize(uCam-wp.xyz))<-0.3){gl_Position=vec4(2.0,2.0,2.0,1.0);gl_PointSize=0.0;}}`,
- fragmentShader:`varying vec3 vCol;
-void main(){ vec2 c=gl_PointCoord-0.5; float r2=dot(c,c);
- // Almost the whole quad is kept (only the extreme corners drop) so neighbours overlap into a solid wall.
- // The middle stays the bright chunky sprite; the rim is a darker opaque fill of the same colour.
- if(r2>0.46) discard;
- float core=smoothstep(0.40,0.22,r2);
- vec3 fill=mix(vCol*0.78, vCol, core);
- float lm=dot(fill,vec3(0.3,0.55,0.15)); vec3 col=fill*(1.9/(1.0+1.9*lm*0.75));
+ fragmentShader:`uniform float uGrade; varying vec3 vCol;
+vec3 gradeClay(vec3 c){
+ vec3 warm=c*vec3(1.035,1.005,0.975);
+ float y=dot(warm,vec3(0.30,0.59,0.11));
+ vec3 sat=mix(vec3(y),warm,1.10);
+ vec3 con=(sat-y)*1.05+y;
+ float clay=smoothstep(0.02,0.22,con.r-con.b);
+ con.r+=0.018*clay;
+ con.g+=0.005*clay;
+ return max(con,vec3(0.0));}
+void main(){ vec2 q=gl_PointCoord-0.5; if(dot(q,q)>0.25) discard;
+ float lm=dot(vCol,vec3(0.3,0.55,0.15)); vec3 col=vCol*(1.9/(1.0+1.9*lm*0.75));
+ col=mix(col,gradeClay(col),uGrade);
  gl_FragColor=vec4(pow(max(col,vec3(0.0)),vec3(1.0/2.2)),1.0);}`});
 
 // ---------- load & decode chunks ----------
@@ -78,21 +87,16 @@ const group=new THREE.Group(); group.position.copy(bmin); group.scale.copy(ext);
 const chunkObjs=[], pointSrc=[]; let loadedFiles=0, loadedPts=0;
 let qualityHigh=true, walkT=0;
 function pokeUi(){ walkT=0; document.body.classList.remove('uidim'); }
-function dprCap(){ if(qs.has('capture')&&!qs.has('dpr')) return 1; return qualityHigh?3:2; }
+function dprCap(){ if(qs.has('capture')&&!qs.has('dpr')) return 1; return 2; }
 function applyPixelRatio(){
  renderer.setPixelRatio(Math.min(devicePixelRatio||1, dprCap()));
  renderer.setSize(W(),Hh());
  U.uScreen.value=Hh()*renderer.getPixelRatio();
- // High: ~3.4 cm sprites on a 1.25 cm cloud. Standard keeps 40% of the points, so the
- // sprite grows to ~5.2 cm and the pixel floor stays higher — distant walls stay opaque.
- U.uSize.value=qualityHigh?0.034:0.052;
- U.uMaxPx.value=qualityHigh?64:56;
- U.uMinPx.value=qualityHigh?2.2:2.8;
 }
 function keepPoint(pos,i){
  if(qualityHigh) return true;
  const h=(pos[3*i]*374761393 ^ pos[3*i+1]*668265263 ^ pos[3*i+2]*2146121005)>>>0;
- return (h%5)<2;
+ return (h&1)===0;
 }
 function mountChunk(src){
  const n=src.n; let p=src.pos, nn=src.nrm, tt=src.tone, cnt=n;
@@ -111,7 +115,7 @@ function mountChunk(src){
  g.setAttribute('nrm',new THREE.BufferAttribute(nn,3,true));
  g.setAttribute('tone',new THREE.BufferAttribute(tt,1,true));
  g.boundingSphere=src.sphere;
- const o=new THREE.Points(g,pmat); o.userData.c=src.c; o.userData.r=src.r; group.add(o); chunkObjs.push(o);
+ const o=new THREE.Points(g,pmat); o.userData.c=src.c; o.userData.r=src.r; o.userData.sec=src.sec; group.add(o); chunkObjs.push(o);
  return cnt;
 }
 function rebuildPoints(){
@@ -127,6 +131,7 @@ function setQuality(high){
  if(CALICO.syncQuality) CALICO.syncQuality();
 }
 const OCC=0.1, occ=new Set();
+const okey=(x,y,z)=>((Math.floor(x/OCC)+2000)*4096+(Math.floor(y/OCC)+2000))*4096+(Math.floor(z/OCC)+2000);
 // Up-facing / down-facing point counts, 25 cm in plan and 10 cm in height. The eye is measured from this grid
 // (lowest dense floor directly under the viewer). Keep the sizes in sync with test/eye-route.js.
 const FCELL=0.25, FY0=-4, FYN=120, fgrid=new Map();
@@ -135,34 +140,149 @@ function fbin(x,y,z,up){ const yi=Math.round((y-FY0)/0.1); if(yi<0||yi>=FYN) ret
  let h=fgrid.get(k); if(!h){ h=new Uint16Array(FYN*2); h.ix=ix; h.iz=iz; fgrid.set(k,h); }
  const i=yi+(up?0:FYN); if(h[i]<65535) h[i]++; }
 function b64(s){const bin=atob(s),n=bin.length,u=new Uint8Array(n);for(let i=0;i<n;i++)u[i]=bin.charCodeAt(i);return u;}
-// Wall voxels stay the previous 2 cm shell. The denser cloud fills air just inside that shell, and those
-// extra 10 cm cells were thick enough to count as rock and close the guided view.
-if(CALICO.wall){ const u=b64(CALICO.wall), n=u.length>>3;
- for(let i=0;i<n;i++){ const o=i*8;
-  const lo=(u[o]+(u[o+1]<<8)+(u[o+2]<<16)+u[o+3]*16777216)>>>0;
-  const hi=u[o+4]+(u[o+5]<<8)+(u[o+6]<<16)+u[o+7]*16777216;
-  occ.add(hi*4294967296+lo); } }
-function decodeFile(fi){
- const arr=CALICO.files[fi];
- M.chunks.forEach(ch=>{ if(ch.f!==fi) return;
-  const u=b64(arr[ch.i]), n=ch.n;
-  const pos=new Uint16Array(new Uint16Array(u.buffer,0,n*3));
-  const nrm=new Int8Array(new Int8Array(u.buffer,n*6,n*3));
-  const tone=new Uint8Array(new Uint8Array(u.buffer,n*9,n));
-  const c=new THREE.Vector3().fromArray(ch.c);
-  const sphere=new THREE.Sphere(c.clone().sub(bmin).divide(ext),ch.r/maxExt+1e-4);
-  const src={pos,nrm,tone,n,c,r:ch.r,sphere};
-  pointSrc.push(src); mountChunk(src);
-  for(let i=0;i<n;i++){ const x=bmin.x+pos[3*i]/65535*ext.x, y=bmin.y+pos[3*i+1]/65535*ext.y, z=bmin.z+pos[3*i+2]/65535*ext.z;
-   const ny=nrm[3*i+1]/127; if(ny>0.5||ny<-0.5) fbin(x,y,z,ny>0.5); }
-  loadedPts+=n; });
- delete CALICO.files[fi]; loadedFiles++;
- LD.sectionAdded(fi,loadedPts);
- if(loadedFiles===M.files.length) onLoaded();
-}
 CALICO.setQuality=on=>{ setQuality(on); }; CALICO.quality=()=>qualityHigh;
-// data files are fetched as text by the loader in walk.html (byte-accurate progress) and evaluated in order
-CALICO.onFile=fi=>decodeFile(fi);
+// Sections of the registered full-detail cloud. The page keeps the viewer's section,
+// two behind it, and three ahead, and drops the rest so memory stays bounded.
+const sections=(CALICO.sections&&CALICO.sections.sections)||[];
+const sectionById=new Map(sections.map(s=>[s.id,s]));
+const SEC_LEN=(CALICO.sections&&CALICO.sections.sectionLen)||10;
+const BEHIND=2, AHEAD=3;
+const loadedSec=new Map(), inflight=new Map(), occN=new Map();
+let streamBytes=0, bootDone=false, streamGen=0;
+function occAdd(x,y,z,d){
+ const k=okey(x,y,z), c=(occN.get(k)||0)+d;
+ if(c<=0){ occN.delete(k); occ.delete(k); } else { occN.set(k,c); occ.add(k); }
+}
+function fbinDelta(x,y,z,up,d){
+ const yi=Math.round((y-FY0)/0.1); if(yi<0||yi>=FYN) return;
+ const ix=Math.round(x/FCELL), iz=Math.round(z/FCELL), k=ix*100000+iz;
+ let h=fgrid.get(k);
+ if(!h){ if(d<0) return; h=new Uint16Array(FYN*2); h.ix=ix; h.iz=iz; fgrid.set(k,h); }
+ const i=yi+(up?0:FYN), v=h[i]+d; h[i]=v<0?0:(v>65535?65535:v);
+}
+function paintPoints(pos,nrm,n,d){
+ for(let i=0;i<n;i++){
+  const x=bmin.x+pos[3*i]/65535*ext.x, y=bmin.y+pos[3*i+1]/65535*ext.y, z=bmin.z+pos[3*i+2]/65535*ext.z;
+  occAdd(x,y,z,d); const ny=nrm[3*i+1]/127; if(ny>0.5||ny<-0.5) fbinDelta(x,y,z,ny>0.5,d);
+ }
+ wallCache.clear();
+}
+function wantIds(s){
+ if(!sections.length) return [];
+ let id=Math.floor(Math.max(0,s)/SEC_LEN);
+ const ids=sections.map(x=>x.id), maxId=ids[ids.length-1];
+ if(id>maxId) id=maxId;
+ if(!sectionById.has(id)){ let best=ids[0], bd=1e9; for(const i of ids){ const dd=Math.abs(i-id); if(dd<bd){ bd=dd; best=i; } } id=best; }
+ const out=[]; for(let i=id-BEHIND;i<=id+AHEAD;i++) if(sectionById.has(i)) out.push(i); return out;
+}
+function stationOf(x,z){ return routeProj({x:x,z:z}).s; }
+function touchNote(){
+ const el=document.getElementById('streamnote'); if(!el||qs.has('capture')) return;
+ const busy=bootDone&&inflight.size>0; el.classList.toggle('on',busy);
+ el.textContent=busy?('Loading the tunnel ahead… '+inflight.size+' section'+(inflight.size>1?'s':'')):'';
+}
+function dropSection(id){
+ const rec=loadedSec.get(id); if(!rec) return;
+ for(let i=chunkObjs.length-1;i>=0;i--) if(chunkObjs[i].userData.sec===id){
+  group.remove(chunkObjs[i]); chunkObjs[i].geometry.dispose(); chunkObjs.splice(i,1);
+ }
+ const pi=pointSrc.indexOf(rec.src); if(pi>=0) pointSrc.splice(pi,1);
+ loadedPts-=rec.src.n; streamBytes-=rec.bytes; loadedSec.delete(id);
+ rec.src.pos=rec.src.nrm=rec.src.tone=null; rec.buf=null;
+}
+function mountSection(id,buf){
+ const meta=sectionById.get(id), view=new DataView(buf);
+ if(view.getUint32(0,true)!==0x43455343) throw new Error('bad section '+id);
+ const n=view.getUint32(4,true);
+ if(8+n*10!==buf.byteLength) throw new Error('section '+id+' length '+buf.byteLength+' != '+(8+n*10));
+ const pos=new Uint16Array(buf,8,n*3), nrm=new Int8Array(buf,8+n*6,n*3), tone=new Uint8Array(buf,8+n*9,n);
+ const c=new THREE.Vector3().fromArray(meta.c);
+ const sphere=new THREE.Sphere(c.clone().sub(bmin).divide(ext), meta.r/maxExt+1e-4);
+ const src={pos,nrm,tone,n,c,r:meta.r,sphere,sec:id};
+ pointSrc.push(src); mountChunk(src);
+ loadedPts+=n; streamBytes+=buf.byteLength; loadedSec.set(id,{src,bytes:buf.byteLength,buf});
+}
+function readBin(meta){
+ return fetch(meta.file).then(r=>{
+  if(!r.ok) throw new Error('HTTP '+r.status+' '+meta.file);
+  if(!r.body||!r.body.getReader) return r.arrayBuffer().then(buf=>{ if(LD.progress) LD.progress(meta.file,buf.byteLength,true); return buf; });
+  const rd=r.body.getReader(), parts=[]; let n=0;
+  function pump(){ return rd.read().then(part=>{
+   if(part.done){ const u=new Uint8Array(n); let o=0; for(const c of parts){ u.set(c,o); o+=c.byteLength; }
+    if(LD.progress) LD.progress(meta.file,n,true); return u.buffer; }
+   parts.push(part.value); n+=part.value.byteLength; if(LD.progress) LD.progress(meta.file,n,false); return pump();
+  }); }
+  return pump();
+ });
+}
+function fetchSection(id){
+ if(loadedSec.has(id)) return Promise.resolve(id);
+ if(inflight.has(id)) return inflight.get(id);
+ const meta=sectionById.get(id);
+ const p=readBin(meta).then(buf=>{ inflight.delete(id); if(!loadedSec.has(id)) mountSection(id,buf); touchNote(); return id; })
+  .catch(e=>{ inflight.delete(id); touchNote(); LD.log('ERROR: section '+id+' ('+meta.file+') failed — '+e.message,'err'); throw e; });
+ inflight.set(id,p); touchNote(); return p;
+}
+function ensureAt(x,z){
+ const my=++streamGen, s=(x==null)?stationOf(camera.position.x,camera.position.z):stationOf(x,z), ids=wantIds(s), need=new Set(ids);
+ for(const id of [...loadedSec.keys()]) if(!need.has(id)) dropSection(id);
+ return Promise.all(ids.map(fetchSection)).then(()=>{
+  if(my!==streamGen) return {stale:true,s,ids:[...loadedSec.keys()].sort((a,b)=>a-b),bytes:streamBytes,points:loadedPts};
+  const now=new Set(wantIds(s));
+  for(const id of [...loadedSec.keys()]) if(!now.has(id)) dropSection(id);
+  streamWant=ids.join(','); touchNote();
+  return {stale:false,s,ids:[...loadedSec.keys()].sort((a,b)=>a-b),bytes:streamBytes,points:loadedPts};
+ });
+}
+let streamWant='';
+function streamTick(){
+ if(!bootDone||!sections.length) return;
+ const ids=wantIds(stationOf(camera.position.x,camera.position.z)), key=ids.join(',');
+ if(key===streamWant) return;
+ streamWant=key; ensureAt(camera.position.x,camera.position.z);
+}
+function loadShell(){
+ return fetch('data-sec/shell.bin').then(r=>{
+  if(!r.ok) throw new Error('HTTP '+r.status+' data-sec/shell.bin');
+  return r.arrayBuffer();
+ }).then(buf=>{
+  const view=new DataView(buf);
+  if(view.getUint32(0,true)!==0x4C485343) throw new Error('bad shell');
+  const n=view.getUint32(4,true), cols=view.getUint32(8,true);
+  let o=12;
+  for(let i=0;i<n;i++){
+   occ.add(ikey(view.getInt16(o,true), view.getInt16(o+2,true), view.getInt16(o+4,true)));
+   o+=6;
+  }
+  for(let c=0;c<cols;c++){
+   const fx=view.getInt16(o,true), fz=view.getInt16(o+2,true); o+=4;
+   const h=new Uint16Array(FYN*2); h.ix=fx; h.iz=fz;
+   for(let i=0;i<FYN*2;i++){ h[i]=view.getUint16(o,true); o+=2; }
+   fgrid.set(fx*100000+fz, h);
+  }
+  LD.log('Walking shell loaded from the 2 cm cloud ('+n.toLocaleString()+' voxels). The full-detail points are for drawing.','ok');
+ });
+}
+function bootStream(){
+ if(!sections.length){ LD.log('ERROR: no full-detail sections in data-sec/index.json','err'); return; }
+ const first=wantIds(0), tot=CALICO.sections.count;
+ LD.log('Full-detail scan: '+(tot/1e6).toFixed(2)+' M points in '+sections.length+' sections ('+(CALICO.sections.bytes/1e6).toFixed(0)+' MB). Loading the portal stretch…');
+ if(LD.track) first.forEach(id=>{ const m=sectionById.get(id); LD.track(m.file,m.bytes); });
+ LD.status('Downloading the portal stretch…');
+ loadShell().then(()=>ensureAt(0,0)).then(()=>{ bootDone=true; onLoaded(); }).catch(e=>{ LD.fail&&LD.fail('portal stretch',e); });
+}
+const sn=document.createElement('div'); sn.id='streamnote'; document.body.appendChild(sn);
+CALICO.stream={
+ loaded:()=>[...loadedSec.keys()].sort((a,b)=>a-b),
+ bytes:()=>streamBytes,
+ points:()=>loadedPts,
+ inflight:()=>inflight.size,
+ occ:()=>occ.size,
+ floorCells:()=>fgrid.size,
+ chunks:()=>chunkObjs.length,
+ ensure:(x,z)=>ensureAt(x,z),
+ sectionAt:(x,z)=>Math.floor(stationOf(x,z)/SEC_LEN)
+};
 
 // ---------- optional mesh ----------
 let mesh=null;
@@ -205,7 +325,7 @@ function lookAt(p){const d=new THREE.Vector3().subVectors(p,camera.position);yaw
 const START_D=6.0;
 function reset(){ const t=Math.min(START_D/pathLen,1); poseAt(t); guideInited=false; guideOff=0; guideV=0; peekYaw=0; peekPitch=0; }
 function flash(t){msg=t;msgT=2.5;}
-addEventListener('keydown',e=>{keys[e.code]=true;
+addEventListener('keydown',e=>{ if(e.code==='KeyW'||e.code==='KeyA'||e.code==='KeyS'||e.code==='KeyD'||e.code.startsWith('Arrow')) fadeDeskKeys(); if(auto && e.code!=='KeyP') userTakeover(); keys[e.code]=true;
  if(e.code==='KeyC'){keepIn=!keepIn;outT=0;flash('Keep-inside pull-back '+(keepIn?'ON':'OFF (free flight)'));}
  if(e.code==='KeyL'){lampOn=!lampOn;flash('Headlamp '+(lampOn?'ON':'OFF (flat light)')); if(CALICO.syncTouchBtns) CALICO.syncTouchBtns();}
  if(e.code==="KeyR"){reset();auto=false;resetGuard();snapLook(); if(CALICO.syncTouchBtns) CALICO.syncTouchBtns();}
@@ -213,7 +333,7 @@ addEventListener('keydown',e=>{keys[e.code]=true;
  if(e.code==='KeyH'){document.body.classList.toggle('hidehelp');}
  if(e.code==='KeyF'&&!e.repeat){ fastWalk=!fastWalk; flash(fastWalk?'Walking 4×':'Walking normal speed'); if(CALICO.syncTouchBtns) CALICO.syncTouchBtns(); }
  if(e.code==='KeyG'&&!e.repeat){ setGuided(!guided); }
- if(e.code==='KeyP'){ if(auto) stopAuto(); else startAuto(); flash(auto?(FLY?'Auto fly-through to the northwest end and back (P to stop)':'Auto fly-through (P to stop)'):'Manual'); if(CALICO.syncTouchBtns) CALICO.syncTouchBtns(); }
+ if(e.code==='KeyP'){ if(auto){ stopAuto(); snapLook(); } else startAuto(); flash(auto?(FLY?'Auto fly-through to the northwest end and back (P to stop)':'Auto fly-through (P to stop)'):'Manual'); if(CALICO.syncTouchBtns) CALICO.syncTouchBtns(); }
  if(e.code==='KeyM'){loadMesh(()=>{mesh.visible=!mesh.visible;group.visible=!mesh.visible;flash(mesh.visible?'Surface mesh':'Points');});}
  if(e.code==='BracketRight')U.uSize.value*=1.15; if(e.code==='BracketLeft')U.uSize.value/=1.15;
  if(e.code==='Equal'||e.code==='NumpadAdd'){speed=Math.min(speed*1.25,40);flash('Speed '+speed.toFixed(1)+' m/s');}
@@ -221,15 +341,27 @@ addEventListener('keydown',e=>{keys[e.code]=true;
  if(e.code==='Space'||e.code.startsWith('Arrow'))e.preventDefault();});
 addEventListener('keyup',e=>{keys[e.code]=false;});
 addEventListener('wheel',e=>{speed=Math.min(40,Math.max(0.2,speed*(e.deltaY<0?1.12:1/1.12)));flash('Speed '+speed.toFixed(1)+' m/s');},{passive:true});
-const ov=document.getElementById('overlay'), hint=document.getElementById('hint'); let entered=false, hintTimer=0;
+const ov=document.getElementById('overlay'), hint=document.getElementById('hint'), deskKeys=document.getElementById('deskkeys'); let entered=false, hintTimer=0;
+function fadeDeskKeys(){
+ if(!deskKeys||!deskKeys.classList.contains('show')||deskKeys.classList.contains('out')) return;
+ deskKeys.classList.add('out'); deskKeys.style.pointerEvents='none'; document.body.classList.remove('deskstart');
+ setTimeout(()=>{ deskKeys.classList.remove('show'); },520);
+}
 ov.addEventListener('click',()=>{ if(!ov.dataset.ready) return; if(TOUCH) enterTouch(); else renderer.domElement.requestPointerLock(); });
 renderer.domElement.addEventListener('click',()=>{ if(TOUCH||!ov.dataset.ready) return; renderer.domElement.requestPointerLock(); });
+renderer.domElement.addEventListener('pointerdown',e=>{ if(!ov.dataset.ready||e.pointerType==='touch') return; userTakeover(); });
+document.addEventListener('click',e=>{ if(TOUCH||!deskKeys||!deskKeys.classList.contains('show')||deskKeys.classList.contains('out')) return; if(e.target.closest&&e.target.closest('a,button,#plainhelp,#ask')) return; renderer.domElement.requestPointerLock(); });
+const askBtn=document.getElementById('ask'), plainHelp=document.getElementById('plainhelp');
+function togglePlain(on){ const show=on==null?!plainHelp.classList.contains('show'):!!on; plainHelp.classList.toggle('show',show); }
+askBtn.addEventListener('click',e=>{ e.stopPropagation(); togglePlain(); });
+document.getElementById('askclose').addEventListener('click',e=>{ e.stopPropagation(); togglePlain(false); });
+document.getElementById('tourbtn').addEventListener('click',e=>{ e.stopPropagation(); fadeDeskKeys(); if(!auto) startAuto(); flash('Guided tour'); });
 function showHint(html,ms){ hint.innerHTML=html; hint.classList.add('show'); clearTimeout(hintTimer); hintTimer=setTimeout(()=>hint.classList.remove('show'),ms); }
 document.addEventListener('pointerlockchange',()=>{const L=document.pointerLockElement===renderer.domElement;
  if(L){ ov.style.display='none';
   if(!entered){ entered=true; showHint("You're just inside the mine portal, facing into the tunnel.<br><b>W</b> to walk forward · mouse to look · <b>P</b> for an automatic fly-through",6000); showKeyHint(4500); } }
  else if(ov.dataset.ready){ ov.style.display='flex'; document.querySelector('#enter .big').textContent='▶ Paused — click to continue'; LD.status('Paused. Click anywhere to continue.'); hint.classList.remove('show'); }});
-addEventListener('mousemove',e=>{ if(document.pointerLockElement!==renderer.domElement) return;
+addEventListener('mousemove',e=>{ if(auto && (e.buttons||document.pointerLockElement===renderer.domElement)) userTakeover(); if(document.pointerLockElement!==renderer.domElement) return;
  if(guided){ peekYaw=Math.max(-1,Math.min(1,peekYaw-e.movementX*0.0022)); peekPitch=Math.max(-0.6,Math.min(0.6,peekPitch-e.movementY*0.0022));
   peekHold=true; clearTimeout(peekTimer); peekTimer=setTimeout(()=>{peekHold=false;},160); }
  else { yaw-=e.movementX*0.0022; pitch=Math.max(-1.5,Math.min(1.5,pitch-e.movementY*0.0022)); } });
@@ -244,6 +376,7 @@ applyPixelRatio();
 guided=TOUCH;
 document.body.classList.toggle('guided', guided);
 document.body.classList.toggle('freeview', !guided);
+if(TOUCH) document.body.classList.add('hdphone');
 let keyTimer=0;
 function showKeyHint(ms){
  if(TOUCH) return;
@@ -268,8 +401,8 @@ function enterTouch(){
 if(TOUCH){
  document.body.classList.add('touch');
  const big=document.querySelector('#enter .big'), ctl=document.querySelector('#enter .ctl');
- if(big) big.textContent='▶ Tap to enter';
- if(ctl) ctl.innerHTML='<b>Guided</b> follows the tunnel · <b>Free View</b> for two sticks · <b>4×</b> walks faster';
+ if(big) big.textContent='A short guide appears when loading finishes';
+ if(ctl) ctl.innerHTML='Drag the round stick up to walk forward and down to walk back. Drag the picture to look around.';
  const ui=document.createElement('div'); ui.id='touchui';
  ui.innerHTML='<div id="stick"><div class="pad"><div class="knob"></div></div></div>'+
   '<div id="lookstick"><div class="pad"><div class="knob"></div></div></div>'+
@@ -288,7 +421,7 @@ if(TOUCH){
    const nx=dx/d*m, ny=dy/d*m; setKnob(nx,ny); onChange(nx/STICK_R, -ny/STICK_R);
   }
   function end(id){ if(id!==tid) return; tid=null; setKnob(0,0); onChange(0,0); }
-  el.addEventListener('touchstart',e=>{ if(!entered) return; e.preventDefault(); const t=e.changedTouches[0]; tid=t.identifier; apply(t); },{passive:false});
+  el.addEventListener('touchstart',e=>{ if(el.id==='stick') fadeStickCoach(); userTakeover(); if(!entered) return; e.preventDefault(); const t=e.changedTouches[0]; tid=t.identifier; apply(t); },{passive:false});
   el.addEventListener('touchmove',e=>{ for(const t of e.changedTouches) if(t.identifier===tid){ e.preventDefault(); apply(t); } },{passive:false});
   el.addEventListener('touchend',e=>{ for(const t of e.changedTouches) end(t.identifier); },{passive:true});
   el.addEventListener('touchcancel',e=>{ for(const t of e.changedTouches) end(t.identifier); },{passive:true});
@@ -297,6 +430,7 @@ if(TOUCH){
  bindStick(ui.querySelector('#lookstick'), (x,y)=>{ lookAxisX=x; lookAxisY=y; });
  let lookTid=null, lookX=0, lookY=0;
  const onLookStart=e=>{
+  if(e.changedTouches.length) userTakeover();
   if(!entered||!guided) return;
   for(const t of e.changedTouches){
    if(lookTid!==null) continue;
@@ -322,7 +456,7 @@ if(TOUCH){
   modeBtn.classList.toggle('on', guided); modeBtn.classList.toggle('free', !guided);
   modeBtn.textContent=guided?'Guided':'Free'; }
 document.addEventListener('touchstart', pokeUi, {passive:true});
- flyBtn.addEventListener('click',()=>{ if(auto) stopAuto(); else startAuto();
+ flyBtn.addEventListener('click',()=>{ if(auto){ stopAuto(); snapLook(); } else startAuto();
   flash(auto?(FLY?'Auto fly-through to the northwest end and back':'Auto fly-through'):'Manual'); syncTouchBtns(); });
  ui.querySelector('#tReset').addEventListener('click',()=>{ reset(); auto=false; resetGuard(); snapLook(); syncTouchBtns(); });
  lampBtn.addEventListener('click',()=>{ lampOn=!lampOn; flash('Headlamp '+(lampOn?'ON':'OFF (flat light)')); syncTouchBtns(); });
@@ -512,6 +646,23 @@ function startAuto(){ auto=true; if(!FLY){ autoT=nearestT(); return; }
  flyV=0; flyDwell=0; flyBlend=0; flyFrom.copy(camera.position);
  eyeBuf.length=0; eyeMark=null; eyeV=0; }   // fresh travel window; keep the current eye height
 function stopAuto(){ auto=false; snapEye(); }
+function userTakeover(){ if(!auto) return; stopAuto(); snapLook(); if(CALICO.syncTouchBtns) CALICO.syncTouchBtns(); flash('You have control'); }
+function showStickCoach(){
+ const el=document.getElementById('stickcoach'); if(!el) return;
+ el.classList.add('show'); el.classList.remove('out'); el.setAttribute('aria-hidden','false');
+ document.body.classList.add('stickcoach');
+}
+function fadeStickCoach(){
+ const el=document.getElementById('stickcoach'); if(!el||!el.classList.contains('show')||el.classList.contains('out')) return;
+ el.classList.add('out'); el.setAttribute('aria-hidden','true'); document.body.classList.remove('stickcoach');
+ setTimeout(()=>{ el.classList.remove('show'); },520);
+}
+function startTour(){
+ if(qs.has('capture')||entered) return;
+ ov.style.display='none'; entered=true;
+ if(!TOUCH){ deskKeys.classList.add('show'); deskKeys.classList.remove('out'); deskKeys.style.pointerEvents=''; document.body.classList.add('deskstart'); return; }
+ showStickCoach();
+}
 function flyStep(dt){
  const L=FLY_LEN, out=flyD<L, stopAt=out?L:2*L;
  if(flyD>=L-0.02&&flyD<L+0.02&&flyDwell<FLY_DWELL){ flyDwell+=dt; flyV=0; if(flyDwell>=FLY_DWELL) flyD=L+0.021; }
@@ -644,12 +795,12 @@ function update(dt){
  else if(guided&&dt>0) guidedStep(dt);
  if(!guided && !auto && dt>0 && (Math.abs(lookAxisX)>0.12||Math.abs(lookAxisY)>0.12)){
   yaw-=lookAxisX*1.8*dt; pitch=Math.max(-1.2,Math.min(1.2, pitch+lookAxisY*1.3*dt)); }
+ if(!auto && !guided && dt>0){ let turn=0; if(keys.KeyA||keys.ArrowLeft) turn+=1; if(keys.KeyD||keys.ArrowRight) turn-=1; if(turn) yaw+=turn*0.9*dt; }
  easeLook(dt, auto?LOOK_RATE_AUTO:(guided?4.5:LOOK_RATE));
  camera.rotation.set(lookPitch,lookYaw,0);
  if(!auto && !guided && dt>0){
   fwd.set(-Math.sin(lookYaw),0,-Math.cos(lookYaw)); right.set(Math.cos(lookYaw),0,-Math.sin(lookYaw)); mv.set(0,0,0);
   if(keys.KeyW||keys.ArrowUp)mv.add(fwd); if(keys.KeyS||keys.ArrowDown)mv.sub(fwd);
-  if(keys.KeyD||keys.ArrowRight)mv.add(right); if(keys.KeyA||keys.ArrowLeft)mv.sub(right);
   const sm=Math.hypot(stickX,stickY);   // free view: left stick, camera-relative, same floor following
   if(sm>0.16){ const a=Math.min(1,(sm-0.16)/0.84); mv.addScaledVector(fwd,stickY/sm*a); mv.addScaledVector(right,stickX/sm*a); }
   if(keys.KeyE||keys.Space)mv.y+=1; if(keys.KeyQ||keys.ShiftLeft||keys.ShiftRight)mv.y-=1;
@@ -665,7 +816,7 @@ function update(dt){
   guard(dt);
  }
  if(TOUCH&&entered){ const moving=Math.hypot(vel.x,vel.z)>0.12||Math.abs(guideV)>0.12; if(moving) walkT+=dt; if(walkT>3.2) document.body.classList.add('uidim'); }
- tunnelPanel();
+ tunnelPanel(); streamTick();
  U.uCam.value.copy(camera.position);
  camera.updateMatrixWorld();
  const d=new THREE.Vector3(); camera.getWorldDirection(d);
@@ -755,15 +906,16 @@ function retargetNorthwest(){
  CALICO.nw={x:end.x,z:end.z,floor:best.floor,routeM,routeFt:routeM*3.28084,straightM:g.d,straightFt:g.d*3.28084,bearing:g.brg,northM:g.n,eastM:g.e};
 }
 function onLoaded(){
- retargetNorthwest();
+ // The stored centreline is the guide. Retargeting needs the whole-mine occupancy grid, and this page only
+ // keeps a few sections in memory, so the tour stays on data/tunnel.js instead of a partial graph.
  buildMiniMap();
- if(CALICO.nw) LD.log('Fly-through retargeted to the northwest end: '+Math.round(CALICO.nw.routeFt)+' ft along the tunnel, '+Math.round(CALICO.nw.straightFt)+' ft from the portal at about N'+Math.round(CALICO.nw.bearing)+'°E.','ok');
  LD.done(); if(!entered) reset(); update(0); renderer.render(scene,camera);
- LD.log(`Headlamp on, scene ready — ${(loadedPts/1e6).toFixed(2)} M points, first frame rendered just inside the portal.`,'ok');
- LD.log(TOUCH?'Ready — tap to enter.':'Ready — click to enter.','ok');
- LD.status(`All ${M.files.length} tunnel sections loaded (${(loadedPts/1e6).toFixed(2)} M points). ${TOUCH?'Tap':'Click'} anywhere to enter.`);
+ LD.log(`Headlamp on — ${(CALICO.sections.count/1e6).toFixed(2)} M points in the scan, ${(loadedPts/1e6).toFixed(2)} M loaded around the portal.`,'ok');
+ LD.log(qs.has('capture')?'Ready.':(TOUCH?'Ready — use the stick to walk. This phone is showing about half the points.':'Controls ready.'),'ok');
+ LD.status(`Portal stretch loaded (${(loadedPts/1e6).toFixed(2)} M points). Further sections load as you walk.`);
  ov.dataset.ready=1; ov.classList.add('ready');
  CALICO.ready=true; if(qs.has('capture')){ov.style.display='none';document.getElementById('help').style.display='none';document.getElementById('hud').style.display='none';}
+ else startTour();
 }
 addEventListener('resize',()=>{camera.aspect=W()/Hh();camera.updateProjectionMatrix();renderer.setSize(W(),Hh());U.uScreen.value=Hh()*renderer.getPixelRatio();});
 U.uScreen.value=Hh()*renderer.getPixelRatio(); U.uFov.value=Math.tan(THREE.MathUtils.degToRad(camera.fov/2))*2;
@@ -774,7 +926,7 @@ function loop(now){ requestAnimationFrame(loop); if(qs.has('capture')) return;
  if(msgT>0)msgT-=dt;
  navHud();
  const p=camera.position, o=M.origin_las;
- hud.textContent=`${(loadedPts/1e6).toFixed(2)} M pts   ${fpsA.toFixed(0)} fps   speed ${(speed*(fastWalk?WALK_FAST:1)).toFixed(1)} m/s${fastWalk?'  4×':''}   noclip, keep-inside ${keepIn?'on':'off'}   lamp ${lampOn?'on':'off'}\n`+
+ hud.textContent=`${(loadedPts/1e6).toFixed(2)} M loaded / ${(CALICO.sections.count/1e6).toFixed(2)} M   ${fpsA.toFixed(0)} fps   speed ${(speed*(fastWalk?WALK_FAST:1)).toFixed(1)} m/s${fastWalk?'  4×':''}   noclip, keep-inside ${keepIn?'on':'off'}   lamp ${lampOn?'on':'off'}\n`+
   `LAS xyz  ${(p.x+o[0]).toFixed(2)}, ${(-p.z+o[1]).toFixed(2)}, ${(p.y+o[2]).toFixed(2)}`+(keepIn&&!curValid&&!pull&&outT>0.3?`
 Outside the tunnel: pulling you back in ${Math.max(0,OUT_GRACE-outT).toFixed(1)} s`:'')+(msgT>0?`
 ${msg}`:'');}
@@ -825,8 +977,12 @@ function buildMiniMap(){
  let minE=0, maxE=1, minN=0, maxN=1, seen=false;
  function grow(e,n){ if(!seen){ minE=maxE=e; minN=maxN=n; seen=true; return; }
   if(e<minE)minE=e; if(e>maxE)maxE=e; if(n<minN)minN=n; if(n>maxN)maxN=n; }
- for(const h of fgrid.values()){ if(h.ix===undefined) continue; let up=0; for(let i=0;i<FYN;i++) up+=h[i]; if(up<6) continue;
-  const ne=neOf(h.ix*FCELL, h.iz*FCELL); cells.push(ne); grow(ne.e,ne.n); }
+ if(CALICO.sections&&CALICO.sections.footprint&&CALICO.sections.footprint.length){
+  for(const pair of CALICO.sections.footprint){ const ne=neOf(pair[0]*FCELL, pair[1]*FCELL); cells.push(ne); grow(ne.e,ne.n); }
+ } else {
+  for(const h of fgrid.values()){ if(h.ix===undefined) continue; let up=0; for(let i=0;i<FYN;i++) up+=h[i]; if(up<6) continue;
+   const ne=neOf(h.ix*FCELL, h.iz*FCELL); cells.push(ne); grow(ne.e,ne.n); }
+ }
  grow(0,0);
  for(const p of FLYP){ const ne=neOf(p.x,p.z); grow(ne.e,ne.n); }
  const padE=Math.max(4,(maxE-minE)*0.08), padN=Math.max(4,(maxN-minN)*0.08);
@@ -947,4 +1103,5 @@ function tunnelPanel(){
 setInterval(()=>{ if(reachedT>0){ reachedT-=0.25; } },250);
 CALICO.tunnelPanel=()=>{tunnelPanel();return {text:tpEl.innerText,visible:tpEl.style.display!=='none',northReached};};
 requestAnimationFrame(loop);
+bootStream();
 })();
