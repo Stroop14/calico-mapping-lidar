@@ -755,7 +755,7 @@ function retargetNorthwest(){
 // Photos IMG_2933 and IMG_2944 show two rails in the drift, but not where they stop.
 // The guide follows the route centreline from the portal to the crosscut (about 306 ft) and fades out.
 const RAIL_HINT='Rails shown as a guide, based on photos from the trip; the scan itself does not resolve them.';
-const RAIL_END=306*0.3048, RAIL_GAUGE=0.55, RAIL_LIFT=0.05, RAIL_HALF=0.016, RAIL_FADE=6;
+const RAIL_END=306*0.3048, RAIL_GAUGE=0.55, RAIL_LIFT=0.05, RAIL_HALF=0.022, RAIL_FADE=6;
 let railsOn=true, railObj=null;
 function syncRailBtn(){ const b=document.getElementById('tRails'); if(!b) return;
  b.classList.toggle('on', railsOn); b.setAttribute('aria-pressed', railsOn?'true':'false'); }
@@ -768,7 +768,7 @@ function buildRails(){
  const L=Math.min(RAIL_END, FLYS.length?FLYS[FLYS.length-1]:0);
  if(L<2) return;
  const n=Math.ceil(L/0.45);
- const steel=[0.50,0.52,0.54], rust=[0.62,0.32,0.18];
+ const steel=[0.78,0.80,0.82], rust=[0.84,0.46,0.24];
  const pos=[], col=[], idx=[];
  function at(s){
   const p=routeAt(s), q=routeAt(s+0.5<=L?s+0.5:Math.max(0,s-0.5));
@@ -785,7 +785,7 @@ function buildRails(){
    const rgb=steel.map((c,j)=>c*(1-k)+rust[j]*k);
    for(const e of [-1,1]){
     pos.push(a.x+a.rx*(off+e*RAIL_HALF), a.y, a.z+a.rz*(off+e*RAIL_HALF));
-    col.push(rgb[0], rgb[1], rgb[2], a.fade*0.92);
+    col.push(rgb[0], rgb[1], rgb[2], a.fade);
    }
   }
   for(let i=0;i<n;i++){ const a=base+i*2, b=a+1, c=a+2, d=a+3; idx.push(a,c,b, b,c,d); }
