@@ -14,7 +14,7 @@ camera.rotation.order='YXZ';
 // ---------- shared uniforms / point material ----------
 // 0 leaves the original clay. 1 is the tuned warm grade: a little more contrast and saturation,
 // a warmer lamp, and slightly richer clay and timber. This is the only colour knob.
-const GRADE=1;
+const GRADE=0;
 const U={uCam:{value:new THREE.Vector3()},uDir:{value:new THREE.Vector3(0,0,-1)},uLamp:{value:1.0},
   uSize:{value:0.03},uScreen:{value:Hh()},uFov:{value:1.0},uTime:{value:0},uFogDist:{value:38.0},uCull:{value:1.0},
   uGrade:{value:qs.has('grade')?Math.max(0,Math.min(1,parseFloat(qs.get('grade')))):GRADE}};
@@ -271,9 +271,9 @@ if(TOUCH){
   '<div id="lookstick"><div class="pad"><div class="knob"></div></div></div>'+
   '<div id="tbtns"><button type="button" id="tFly" title="Fly">▶</button>'+
   '<button type="button" id="tReset" title="Reset">↺</button><button type="button" id="tLamp" title="Lamp">☀</button>'+
-  '<button type="button" id="tFast" title="Walk speed">4×</button><button type="button" id="tMode" title="Steering mode">Guided</button></div>';
+  '<button type="button" id="tFast" title="Walk speed">4×</button><button type="button" id="tRails" class="on" title="Rail guide" aria-pressed="true">Rails</button><button type="button" id="tMode" title="Steering mode">Guided</button></div>';
  document.body.appendChild(ui);
- const flyBtn=ui.querySelector('#tFly'), lampBtn=ui.querySelector('#tLamp'), fastBtn=ui.querySelector('#tFast'), modeBtn=ui.querySelector('#tMode');
+ const flyBtn=ui.querySelector('#tFly'), lampBtn=ui.querySelector('#tLamp'), fastBtn=ui.querySelector('#tFast'), modeBtn=ui.querySelector('#tMode'), railBtn=ui.querySelector('#tRails');
  const STICK_R=26;
  function bindStick(el, onChange){
   const knob=el.querySelector('.knob'); let tid=null;
@@ -324,6 +324,7 @@ document.addEventListener('touchstart', pokeUi, {passive:true});
  lampBtn.addEventListener('click',()=>{ lampOn=!lampOn; flash('Headlamp '+(lampOn?'ON':'OFF (flat light)')); syncTouchBtns(); });
  fastBtn.addEventListener('click',()=>{ fastWalk=!fastWalk; flash(fastWalk?'Walking 4×':'Walking normal speed'); syncTouchBtns(); });
  modeBtn.addEventListener('click',()=>{ setGuided(!guided); });
+ railBtn.addEventListener('click',()=>{ setRails(!railsOn); pokeUi(); });
  CALICO.syncTouchBtns=syncTouchBtns;
  syncTouchBtns();
 }
@@ -537,6 +538,7 @@ CALICO.setPose=(p,l)=>{camera.position.fromArray(p);lookAt(new THREE.Vector3().f
 CALICO.eye={floorCeil:(x,z,y)=>floorCeil(x,z,y),pointFloor:(x,z)=>pointFC(x,z),target:(x,z,y)=>eyeTarget(x,z,y),state:()=>({eyeY,eyeV,hOff,flyD,flyV,auto}),EYE_HEIGHT,HEAD_CLEAR,get flyLen(){return FLY_LEN;}};
 CALICO.touch={on:TOUCH,stick:()=>({x:stickX,y:stickY}),look:()=>({yaw,pitch})};
 CALICO.renderNow=()=>{update(0);drawMini();renderer.render(scene,camera);};
+CALICO.setRails=(on,silent)=>{ setRails(on, silent!==false); };
 CALICO.toggleMesh=(on,cb)=>loadMesh(()=>{mesh.visible=on;group.visible=!on;cb&&cb();});
 CALICO.setLamp=v=>{lampOn=v;};
 
@@ -750,8 +752,56 @@ function retargetNorthwest(){
  }
  CALICO.nw={x:end.x,z:end.z,floor:best.floor,routeM,routeFt:routeM*3.28084,straightM:g.d,straightFt:g.d*3.28084,bearing:g.brg,northM:g.n,eastM:g.e};
 }
+// Photos IMG_2933 and IMG_2944 show two rails in the drift, but not where they stop.
+// The guide follows the route centreline from the portal to the crosscut (about 306 ft) and fades out.
+const RAIL_HINT='Rails shown as a guide, based on photos from the trip; the scan itself does not resolve them.';
+const RAIL_END=306*0.3048, RAIL_GAUGE=0.55, RAIL_LIFT=0.05, RAIL_HALF=0.016, RAIL_FADE=6;
+let railsOn=true, railObj=null;
+function syncRailBtn(){ const b=document.getElementById('tRails'); if(!b) return;
+ b.classList.toggle('on', railsOn); b.setAttribute('aria-pressed', railsOn?'true':'false'); }
+function setRails(on, silent){ railsOn=!!on; if(railObj) railObj.visible=railsOn; syncRailBtn();
+ if(!silent) showHint(RAIL_HINT, 5200); }
+function railButton(){ const b=document.createElement('button'); b.type='button'; b.id='tRails'; b.title=RAIL_HINT; b.textContent='Rails';
+ b.addEventListener('click',()=>{ setRails(!railsOn); pokeUi(); }); return b; }
+function buildRails(){
+ if(railObj){ scene.remove(railObj); railObj.geometry.dispose(); railObj=null; }
+ const L=Math.min(RAIL_END, FLYS.length?FLYS[FLYS.length-1]:0);
+ if(L<2) return;
+ const n=Math.ceil(L/0.45);
+ const steel=[0.50,0.52,0.54], rust=[0.62,0.32,0.18];
+ const pos=[], col=[], idx=[];
+ function at(s){
+  const p=routeAt(s), q=routeAt(s+0.5<=L?s+0.5:Math.max(0,s-0.5));
+  let dx=q.x-p.x, dz=q.z-p.z; const h=Math.hypot(dx,dz)||1; dx/=h; dz/=h;
+  const fc=fcAt(p.x,p.z,p.y); const y=(fc?fc.floor:p.y-1.40)+RAIL_LIFT;
+  const fade=s>L-RAIL_FADE?Math.max(0,(L-s)/RAIL_FADE):1;
+  return {x:p.x,y,z:p.z,rx:-dz,rz:dx,fade};
+ }
+ for(const side of [-1,1]){
+  const base=pos.length/3;
+  for(let i=0;i<=n;i++){
+   const s=L*i/n, a=at(s), off=side*(RAIL_GAUGE*0.5);
+   const k=0.08+0.35*(0.5+0.5*Math.sin(s*0.73+side));
+   const rgb=steel.map((c,j)=>c*(1-k)+rust[j]*k);
+   for(const e of [-1,1]){
+    pos.push(a.x+a.rx*(off+e*RAIL_HALF), a.y, a.z+a.rz*(off+e*RAIL_HALF));
+    col.push(rgb[0], rgb[1], rgb[2], a.fade*0.92);
+   }
+  }
+  for(let i=0;i<n;i++){ const a=base+i*2, b=a+1, c=a+2, d=a+3; idx.push(a,c,b, b,c,d); }
+ }
+ const g=new THREE.BufferGeometry();
+ g.setAttribute('position', new THREE.Float32BufferAttribute(pos,3));
+ g.setAttribute('rcol', new THREE.Float32BufferAttribute(col,4));
+ g.setIndex(idx);
+ const mat=new THREE.ShaderMaterial({transparent:true,depthWrite:false,side:THREE.DoubleSide,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2,
+  vertexShader:'attribute vec4 rcol; varying vec4 vC; void main(){ vC=rcol; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }',
+  fragmentShader:'varying vec4 vC; void main(){ gl_FragColor=vec4(vC.rgb, vC.a); }'});
+ railObj=new THREE.Mesh(g, mat); railObj.renderOrder=2; railObj.visible=railsOn; railObj.frustumCulled=false; scene.add(railObj);
+}
 function onLoaded(){
  retargetNorthwest();
+ buildRails();
  buildMiniMap();
  if(CALICO.nw) LD.log('Fly-through retargeted to the northwest end: '+Math.round(CALICO.nw.routeFt)+' ft along the tunnel, '+Math.round(CALICO.nw.straightFt)+' ft from the portal at about N'+Math.round(CALICO.nw.bearing)+'°E.','ok');
  LD.done(); if(!entered) reset(); update(0); renderer.render(scene,camera);
@@ -815,6 +865,7 @@ function buildMiniMap(){
  const wrap=document.createElement('div'); wrap.id='mapwrap';
  wrap.innerHTML='<button type="button" id="mapBtn">Map</button><button type="button" id="qBtn">High</button><div id="qpop"><button type="button" data-q="0">Standard</button><button type="button" data-q="1">High</button></div><canvas id="minimap" width="360" height="300"></canvas>';
  document.body.appendChild(wrap);
+ if(!TOUCH){ const b=railButton(); b.classList.add('desk'); wrap.insertBefore(b, wrap.querySelector('#minimap')); syncRailBtn(); }
  const btn=wrap.querySelector('#mapBtn'), qBtn=wrap.querySelector('#qBtn'), qpop=wrap.querySelector('#qpop'), cv=wrap.querySelector('#minimap'), ctx=cv.getContext('2d');
  if(TOUCH){ cv.width=180; cv.height=148; } else { cv.width=360; cv.height=300; }
  const W=cv.width, H=cv.height, cells=[];
