@@ -226,7 +226,12 @@ function fadeDeskKeys(){
 ov.addEventListener('click',()=>{ if(!ov.dataset.ready) return; if(TOUCH) enterTouch(); else renderer.domElement.requestPointerLock(); });
 renderer.domElement.addEventListener('click',()=>{ if(TOUCH||!ov.dataset.ready) return; renderer.domElement.requestPointerLock(); });
 renderer.domElement.addEventListener('pointerdown',e=>{ if(!ov.dataset.ready||e.pointerType==='touch') return; userTakeover(); });
-document.addEventListener('click',e=>{ if(TOUCH||!deskKeys||!deskKeys.classList.contains('show')) return; if(e.target.closest&&e.target.closest('a')) return; renderer.domElement.requestPointerLock(); });
+document.addEventListener('click',e=>{ if(TOUCH||!deskKeys||!deskKeys.classList.contains('show')||deskKeys.classList.contains('out')) return; if(e.target.closest&&e.target.closest('a,button,#plainhelp,#ask')) return; renderer.domElement.requestPointerLock(); });
+const askBtn=document.getElementById('ask'), plainHelp=document.getElementById('plainhelp');
+function togglePlain(on){ const show=on==null?!plainHelp.classList.contains('show'):!!on; plainHelp.classList.toggle('show',show); }
+askBtn.addEventListener('click',e=>{ e.stopPropagation(); togglePlain(); });
+document.getElementById('askclose').addEventListener('click',e=>{ e.stopPropagation(); togglePlain(false); });
+document.getElementById('tourbtn').addEventListener('click',e=>{ e.stopPropagation(); fadeDeskKeys(); if(!auto) startAuto(); flash('Guided tour'); });
 function showHint(html,ms){ hint.innerHTML=html; hint.classList.add('show'); clearTimeout(hintTimer); hintTimer=setTimeout(()=>hint.classList.remove('show'),ms); }
 document.addEventListener('pointerlockchange',()=>{const L=document.pointerLockElement===renderer.domElement;
  if(L){ ov.style.display='none';
@@ -271,8 +276,8 @@ function enterTouch(){
 if(TOUCH){
  document.body.classList.add('touch');
  const big=document.querySelector('#enter .big'), ctl=document.querySelector('#enter .ctl');
- if(big) big.textContent='The stick guide appears when loading finishes';
- if(ctl) ctl.innerHTML='Drag the bottom-right stick up to walk forward and down to walk back<br><b>Guided</b> follows the tunnel · <b>Free View</b> for two sticks · <b>4×</b> walks faster';
+ if(big) big.textContent='A short guide appears when loading finishes';
+ if(ctl) ctl.innerHTML='Drag the round stick up to walk forward and down to walk back. Drag the picture to look around.';
  const ui=document.createElement('div'); ui.id='touchui';
  ui.innerHTML='<div id="stick"><div class="pad"><div class="knob"></div></div></div>'+
   '<div id="lookstick"><div class="pad"><div class="knob"></div></div></div>'+
@@ -665,12 +670,12 @@ function update(dt){
  else if(guided&&dt>0) guidedStep(dt);
  if(!guided && !auto && dt>0 && (Math.abs(lookAxisX)>0.12||Math.abs(lookAxisY)>0.12)){
   yaw-=lookAxisX*1.8*dt; pitch=Math.max(-1.2,Math.min(1.2, pitch+lookAxisY*1.3*dt)); }
+ if(!auto && !guided && dt>0){ let turn=0; if(keys.KeyA||keys.ArrowLeft) turn+=1; if(keys.KeyD||keys.ArrowRight) turn-=1; if(turn) yaw+=turn*0.9*dt; }
  easeLook(dt, auto?LOOK_RATE_AUTO:(guided?4.5:LOOK_RATE));
  camera.rotation.set(lookPitch,lookYaw,0);
  if(!auto && !guided && dt>0){
   fwd.set(-Math.sin(lookYaw),0,-Math.cos(lookYaw)); right.set(Math.cos(lookYaw),0,-Math.sin(lookYaw)); mv.set(0,0,0);
   if(keys.KeyW||keys.ArrowUp)mv.add(fwd); if(keys.KeyS||keys.ArrowDown)mv.sub(fwd);
-  if(keys.KeyD||keys.ArrowRight)mv.add(right); if(keys.KeyA||keys.ArrowLeft)mv.sub(right);
   const sm=Math.hypot(stickX,stickY);   // free view: left stick, camera-relative, same floor following
   if(sm>0.16){ const a=Math.min(1,(sm-0.16)/0.84); mv.addScaledVector(fwd,stickY/sm*a); mv.addScaledVector(right,stickX/sm*a); }
   if(keys.KeyE||keys.Space)mv.y+=1; if(keys.KeyQ||keys.ShiftLeft||keys.ShiftRight)mv.y-=1;
