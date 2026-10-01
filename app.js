@@ -14,7 +14,7 @@ camera.rotation.order='YXZ';
 // ---------- shared uniforms / point material ----------
 // 0 leaves the original clay. 1 is the tuned warm grade: a little more contrast and saturation,
 // a warmer lamp, and slightly richer clay and timber. This is the only colour knob.
-const GRADE=1;
+const GRADE=0;
 const U={uCam:{value:new THREE.Vector3()},uDir:{value:new THREE.Vector3(0,0,-1)},uLamp:{value:1.0},
   uSize:{value:0.03},uScreen:{value:Hh()},uFov:{value:1.0},uTime:{value:0},uFogDist:{value:38.0},uCull:{value:1.0},
   uGrade:{value:qs.has('grade')?Math.max(0,Math.min(1,parseFloat(qs.get('grade')))):GRADE}};
@@ -201,7 +201,7 @@ function lookAt(p){const d=new THREE.Vector3().subVectors(p,camera.position);yaw
 const START_D=6.0;
 function reset(){ const t=Math.min(START_D/pathLen,1); poseAt(t); guideInited=false; guideOff=0; guideV=0; peekYaw=0; peekPitch=0; }
 function flash(t){msg=t;msgT=2.5;}
-addEventListener('keydown',e=>{keys[e.code]=true;
+addEventListener('keydown',e=>{ if(auto && e.code!=='KeyP') userTakeover(); keys[e.code]=true;
  if(e.code==='KeyC'){keepIn=!keepIn;outT=0;flash('Keep-inside pull-back '+(keepIn?'ON':'OFF (free flight)'));}
  if(e.code==='KeyL'){lampOn=!lampOn;flash('Headlamp '+(lampOn?'ON':'OFF (flat light)')); if(CALICO.syncTouchBtns) CALICO.syncTouchBtns();}
  if(e.code==="KeyR"){reset();auto=false;resetGuard();snapLook(); if(CALICO.syncTouchBtns) CALICO.syncTouchBtns();}
@@ -209,7 +209,7 @@ addEventListener('keydown',e=>{keys[e.code]=true;
  if(e.code==='KeyH'){document.body.classList.toggle('hidehelp');}
  if(e.code==='KeyF'&&!e.repeat){ fastWalk=!fastWalk; flash(fastWalk?'Walking 4×':'Walking normal speed'); if(CALICO.syncTouchBtns) CALICO.syncTouchBtns(); }
  if(e.code==='KeyG'&&!e.repeat){ setGuided(!guided); }
- if(e.code==='KeyP'){ if(auto) stopAuto(); else startAuto(); flash(auto?(FLY?'Auto fly-through to the northwest end and back (P to stop)':'Auto fly-through (P to stop)'):'Manual'); if(CALICO.syncTouchBtns) CALICO.syncTouchBtns(); }
+ if(e.code==='KeyP'){ if(auto){ stopAuto(); snapLook(); } else startAuto(); flash(auto?(FLY?'Auto fly-through to the northwest end and back (P to stop)':'Auto fly-through (P to stop)'):'Manual'); if(CALICO.syncTouchBtns) CALICO.syncTouchBtns(); }
  if(e.code==='KeyM'){loadMesh(()=>{mesh.visible=!mesh.visible;group.visible=!mesh.visible;flash(mesh.visible?'Surface mesh':'Points');});}
  if(e.code==='BracketRight')U.uSize.value*=1.15; if(e.code==='BracketLeft')U.uSize.value/=1.15;
  if(e.code==='Equal'||e.code==='NumpadAdd'){speed=Math.min(speed*1.25,40);flash('Speed '+speed.toFixed(1)+' m/s');}
@@ -220,12 +220,13 @@ addEventListener('wheel',e=>{speed=Math.min(40,Math.max(0.2,speed*(e.deltaY<0?1.
 const ov=document.getElementById('overlay'), hint=document.getElementById('hint'); let entered=false, hintTimer=0;
 ov.addEventListener('click',()=>{ if(!ov.dataset.ready) return; if(TOUCH) enterTouch(); else renderer.domElement.requestPointerLock(); });
 renderer.domElement.addEventListener('click',()=>{ if(TOUCH||!ov.dataset.ready) return; renderer.domElement.requestPointerLock(); });
+renderer.domElement.addEventListener('pointerdown',e=>{ if(!ov.dataset.ready||e.pointerType==='touch') return; userTakeover(); });
 function showHint(html,ms){ hint.innerHTML=html; hint.classList.add('show'); clearTimeout(hintTimer); hintTimer=setTimeout(()=>hint.classList.remove('show'),ms); }
 document.addEventListener('pointerlockchange',()=>{const L=document.pointerLockElement===renderer.domElement;
  if(L){ ov.style.display='none';
   if(!entered){ entered=true; showHint("You're just inside the mine portal, facing into the tunnel.<br><b>W</b> to walk forward · mouse to look · <b>P</b> for an automatic fly-through",6000); showKeyHint(4500); } }
  else if(ov.dataset.ready){ ov.style.display='flex'; document.querySelector('#enter .big').textContent='▶ Paused — click to continue'; LD.status('Paused. Click anywhere to continue.'); hint.classList.remove('show'); }});
-addEventListener('mousemove',e=>{ if(document.pointerLockElement!==renderer.domElement) return;
+addEventListener('mousemove',e=>{ if(auto && (e.buttons||document.pointerLockElement===renderer.domElement)) userTakeover(); if(document.pointerLockElement!==renderer.domElement) return;
  if(guided){ peekYaw=Math.max(-1,Math.min(1,peekYaw-e.movementX*0.0022)); peekPitch=Math.max(-0.6,Math.min(0.6,peekPitch-e.movementY*0.0022));
   peekHold=true; clearTimeout(peekTimer); peekTimer=setTimeout(()=>{peekHold=false;},160); }
  else { yaw-=e.movementX*0.0022; pitch=Math.max(-1.5,Math.min(1.5,pitch-e.movementY*0.0022)); } });
@@ -264,8 +265,8 @@ function enterTouch(){
 if(TOUCH){
  document.body.classList.add('touch');
  const big=document.querySelector('#enter .big'), ctl=document.querySelector('#enter .ctl');
- if(big) big.textContent='▶ Tap to enter';
- if(ctl) ctl.innerHTML='<b>Guided</b> follows the tunnel · <b>Free View</b> for two sticks · <b>4×</b> walks faster';
+ if(big) big.textContent='The walk starts when loading finishes';
+ if(ctl) ctl.innerHTML='The guided walk starts on its own · touch a joystick or drag to take over<br><b>Guided</b> follows the tunnel · <b>Free View</b> for two sticks · <b>4×</b> walks faster';
  const ui=document.createElement('div'); ui.id='touchui';
  ui.innerHTML='<div id="stick"><div class="pad"><div class="knob"></div></div></div>'+
   '<div id="lookstick"><div class="pad"><div class="knob"></div></div></div>'+
@@ -284,7 +285,7 @@ if(TOUCH){
    const nx=dx/d*m, ny=dy/d*m; setKnob(nx,ny); onChange(nx/STICK_R, -ny/STICK_R);
   }
   function end(id){ if(id!==tid) return; tid=null; setKnob(0,0); onChange(0,0); }
-  el.addEventListener('touchstart',e=>{ if(!entered) return; e.preventDefault(); const t=e.changedTouches[0]; tid=t.identifier; apply(t); },{passive:false});
+  el.addEventListener('touchstart',e=>{ userTakeover(); if(!entered) return; e.preventDefault(); const t=e.changedTouches[0]; tid=t.identifier; apply(t); },{passive:false});
   el.addEventListener('touchmove',e=>{ for(const t of e.changedTouches) if(t.identifier===tid){ e.preventDefault(); apply(t); } },{passive:false});
   el.addEventListener('touchend',e=>{ for(const t of e.changedTouches) end(t.identifier); },{passive:true});
   el.addEventListener('touchcancel',e=>{ for(const t of e.changedTouches) end(t.identifier); },{passive:true});
@@ -293,6 +294,7 @@ if(TOUCH){
  bindStick(ui.querySelector('#lookstick'), (x,y)=>{ lookAxisX=x; lookAxisY=y; });
  let lookTid=null, lookX=0, lookY=0;
  const onLookStart=e=>{
+  if(e.changedTouches.length) userTakeover();
   if(!entered||!guided) return;
   for(const t of e.changedTouches){
    if(lookTid!==null) continue;
@@ -318,7 +320,7 @@ if(TOUCH){
   modeBtn.classList.toggle('on', guided); modeBtn.classList.toggle('free', !guided);
   modeBtn.textContent=guided?'Guided':'Free'; }
 document.addEventListener('touchstart', pokeUi, {passive:true});
- flyBtn.addEventListener('click',()=>{ if(auto) stopAuto(); else startAuto();
+ flyBtn.addEventListener('click',()=>{ if(auto){ stopAuto(); snapLook(); } else startAuto();
   flash(auto?(FLY?'Auto fly-through to the northwest end and back':'Auto fly-through'):'Manual'); syncTouchBtns(); });
  ui.querySelector('#tReset').addEventListener('click',()=>{ reset(); auto=false; resetGuard(); snapLook(); syncTouchBtns(); });
  lampBtn.addEventListener('click',()=>{ lampOn=!lampOn; flash('Headlamp '+(lampOn?'ON':'OFF (flat light)')); syncTouchBtns(); });
@@ -508,6 +510,15 @@ function startAuto(){ auto=true; if(!FLY){ autoT=nearestT(); return; }
  flyV=0; flyDwell=0; flyBlend=0; flyFrom.copy(camera.position);
  eyeBuf.length=0; eyeMark=null; eyeV=0; }   // fresh travel window; keep the current eye height
 function stopAuto(){ auto=false; snapEye(); }
+function userTakeover(){ if(!auto) return; stopAuto(); snapLook(); if(CALICO.syncTouchBtns) CALICO.syncTouchBtns(); flash('You have control'); }
+function startTour(){
+ if(qs.has('capture')||entered) return;
+ ov.style.display='none'; entered=true; startAuto();
+ if(CALICO.syncTouchBtns) CALICO.syncTouchBtns();
+ flash(FLY?'Guided walk to the northwest end and back':'Auto fly-through');
+ if(TOUCH) showHint('Guided walk is playing.<br>Touch a joystick or drag the view to take over.',5000);
+ else showKeyHint(4500);
+}
 function flyStep(dt){
  const L=FLY_LEN, out=flyD<L, stopAt=out?L:2*L;
  if(flyD>=L-0.02&&flyD<L+0.02&&flyDwell<FLY_DWELL){ flyDwell+=dt; flyV=0; if(flyDwell>=FLY_DWELL) flyD=L+0.021; }
@@ -756,10 +767,11 @@ function onLoaded(){
  if(CALICO.nw) LD.log('Fly-through retargeted to the northwest end: '+Math.round(CALICO.nw.routeFt)+' ft along the tunnel, '+Math.round(CALICO.nw.straightFt)+' ft from the portal at about N'+Math.round(CALICO.nw.bearing)+'°E.','ok');
  LD.done(); if(!entered) reset(); update(0); renderer.render(scene,camera);
  LD.log(`Headlamp on, scene ready — ${(loadedPts/1e6).toFixed(2)} M points, first frame rendered just inside the portal.`,'ok');
- LD.log(TOUCH?'Ready — tap to enter.':'Ready — click to enter.','ok');
- LD.status(`All ${M.files.length} tunnel sections loaded (${(loadedPts/1e6).toFixed(2)} M points). ${TOUCH?'Tap':'Click'} anywhere to enter.`);
+ LD.log(qs.has('capture')?'Ready.':'Starting the guided walk.','ok');
+ LD.status(`All ${M.files.length} tunnel sections loaded (${(loadedPts/1e6).toFixed(2)} M points).`);
  ov.dataset.ready=1; ov.classList.add('ready');
  CALICO.ready=true; if(qs.has('capture')){ov.style.display='none';document.getElementById('help').style.display='none';document.getElementById('hud').style.display='none';}
+ else startTour();
 }
 addEventListener('resize',()=>{camera.aspect=W()/Hh();camera.updateProjectionMatrix();renderer.setSize(W(),Hh());U.uScreen.value=Hh()*renderer.getPixelRatio();});
 U.uScreen.value=Hh()*renderer.getPixelRatio(); U.uFov.value=Math.tan(THREE.MathUtils.degToRad(camera.fov/2))*2;
