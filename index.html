@@ -27,7 +27,10 @@ a:hover{color:#ffd2a6}
 .maps figcaption{margin-top:8px;text-align:center;font-size:15px;line-height:1.45;color:#f0d2b0}
 .enter{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:14px;padding:54px 22px 58px;box-sizing:border-box;background:#120c09 url("assets/hero/oblique_3d.jpg") center/cover no-repeat;border-top:5px solid #0f9d9a;border-bottom:5px solid #0f9d9a}
 .enter::before{content:"";position:absolute;inset:0;background:linear-gradient(100deg,rgba(5,4,3,.92) 0%,rgba(5,4,3,.78) 46%,rgba(5,4,3,.55) 100%)}
-.enter h2,.enter p,.enter .go{position:relative;z-index:1}
+.enter h2,.enter p,.enter .go,.enter .gos{position:relative;z-index:1}
+.enter .gos{display:flex;flex-wrap:wrap;gap:12px 14px;justify-content:center;align-items:center}
+.enter .go.hd{padding:14px 18px;font-size:clamp(16px,2.2vw,22px);animation:none;background:#146e6c}
+.enter .go.hd:hover{background:#0c7f7c;color:#f3fffd}
 .enter h2{margin:0;max-width:16em;font-size:clamp(34px,5.4vw,60px);font-weight:800;line-height:1.05;letter-spacing:-.015em;color:#ffe0c2}
 .enter p{margin:0;max-width:36em;font-size:clamp(17px,2.3vw,22px);line-height:1.35;color:#f3d7bc}
 .go{display:inline-block;max-width:min(760px,94vw);margin-top:8px;padding:22px 28px;border:3px solid #d7fffb;border-radius:16px;background:#0f9d9a;color:#04221f;font-size:clamp(24px,4.2vw,36px);font-weight:800;letter-spacing:.2px;line-height:1.15;text-align:center;text-decoration:none;animation:softpulse 2.6s ease-in-out infinite}
@@ -97,7 +100,10 @@ footer .cta{margin-top:14px}
 <section class="enter" id="enter">
 <h2>Step inside the scan: walk the Silver King Mine live in 3D</h2>
 <p>Real 2019 laser-scan data, 5.36 million points. Runs in your browser.</p>
+<div class="gos">
 <a class="go" href="walk.html">Click here to go inside the LiDAR scan</a>
+<a class="go hd" href="walk-hd.html">Full detail version (desktop)</a>
+</div>
 </section>
 <div class="rest">
 <section class="block" id="then">

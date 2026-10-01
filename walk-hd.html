@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8">
-<title>Calico Mine Tunnel — high-detail LiDAR</title>
+<title>Calico Mine Tunnel — Full detail walkthrough</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
 html,body{margin:0;height:100%;background:#050403;overflow:hidden;font-family:system-ui,Segoe UI,Helvetica,Arial,sans-serif;color:#e8d8c4}
@@ -46,6 +46,33 @@ canvas{display:block}
 body.touch #keyhint{display:none!important}
 #homelink{position:fixed;z-index:8;top:8px;left:10px;padding:5px 9px;border-radius:6px;background:rgba(10,7,5,.88);border:1px solid rgba(233,160,102,.75);color:#ffd2a6;font:700 12px/1 system-ui,Segoe UI,Helvetica,Arial,sans-serif;text-decoration:none}
 #homelink:hover{background:rgba(233,160,102,.24)}
+#deskkeys{display:none;position:fixed;inset:0;z-index:12;align-items:center;justify-content:center;flex-direction:column;background:rgba(0,0,0,.72);opacity:1;transition:opacity .5s ease;padding:24px;box-sizing:border-box}
+#deskkeys.show{display:flex}
+#deskkeys.out{opacity:0}
+#deskkeys .boards{display:flex;gap:36px;align-items:flex-end;justify-content:center}
+#deskkeys .cluster{display:flex;flex-direction:column;align-items:center;gap:12px}
+#deskkeys .row{display:flex;gap:12px}
+#deskkeys .keycap{width:128px;height:112px;box-sizing:border-box;border-radius:16px;background:linear-gradient(#fff,#e7e2d8);color:#111;border:4px solid #fff;box-shadow:0 8px 0 #1a140e,0 16px 28px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center}
+#deskkeys .keycap b{font-size:64px;line-height:1;font-weight:800}
+#deskkeys .line{margin:10px 0 0;max-width:920px;font-size:26px;line-height:1.25;font-weight:750;color:#fff;text-align:center;text-shadow:0 2px 0 #000}
+#tourbtn{margin-top:18px;appearance:none;cursor:pointer;background:#f3c79a;color:#1c1008;border:3px solid #fff;border-radius:14px;padding:16px 28px;font:800 26px/1.2 system-ui,Segoe UI,Helvetica,Arial,sans-serif;box-shadow:0 8px 0 #6b4a28}
+#ask{position:fixed;z-index:30;top:10px;right:12px;width:52px;height:52px;border-radius:50%;border:2px solid #fff;background:#070605;color:#fff;font:800 30px/1 system-ui,Segoe UI,Helvetica,Arial,sans-serif;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.45)}
+#plainhelp{display:none;position:fixed;z-index:31;top:72px;right:12px;width:min(440px,92vw);box-sizing:border-box;background:#070605;color:#fff;border:2px solid #fff;border-radius:14px;padding:16px 18px;font-size:18px;line-height:1.45;box-shadow:0 16px 40px rgba(0,0,0,.55)}
+#plainhelp.show{display:block}
+#plainhelp p{margin:0 0 10px}
+#plainhelp button{appearance:none;cursor:pointer;background:#f3c79a;color:#1c1008;border:0;border-radius:8px;padding:8px 14px;font:750 16px/1 system-ui,Segoe UI,Helvetica,Arial,sans-serif}
+body.touch #ask{top:8px;right:max(8px,env(safe-area-inset-right));width:46px;height:46px;font-size:26px}
+body.deskstart #help,body.deskstart #hud,body.stickcoach #hud{display:none!important}
+body.touch #deskkeys{display:none!important}
+#stickcoach{display:none;position:fixed;inset:0;z-index:9;pointer-events:none;opacity:1;transition:opacity .5s ease}
+body.touch #stickcoach.show{display:block}
+#stickcoach.out{opacity:0}
+#stickcoach .scrim{position:absolute;inset:0;background:rgba(0,0,0,.55)}
+#stickcoach .copy{position:absolute;left:12px;right:12px;bottom:340px;background:#070605;color:#fff;border:3px solid #fff;border-radius:16px;padding:16px 16px 14px;box-shadow:0 16px 40px rgba(0,0,0,.7)}
+#stickcoach .copy b{display:block;font-size:26px;line-height:1.2;font-weight:800}
+#stickcoach .arrow{position:absolute;right:54px;bottom:52px;width:210px;height:240px;animation:pointstick .85s ease-in-out infinite;filter:drop-shadow(0 4px 0 #000) drop-shadow(0 0 10px rgba(0,0,0,.8))}
+@keyframes pointstick{0%,100%{transform:translate(0,0)}50%{transform:translate(16px,20px)}}
+body.stickcoach #stick{z-index:11;opacity:1;border-radius:50%;box-shadow:0 0 0 5px #fff,0 0 0 12px #e9a066,0 0 28px rgba(255,255,255,.85)}
 body.touch #homelink{top:8px;left:max(8px,env(safe-area-inset-left));font-size:11px;padding:4px 7px}
 body.hidehelp #help{display:none}
 body.touch{touch-action:none}
@@ -82,6 +109,11 @@ body.touch #mapBtn,body.touch #qBtn{padding:4px 6px;font-size:10px}
 body.touch #minimap{width:90px;height:74px;background:rgba(0,0,0,.45);border-color:rgba(233,160,102,.4);box-shadow:none}
 body.touch.mapopen #hud{display:none!important}
 body.uidim #stick,body.uidim #lookstick,body.uidim #tFly,body.uidim #tReset,body.uidim #tLamp,body.uidim #tFast,body.uidim #mapwrap{opacity:.16}
+#hdnote{display:none;position:fixed;left:50%;bottom:max(14px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:20;max-width:min(560px,94vw);box-sizing:border-box;background:rgba(7,6,5,.92);border:2px solid #0f9d9a;color:#f3fffd;border-radius:10px;padding:8px 12px;font-size:14px;line-height:1.4;text-align:center}
+body.hdphone #hdnote{display:block}
+#hdnote a{color:#9ff7f4;font-weight:700}
+#streamnote{display:none;position:fixed;left:50%;top:64px;transform:translateX(-50%);z-index:6;background:rgba(10,7,5,.82);border:1px solid #0f9d9a;color:#e8d8c4;border-radius:8px;padding:6px 12px;font-size:13px;pointer-events:none}
+#streamnote.on{display:block}
 body.uidim #tMode{opacity:.78}
 #stick,#lookstick,#tbtns button,#mapwrap{transition:opacity .55s}
 @media (max-width:700px){
@@ -96,31 +128,67 @@ body.uidim #tMode{opacity:.78}
  #hint{font-size:15px;padding:12px 14px}
 }
 </style></head>
-<body>
+<body class="hidehelp">
 <div id="overlay"><div id="card">
-<h1>Calico Mine Tunnel — LiDAR Walkthrough</h1>
+<h1>Calico Mine Tunnel — Full detail</h1>
 <p class="sub">GeoSLAM handheld LiDAR · CSUSB geology field class · 24 March 2019</p>
 <div id="credits">
 <span class="place">SILVER KING MINE · CALICO HILLS, CA</span>
 CSUSB geology field camp (Spring 2019)<br>
 CSUSB Department of Geological Sciences<br>
 Field data from the class<br>
-Handheld GeoSLAM LiDAR · 5,359,712 points<br>
+Handheld GeoSLAM LiDAR · 13,657,307 points<br>
 Portal 34.95117° N, 116.86307° W<br>
 Walkthrough rendered by the class of 2019
 </div>
-<p class="about">A walk-through of a real 3-D laser scan of the Silver King Mine tunnel in the Calico Hills, captured with a handheld GeoSLAM scanner during the Spring 2019 CSUSB geology field camp. Field camp is the capstone of a geology education: a great week of real fieldwork in the heat, and here, underground in clay dust. About 13.7 million measured points are streamed into your browser (~185 MB uncompressed on first visit), then you can walk the tunnel with a virtual headlamp. Colours are artistic, not true colour &mdash; the scanner recorded shape only.</p>
+<p class="about">The full registered scan of the Silver King Mine tunnel, 13,657,307 points at about 1.25 cm spacing, streamed in 10 m sections. A desktop draws every point near you (larger up close, so the walls and floor fill in) and drops sections you have walked past. A phone draws about half of those points. Colours are the same clay palette as the main walkthrough — the scanner recorded shape only. The two original scan files are a separate, unregistered pair and are not merged into this view.</p>
 <p class="sub" style="margin:0 0 12px;font-size:13px"><a href="index.html" style="color:#f0b27a">Home</a> &nbsp;·&nbsp; <a href="maps.html" style="color:#f0b27a">Maps &amp; measurements</a></p>
-<div id="enter"><div class="big">▶ Click to enter</div>
-<div class="ctl"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> move &nbsp;·&nbsp; <b>mouse</b> look &nbsp;·&nbsp; <kbd>Space</kbd> / <kbd>Shift</kbd> up / down &nbsp;·&nbsp; <kbd>F</kbd> walk 4× &nbsp;·&nbsp; <kbd>G</kbd> guided &nbsp;·&nbsp; <kbd>Esc</kbd> release the mouse<br>
-<span style="opacity:.8;font-size:13px"><kbd>P</kbd> auto fly-through · <kbd>M</kbd> surface mesh · <kbd>L</kbd> headlamp · <kbd>R</kbd> back to portal · <kbd>H</kbd> help panel</span></div></div>
+<div id="enter"><div class="big">A short guide appears when loading finishes</div>
+<div class="ctl">Press W or the Up Arrow to walk forward. Click the picture, then move the mouse to look around.</div></div>
 <div id="status">Starting…</div>
 <div id="bar"><div></div></div>
-<div id="stats"><span id="pct">0%</span><span id="mb">0.0 / 185.0 MB</span><span id="speed">— MB/s</span><span id="eta">time left: estimating…</span></div>
+<div id="stats"><span id="pct">0%</span><span id="mb">0.0 / 72.1 MB</span><span id="speed">— MB/s</span><span id="eta">time left: estimating…</span></div>
 <div id="log"></div>
 <button id="retry" onclick="location.reload()">Retry (reload page)</button>
 </div></div>
+<div id="deskkeys" role="dialog" aria-label="How to walk">
+<div class="boards">
+<div class="cluster">
+<div class="row"><div class="keycap"><b>W</b></div></div>
+<div class="row"><div class="keycap"><b>A</b></div><div class="keycap"><b>S</b></div><div class="keycap"><b>D</b></div></div>
+</div>
+<div class="cluster">
+<div class="row"><div class="keycap"><b>↑</b></div></div>
+<div class="row"><div class="keycap"><b>←</b></div><div class="keycap"><b>↓</b></div><div class="keycap"><b>→</b></div></div>
+</div>
+</div>
+<p class="line">Press W or the Up Arrow to walk forward</p>
+<p class="line">S or Down Arrow to walk back</p>
+<p class="line">A / D or Left / Right Arrow to turn</p>
+<p class="line">Move the mouse to look around (click the picture first).</p>
+<button type="button" id="tourbtn">Or click here for a guided tour</button>
+</div>
+<div id="stickcoach" aria-hidden="true">
+<div class="scrim"></div>
+<div class="copy"><b>Drag this up to walk forward, down to walk back, and drag the picture to look around.</b></div>
+<svg class="arrow" viewBox="0 0 210 240" aria-hidden="true">
+<path d="M20 12 L126 140" fill="none" stroke="#000" stroke-width="42" stroke-linecap="round"/>
+<path d="M20 12 L126 140" fill="none" stroke="#fff" stroke-width="26" stroke-linecap="round"/>
+<path d="M198 228 L112 176 L158 128 Z" fill="#000"/>
+<path d="M190 216 L122 174 L160 136 Z" fill="#fff"/>
+</svg>
+</div>
+<button type="button" id="ask" aria-label="Help">?</button>
+<div id="plainhelp">
+<p>Press W or the Up Arrow to walk forward. S or the Down Arrow walks back.</p>
+<p>A, D, or the Left and Right arrows turn you.</p>
+<p>Click the picture, then move the mouse to look around. Esc lets the mouse go.</p>
+<p>On a phone, drag the round stick up to walk forward and down to walk back. Drag the picture to look around.</p>
+<p>The guided tour walks the tunnel for you, out and back.</p>
+<button type="button" id="askclose">Close</button>
+</div>
 <a id="homelink" href="index.html">Home</a>
+<div id="hdnote">Full detail is for a desktop. This phone is showing a lighter half-resolution set. <a href="walk.html">Open the lighter walkthrough</a></div>
 <div id="hint"></div>
 <div id="help"><a href="index.html" style="color:#f0b27a">Home</a><br><b>Move</b> W A S D / arrow keys<br><b>Look</b> mouse (click to lock pointer)<br>
 <b>Up / Down</b> E or Space / Q or Shift<br><b>Speed</b> mouse wheel or + / − &nbsp; <b>F</b> walk 4× faster (tap again for normal)<br>
@@ -135,16 +203,11 @@ window.CALICO={files:{},addFile:function(i,a){CALICO.files[i]=a;if(CALICO.onFile
 (function(){
 'use strict';
 // Uncompressed sizes (what a streaming reader counts; GitHub Pages gzips on the wire, so Content-Length can't be used).
-var NPTS=14;
-function ptsName(i){var s=String(i);while(s.length<3)s='0'+s;return 'data-hd/pts_'+s+'.js';}
-var SIZES={'lib/three.min.js':608081,'data-hd/meta.js':2328341,
- 'data-hd/pts_000.js':13749372,'data-hd/pts_001.js':12724470,'data-hd/pts_002.js':13338945,'data-hd/pts_003.js':13076863,
- 'data-hd/pts_004.js':13604857,'data-hd/pts_005.js':13492108,'data-hd/pts_006.js':13154035,'data-hd/pts_007.js':13348513,
- 'data-hd/pts_008.js':13250570,'data-hd/pts_009.js':12782222,'data-hd/pts_010.js':13562270,'data-hd/pts_011.js':13656695,
- 'data-hd/pts_012.js':12922386,'data-hd/pts_013.js':9435338,
- 'data/mesh.js':18783875};
-var PTS=[];for(var i=0;i<NPTS;i++)PTS.push(ptsName(i));
-var START=['lib/three.min.js','data-hd/meta.js'].concat(PTS);
+var NPTS=0;
+function ptsName(i){var s=String(i);while(s.length<3)s='0'+s;return 'data/pts_'+s+'.js';}
+var SIZES={'lib/three.min.js':608081,'data/meta.js':16629,'data/tunnel.js':15890,'data-sec/index.json':83302};
+var PTS=[];
+var START=['lib/three.min.js','data/meta.js','data/tunnel.js','data-sec/index.json'];
 var T0=performance.now(), $=function(id){return document.getElementById(id);};
 var logEl=$('log'), bar=$('bar').firstChild;
 function fmtMB(b){return (b/1e6).toFixed(1);}
@@ -184,6 +247,8 @@ function fetchText(url,onBytes){
    n+=r.value.byteLength;parts.push(dec.decode(r.value,{stream:true}));onBytes(n,false);return pump();});}
   return pump();});}
 L.fetchText=fetchText;
+L.track=function(name,size){expected[name]=size||0;if(!(name in got))got[name]=0;};
+L.progress=function(name,n,done){got[name]=n;if(done)expected[name]=n;};
 var doneFiles=0;
 function fetchTracked(f){return fetchText(f,function(n,done){got[f]=n;if(done){expected[f]=n;doneFiles++;
  if(doneFiles===START.length){finished=true;paint();var el=((performance.now()-T0)/1000).toFixed(1);setTimeout(function(){log('All data downloaded: '+fmtMB(totals()[0])+' MB in '+el+' s.','ok');},0);}}});}
@@ -192,45 +257,25 @@ L.evalScript=evalScript;
 function fail(what,err){L.errors++;log('ERROR: '+what+' failed — '+(err&&err.message||err),'err');
  status('Loading failed: '+what+'. Check your connection, then retry.',true);$('status').style.color='#ff7b6b';$('retry').style.display='inline-block';}
 L.fail=fail;
+L.done=function(){clearInterval(paintTimer);finished=true;paint();};
 
-log('Page started — loading viewer and '+PTS.length+' tunnel sections ('+fmtMB(totals()[1])+' MB).');
+log('Page started — loading the full-detail viewer ('+fmtMB(totals()[1])+' MB of engine and index, then the portal sections).');
 status('Downloading 3-D viewer engine (three.js)…');
 
-// --- engine: three.js -> meta -> app.js ---
+// --- engine: three.js -> meta -> tunnel -> section index -> app-stream.js ---
 var appReady=new Promise(function(resolve,reject){
- Promise.all([fetchTracked('lib/three.min.js'),fetchTracked('data-hd/meta.js')]).then(function(t){
+ Promise.all([fetchTracked('lib/three.min.js'),fetchTracked('data/meta.js'),fetchTracked('data/tunnel.js'),fetchTracked('data-sec/index.json')]).then(function(t){
   evalScript(t[0],'three.min.js');if(!window.THREE)throw new Error('three.js did not initialise');
   log('3-D engine (three.js r'+THREE.REVISION+') ready.','ok');
   evalScript(t[1],'meta.js');
-  var M=CALICO.meta;L.filePts=M.files.map(function(_,fi){return M.chunks.reduce(function(a,c){return a+(c.f===fi?c.n:0);},0);});
-  log('Scan index loaded: '+(M.count/1e6).toFixed(2)+' M points in '+M.chunks.length+' blocks.','ok');
-  var tj=document.createElement('script');tj.src='data/tunnel.js';   // tunnel callouts + fly-through path (optional)
-  tj.onerror=function(){log('Tunnel callouts (data/tunnel.js) not available — continuing without them.');};
-  var go=function(){var s=document.createElement('script');s.src='app-hd.js';
-  s.onload=function(){resolve();};s.onerror=function(){reject(new Error('app-hd.js could not be loaded'));};
-  document.body.appendChild(s);};
-  tj.addEventListener('load',go);tj.addEventListener('error',go);document.body.appendChild(tj);
+  evalScript(t[2],'tunnel.js');
+  CALICO.sections=JSON.parse(t[3]);
+  log('Full-detail index: '+(CALICO.sections.count/1e6).toFixed(2)+' M points in '+CALICO.sections.sections.length+' sections.','ok');
+  var s=document.createElement('script');s.src='app-stream.js';
+  s.onload=function(){resolve();};s.onerror=function(){reject(new Error('app-stream.js could not be loaded'));};
+  document.body.appendChild(s);
  }).catch(reject);});
 appReady.catch(function(e){fail('viewer engine',e);});
-
-// --- point sections: 2 downloads at a time, in tunnel order; add to scene one by one ---
-var queue=[],texts={},nextAdd=0,nextFetch=0,active=0,dlCount=0,addBusy=false;
-function startNext(){while(active<2&&nextFetch<PTS.length){(function(fi){var f=PTS[fi];active++;
-  fetchTracked(f).then(function(t){active--;dlCount++;texts[fi]=t;
-   log('Tunnel section '+(fi+1)+' of '+PTS.length+' downloaded ('+fmtMB(t.length)+' MB).');
-   startNext();addNext();
-  }).catch(function(e){active--;fail('tunnel section '+(fi+1)+' ('+f+')',e);});})(nextFetch++);}}
-startNext();
-function addNext(){appReady.then(function(){
- if(addBusy||!(nextAdd in texts))return;addBusy=true;var fi=nextAdd;
- if(!finished)status('Downloading & building the tunnel… section '+(fi+1)+' of '+PTS.length+' going into the scene');
- else status('Building the tunnel… adding section '+(fi+1)+' of '+PTS.length);
- setTimeout(function(){ // let the status paint before the (blocking) decode
-  try{evalScript(texts[fi],PTS[fi]);delete texts[fi];}catch(e){fail('adding tunnel section '+(fi+1),e);return;}
-  nextAdd++;addBusy=false;setTimeout(addNext,30);},30);});}
-L.sectionAdded=function(fi,total){log('Tunnel section '+(fi+1)+' of '+PTS.length+' added to scene (running total '+total.toLocaleString()+' points).','ok');
- if(!finished)status('Downloading… '+(fi+1)+' of '+PTS.length+' sections in the scene so far');};
-L.done=function(){clearInterval(paintTimer);finished=true;paint();};
 })();
 </script>
 </body></html>
