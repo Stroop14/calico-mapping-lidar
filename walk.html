@@ -46,18 +46,33 @@ canvas{display:block}
 body.touch #keyhint{display:none!important}
 #homelink{position:fixed;z-index:8;top:8px;left:10px;padding:5px 9px;border-radius:6px;background:rgba(10,7,5,.88);border:1px solid rgba(233,160,102,.75);color:#ffd2a6;font:700 12px/1 system-ui,Segoe UI,Helvetica,Arial,sans-serif;text-decoration:none}
 #homelink:hover{background:rgba(233,160,102,.24)}
-#startpanel{display:none;position:fixed;z-index:12;left:50%;top:50%;width:min(640px,90vw);height:min(640px,90vw);transform:translate(-50%,-50%);box-sizing:border-box;padding:28px 32px 22px;background:#070605;color:#f4efe8;border:1px solid rgba(255,255,255,.16);box-shadow:0 28px 90px rgba(0,0,0,.78);flex-direction:column;overflow:auto}
-#startpanel.show{display:flex}
-#startpanel h2{margin:0 0 14px;font-size:26px;font-weight:650;letter-spacing:.01em;color:#fff}
-#startpanel .main{display:grid;grid-template-columns:1fr 1fr;gap:10px 16px;margin:0 0 14px}
-#startpanel .main div{background:rgba(255,255,255,.05);border-radius:8px;padding:10px 12px}
-#startpanel .main b{display:block;font-size:20px;line-height:1.15;color:#fff;margin-bottom:4px}
-#startpanel .main span{display:block;font-size:14px;line-height:1.35;color:#e8d8c4}
-#startpanel .rest{margin:0;font-size:14px;line-height:1.55;color:#e4d5c4}
-#startpanel .rest b{color:#fff;font-weight:700}
-#startpanel .go{margin:auto 0 0;padding-top:14px;text-align:center;font-size:18px;font-weight:750;color:#ffd2a6}
-body.deskstart #help{display:none}
-body.touch #startpanel{display:none!important}
+#deskkeys{display:none;position:fixed;inset:0;z-index:12;align-items:center;justify-content:center;flex-direction:column;background:rgba(0,0,0,.72);opacity:1;transition:opacity .5s ease;padding:24px;box-sizing:border-box}
+#deskkeys.show{display:flex}
+#deskkeys.out{opacity:0}
+#deskkeys .boards{display:flex;gap:36px;align-items:flex-end;justify-content:center}
+#deskkeys .cluster{display:flex;flex-direction:column;align-items:center;gap:12px}
+#deskkeys .row{display:flex;gap:12px}
+#deskkeys .keycap{width:128px;height:112px;box-sizing:border-box;border-radius:16px;background:linear-gradient(#fff,#e7e2d8);color:#111;border:4px solid #fff;box-shadow:0 8px 0 #1a140e,0 16px 28px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center}
+#deskkeys .keycap b{font-size:64px;line-height:1;font-weight:800}
+#deskkeys .line{margin:10px 0 0;max-width:920px;font-size:26px;line-height:1.25;font-weight:750;color:#fff;text-align:center;text-shadow:0 2px 0 #000}
+#tourbtn{margin-top:18px;appearance:none;cursor:pointer;background:#f3c79a;color:#1c1008;border:3px solid #fff;border-radius:14px;padding:16px 28px;font:800 26px/1.2 system-ui,Segoe UI,Helvetica,Arial,sans-serif;box-shadow:0 8px 0 #6b4a28}
+#ask{position:fixed;z-index:30;top:10px;right:12px;width:52px;height:52px;border-radius:50%;border:2px solid #fff;background:#070605;color:#fff;font:800 30px/1 system-ui,Segoe UI,Helvetica,Arial,sans-serif;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.45)}
+#plainhelp{display:none;position:fixed;z-index:31;top:72px;right:12px;width:min(440px,92vw);box-sizing:border-box;background:#070605;color:#fff;border:2px solid #fff;border-radius:14px;padding:16px 18px;font-size:18px;line-height:1.45;box-shadow:0 16px 40px rgba(0,0,0,.55)}
+#plainhelp.show{display:block}
+#plainhelp p{margin:0 0 10px}
+#plainhelp button{appearance:none;cursor:pointer;background:#f3c79a;color:#1c1008;border:0;border-radius:8px;padding:8px 14px;font:750 16px/1 system-ui,Segoe UI,Helvetica,Arial,sans-serif}
+body.touch #ask{top:8px;right:max(8px,env(safe-area-inset-right));width:46px;height:46px;font-size:26px}
+body.deskstart #help,body.deskstart #hud,body.stickcoach #hud{display:none!important}
+body.touch #deskkeys{display:none!important}
+#stickcoach{display:none;position:fixed;inset:0;z-index:9;pointer-events:none;opacity:1;transition:opacity .5s ease}
+body.touch #stickcoach.show{display:block}
+#stickcoach.out{opacity:0}
+#stickcoach .scrim{position:absolute;inset:0;background:rgba(0,0,0,.55)}
+#stickcoach .copy{position:absolute;left:12px;right:12px;bottom:340px;background:#070605;color:#fff;border:3px solid #fff;border-radius:16px;padding:16px 16px 14px;box-shadow:0 16px 40px rgba(0,0,0,.7)}
+#stickcoach .copy b{display:block;font-size:26px;line-height:1.2;font-weight:800}
+#stickcoach .arrow{position:absolute;right:54px;bottom:52px;width:210px;height:240px;animation:pointstick .85s ease-in-out infinite;filter:drop-shadow(0 4px 0 #000) drop-shadow(0 0 10px rgba(0,0,0,.8))}
+@keyframes pointstick{0%,100%{transform:translate(0,0)}50%{transform:translate(16px,20px)}}
+body.stickcoach #stick{z-index:11;opacity:1;border-radius:50%;box-shadow:0 0 0 5px #fff,0 0 0 12px #e9a066,0 0 28px rgba(255,255,255,.85)}
 body.touch #homelink{top:8px;left:max(8px,env(safe-area-inset-left));font-size:11px;padding:4px 7px}
 body.hidehelp #help{display:none}
 body.touch{touch-action:none}
@@ -108,7 +123,7 @@ body.uidim #tMode{opacity:.78}
  #hint{font-size:15px;padding:12px 14px}
 }
 </style></head>
-<body>
+<body class="hidehelp">
 <div id="overlay"><div id="card">
 <h1>Calico Mine Tunnel — LiDAR Walkthrough</h1>
 <p class="sub">GeoSLAM handheld LiDAR · CSUSB geology field class · 24 March 2019</p>
@@ -123,29 +138,49 @@ Walkthrough rendered by Mike Murrey, field camp class of 2019
 </div>
 <p class="about">A walk-through of a real 3-D laser scan of the Silver King Mine tunnel in the Calico Hills, captured with a handheld GeoSLAM scanner during the 2019 CSUSB geology field camp led by Dr. Erik Melchiorre. Field camp is the capstone of a geology education: days of nonstop fieldwork in the heat, and here, underground in clay dust. About 5.36 million measured points are streamed into your browser (~71 MB uncompressed on first visit), then you can walk the tunnel with a virtual headlamp. Colours are artistic, not true colour &mdash; the scanner recorded shape only.</p>
 <p class="sub" style="margin:0 0 12px;font-size:13px"><a href="index.html" style="color:#f0b27a">Home</a> &nbsp;·&nbsp; <a href="maps.html" style="color:#f0b27a">Maps &amp; measurements</a></p>
-<div id="enter"><div class="big">Controls appear when loading finishes</div>
-<div class="ctl"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> move &nbsp;·&nbsp; <b>mouse</b> look &nbsp;·&nbsp; <kbd>Space</kbd> / <kbd>Shift</kbd> up / down &nbsp;·&nbsp; <kbd>F</kbd> walk 4× &nbsp;·&nbsp; <kbd>G</kbd> guided &nbsp;·&nbsp; <kbd>Esc</kbd> release the mouse<br>
-<span style="opacity:.8;font-size:13px">Click or press any key to begin · <kbd>P</kbd> auto fly-through · <kbd>M</kbd> surface mesh · <kbd>L</kbd> headlamp · <kbd>R</kbd> back to portal · <kbd>H</kbd> help panel</span></div></div>
+<div id="enter"><div class="big">A short guide appears when loading finishes</div>
+<div class="ctl">Press W or the Up Arrow to walk forward. Click the picture, then move the mouse to look around.</div></div>
 <div id="status">Starting…</div>
 <div id="bar"><div></div></div>
 <div id="stats"><span id="pct">0%</span><span id="mb">0.0 / 72.1 MB</span><span id="speed">— MB/s</span><span id="eta">time left: estimating…</span></div>
 <div id="log"></div>
 <button id="retry" onclick="location.reload()">Retry (reload page)</button>
 </div></div>
-<div id="startpanel" role="dialog" aria-label="Controls">
-<h2>Controls</h2>
-<div class="main">
-<div><b>W A S D</b><span>Move. The arrow keys do the same.</span></div>
-<div><b>Mouse</b><span>Click, then move, to look around. Esc releases the mouse.</span></div>
-<div><b>F</b><span>Walk 4×. Press again for normal speed.</span></div>
-<div><b>P</b><span>Start the automatic fly-through, to the northwest end and back.</span></div>
+<div id="deskkeys" role="dialog" aria-label="How to walk">
+<div class="boards">
+<div class="cluster">
+<div class="row"><div class="keycap"><b>W</b></div></div>
+<div class="row"><div class="keycap"><b>A</b></div><div class="keycap"><b>S</b></div><div class="keycap"><b>D</b></div></div>
 </div>
-<p class="rest"><b>Space</b> or <b>E</b> up · <b>Shift</b> or <b>Q</b> down<br>
-<b>Mouse wheel</b> or <b>+</b> / <b>−</b> change speed · <b>G</b> guided steering along the tunnel<br>
-<b>L</b> headlamp · <b>R</b> back to the portal · <b>H</b> hide the help and the compass<br>
-<b>C</b> keep-inside pull-back · <b>M</b> surface mesh · <b>[ ]</b> point size · <b>B</b> back-face culling<br>
-<b>Map</b> (top left) is a north-up plan · <b>Std / High</b> sets point density</p>
-<p class="go">Click to start · Press any key to begin</p>
+<div class="cluster">
+<div class="row"><div class="keycap"><b>↑</b></div></div>
+<div class="row"><div class="keycap"><b>←</b></div><div class="keycap"><b>↓</b></div><div class="keycap"><b>→</b></div></div>
+</div>
+</div>
+<p class="line">Press W or the Up Arrow to walk forward</p>
+<p class="line">S or Down Arrow to walk back</p>
+<p class="line">A / D or Left / Right Arrow to turn</p>
+<p class="line">Move the mouse to look around (click the picture first).</p>
+<button type="button" id="tourbtn">Or click here for a guided tour</button>
+</div>
+<div id="stickcoach" aria-hidden="true">
+<div class="scrim"></div>
+<div class="copy"><b>Drag this up to walk forward, down to walk back, and drag the picture to look around.</b></div>
+<svg class="arrow" viewBox="0 0 210 240" aria-hidden="true">
+<path d="M20 12 L126 140" fill="none" stroke="#000" stroke-width="42" stroke-linecap="round"/>
+<path d="M20 12 L126 140" fill="none" stroke="#fff" stroke-width="26" stroke-linecap="round"/>
+<path d="M198 228 L112 176 L158 128 Z" fill="#000"/>
+<path d="M190 216 L122 174 L160 136 Z" fill="#fff"/>
+</svg>
+</div>
+<button type="button" id="ask" aria-label="Help">?</button>
+<div id="plainhelp">
+<p>Press W or the Up Arrow to walk forward. S or the Down Arrow walks back.</p>
+<p>A, D, or the Left and Right arrows turn you.</p>
+<p>Click the picture, then move the mouse to look around. Esc lets the mouse go.</p>
+<p>On a phone, drag the round stick up to walk forward and down to walk back. Drag the picture to look around.</p>
+<p>The guided tour walks the tunnel for you, out and back.</p>
+<button type="button" id="askclose">Close</button>
 </div>
 <a id="homelink" href="index.html">Home</a>
 <div id="hint"></div>
