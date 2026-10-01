@@ -46,6 +46,18 @@ canvas{display:block}
 body.touch #keyhint{display:none!important}
 #homelink{position:fixed;z-index:8;top:8px;left:10px;padding:5px 9px;border-radius:6px;background:rgba(10,7,5,.88);border:1px solid rgba(233,160,102,.75);color:#ffd2a6;font:700 12px/1 system-ui,Segoe UI,Helvetica,Arial,sans-serif;text-decoration:none}
 #homelink:hover{background:rgba(233,160,102,.24)}
+#startpanel{display:none;position:fixed;z-index:12;left:50%;top:50%;width:min(640px,90vw);height:min(640px,90vw);transform:translate(-50%,-50%);box-sizing:border-box;padding:28px 32px 22px;background:#070605;color:#f4efe8;border:1px solid rgba(255,255,255,.16);box-shadow:0 28px 90px rgba(0,0,0,.78);flex-direction:column;overflow:auto}
+#startpanel.show{display:flex}
+#startpanel h2{margin:0 0 14px;font-size:26px;font-weight:650;letter-spacing:.01em;color:#fff}
+#startpanel .main{display:grid;grid-template-columns:1fr 1fr;gap:10px 16px;margin:0 0 14px}
+#startpanel .main div{background:rgba(255,255,255,.05);border-radius:8px;padding:10px 12px}
+#startpanel .main b{display:block;font-size:20px;line-height:1.15;color:#fff;margin-bottom:4px}
+#startpanel .main span{display:block;font-size:14px;line-height:1.35;color:#e8d8c4}
+#startpanel .rest{margin:0;font-size:14px;line-height:1.55;color:#e4d5c4}
+#startpanel .rest b{color:#fff;font-weight:700}
+#startpanel .go{margin:auto 0 0;padding-top:14px;text-align:center;font-size:18px;font-weight:750;color:#ffd2a6}
+body.deskstart #help{display:none}
+body.touch #startpanel{display:none!important}
 body.touch #homelink{top:8px;left:max(8px,env(safe-area-inset-left));font-size:11px;padding:4px 7px}
 body.hidehelp #help{display:none}
 body.touch{touch-action:none}
@@ -63,11 +75,7 @@ body.freeview #stick{left:max(10px,env(safe-area-inset-left));right:auto}
 #tbtns{position:fixed;left:50%;right:auto;transform:translateX(-50%);bottom:calc(88px + 8px + max(8px,env(safe-area-inset-bottom)));z-index:6;display:flex;flex-direction:row;gap:5px;align-items:center;justify-content:center;touch-action:none;max-width:calc(100vw - 16px)}
 #tbtns button{appearance:none;width:40px;height:40px;min-height:0;padding:0;background:rgba(10,7,5,.38);color:#ffd2a6;border:1px solid rgba(233,160,102,.7);border-radius:8px;font:700 12px/1 system-ui,Segoe UI,Helvetica,Arial,sans-serif;letter-spacing:0}
 #tFast{font-size:13px;font-weight:800}
-#tFast.on,#tRails.on{background:rgba(233,160,102,.85);color:#1c1008;border-color:#ffe0bf}
-#tRails{width:auto;min-width:44px;padding:0 6px;font-size:10px;font-weight:750}
-#mapwrap #tRails{pointer-events:auto;width:auto;min-width:0;appearance:none;cursor:pointer;background:rgba(10,7,5,.55);color:#ffd2a6;border:1px solid rgba(233,160,102,.75);border-radius:6px;padding:5px 8px;font:700 12px/1 system-ui,Segoe UI,Helvetica,Arial,sans-serif}
-#mapwrap #tRails.on{background:rgba(233,160,102,.85);color:#1c1008;border-color:#ffe0bf}
-body.touch #mapwrap #tRails{display:none}
+#tFast.on{background:rgba(233,160,102,.85);color:#1c1008;border-color:#ffe0bf}
 #tMode{width:auto;min-width:52px;padding:0 7px;font-size:11px;font-weight:750}
 #tMode.on{background:rgba(233,160,102,.82);color:#1c1008;border-color:#ffe0bf}
 #tMode.free{background:rgba(243,226,200,.78);color:#1c1008;border-color:#fff}
@@ -85,7 +93,7 @@ body.touch #mapwrap{left:max(8px,env(safe-area-inset-left));top:46px;max-width:1
 body.touch #mapBtn,body.touch #qBtn{padding:4px 6px;font-size:10px}
 body.touch #minimap{width:90px;height:74px;background:rgba(0,0,0,.45);border-color:rgba(233,160,102,.4);box-shadow:none}
 body.touch.mapopen #hud{display:none!important}
-body.uidim #stick,body.uidim #lookstick,body.uidim #tFly,body.uidim #tReset,body.uidim #tLamp,body.uidim #tFast,body.uidim #tRails,body.uidim #mapwrap{opacity:.16}
+body.uidim #stick,body.uidim #lookstick,body.uidim #tFly,body.uidim #tReset,body.uidim #tLamp,body.uidim #tFast,body.uidim #mapwrap{opacity:.16}
 body.uidim #tMode{opacity:.78}
 #stick,#lookstick,#tbtns button,#mapwrap{transition:opacity .55s}
 @media (max-width:700px){
@@ -113,17 +121,32 @@ Handheld GeoSLAM LiDAR · 5,359,712 points<br>
 Portal 34.95117° N, 116.86307° W<br>
 Walkthrough rendered by Mike Murrey, field camp class of 2019
 </div>
-<p class="about">A walk-through of a real 3-D laser scan of the Silver King Mine tunnel in the Calico Hills, captured with a handheld GeoSLAM scanner during the 2019 CSUSB geology field camp led by Dr. Erik Melchiorre. Field camp is the capstone of a geology education: days of nonstop fieldwork in the heat, and here, underground in clay dust. About 5.36 million measured points are streamed into your browser (~71 MB uncompressed on first visit), then you can walk the tunnel with a virtual headlamp. Colours are artistic, not true colour &mdash; the scanner recorded shape only. Rails are shown as a guide placed from trip photos; the scan itself does not resolve them.</p>
+<p class="about">A walk-through of a real 3-D laser scan of the Silver King Mine tunnel in the Calico Hills, captured with a handheld GeoSLAM scanner during the 2019 CSUSB geology field camp led by Dr. Erik Melchiorre. Field camp is the capstone of a geology education: days of nonstop fieldwork in the heat, and here, underground in clay dust. About 5.36 million measured points are streamed into your browser (~71 MB uncompressed on first visit), then you can walk the tunnel with a virtual headlamp. Colours are artistic, not true colour &mdash; the scanner recorded shape only.</p>
 <p class="sub" style="margin:0 0 12px;font-size:13px"><a href="index.html" style="color:#f0b27a">Home</a> &nbsp;·&nbsp; <a href="maps.html" style="color:#f0b27a">Maps &amp; measurements</a></p>
-<div id="enter"><div class="big">The walk starts when loading finishes</div>
+<div id="enter"><div class="big">Controls appear when loading finishes</div>
 <div class="ctl"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> move &nbsp;·&nbsp; <b>mouse</b> look &nbsp;·&nbsp; <kbd>Space</kbd> / <kbd>Shift</kbd> up / down &nbsp;·&nbsp; <kbd>F</kbd> walk 4× &nbsp;·&nbsp; <kbd>G</kbd> guided &nbsp;·&nbsp; <kbd>Esc</kbd> release the mouse<br>
-<span style="opacity:.8;font-size:13px">A key or a drag takes over · <kbd>P</kbd> auto fly-through · <kbd>M</kbd> surface mesh · <kbd>L</kbd> headlamp · <kbd>R</kbd> back to portal · <kbd>H</kbd> help panel</span></div></div>
+<span style="opacity:.8;font-size:13px">Click or press any key to begin · <kbd>P</kbd> auto fly-through · <kbd>M</kbd> surface mesh · <kbd>L</kbd> headlamp · <kbd>R</kbd> back to portal · <kbd>H</kbd> help panel</span></div></div>
 <div id="status">Starting…</div>
 <div id="bar"><div></div></div>
 <div id="stats"><span id="pct">0%</span><span id="mb">0.0 / 72.1 MB</span><span id="speed">— MB/s</span><span id="eta">time left: estimating…</span></div>
 <div id="log"></div>
 <button id="retry" onclick="location.reload()">Retry (reload page)</button>
 </div></div>
+<div id="startpanel" role="dialog" aria-label="Controls">
+<h2>Controls</h2>
+<div class="main">
+<div><b>W A S D</b><span>Move. The arrow keys do the same.</span></div>
+<div><b>Mouse</b><span>Click, then move, to look around. Esc releases the mouse.</span></div>
+<div><b>F</b><span>Walk 4×. Press again for normal speed.</span></div>
+<div><b>P</b><span>Start the automatic fly-through, to the northwest end and back.</span></div>
+</div>
+<p class="rest"><b>Space</b> or <b>E</b> up · <b>Shift</b> or <b>Q</b> down<br>
+<b>Mouse wheel</b> or <b>+</b> / <b>−</b> change speed · <b>G</b> guided steering along the tunnel<br>
+<b>L</b> headlamp · <b>R</b> back to the portal · <b>H</b> hide the help and the compass<br>
+<b>C</b> keep-inside pull-back · <b>M</b> surface mesh · <b>[ ]</b> point size · <b>B</b> back-face culling<br>
+<b>Map</b> (top left) is a north-up plan · <b>Std / High</b> sets point density</p>
+<p class="go">Click to start · Press any key to begin</p>
+</div>
 <a id="homelink" href="index.html">Home</a>
 <div id="hint"></div>
 <div id="help"><a href="index.html" style="color:#f0b27a">Home</a><br><b>Move</b> W A S D / arrow keys<br><b>Look</b> mouse (click to lock pointer)<br>
