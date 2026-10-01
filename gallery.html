@@ -2,7 +2,7 @@
 <html lang="en"><head><meta charset="utf-8">
 <title>Photos and videos · Silver King Mine, Calico</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="description" content="84 photos and 5 videos from the 24 March 2019 CSUSB geology field camp at the Silver King Mine.">
+<meta name="description" content="97 photos and 5 videos from the 24 March 2019 CSUSB geology field camp at the Silver King Mine.">
 <style>
 html,body{margin:0;background:#050403;color:#e8d8c4;font-family:system-ui,Segoe UI,Helvetica,Arial,sans-serif}
 body{padding:18px 16px 64px}
@@ -45,7 +45,7 @@ h1{margin:0 0 6px;font-size:clamp(28px,5vw,40px);font-weight:700;color:#f3c79a}
 <main>
 <a class="back" href="index.html#photos">Back to the main page</a>
 <h1>Photos and videos from the day</h1>
-<p class="deck">84 photos and 5 videos from the CSUSB geology field camp at the Silver King Mine, 24 March 2019. Select a picture to see it larger. Videos are marked VIDEO.</p>
+<p class="deck" id="deck">97 photos and 5 videos from the CSUSB geology field camp at the Silver King Mine, 24 March 2019. Select a picture to see it larger. Videos are marked VIDEO.</p>
 <div class="grid" id="grid"></div>
 </main>
 <div id="lb" hidden>
@@ -156,6 +156,10 @@ function tile(item, i){
 }
 fetch('photos/photos.json').then(function(r){ return r.json(); }).then(function(data){
   items=data;
+  var photos=data.filter(function(it){ return it.type!=='video'; }).length;
+  var videos=data.length-photos;
+  var deck=document.getElementById('deck');
+  if(deck) deck.textContent=photos+' photos and '+videos+' videos from the CSUSB geology field camp at the Silver King Mine, 24 March 2019. Select a picture to see it larger. Videos are marked VIDEO.';
   data.forEach(function(item, i){ grid.appendChild(tile(item, i)); });
   var h=location.hash||'';
   var byId=h.match(/^#v-video_(\d+)/);

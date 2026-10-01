@@ -100,13 +100,13 @@ footer .cta{margin-top:14px}
 <div class="rest">
 <section class="block" id="then">
 <h2>Then and now</h2>
-<p class="lead">Black-and-white prints from the Calico trip beside colour photos from 25 March 2019. Drag the line across each picture.</p>
+<p class="lead">Black-and-white prints from the Calico trip beside colour photos from 25 March 2019. The colour photo fills the picture. Drag the circle to see the older print inside it.</p>
 <div id="then-list"></div>
 <a class="cta" href="slider.html">Click here to open the full Then and Now page</a>
 </section>
 <section class="block" id="photos">
 <h2>Photos and videos from the day</h2>
-<p class="lead">84 photos and 5 videos from the 24 March 2019 field camp: the tunnel, the portal, survey notes, and the ghost-town overlook.</p>
+<p class="lead"><span id="mediacount">97 photos and 5 videos</span> from the 24 March 2019 field camp: the tunnel, the portal, survey notes, and the ghost-town overlook.</p>
 <div class="strip">
 <a href="gallery.html"><img src="photos/thumb_006.jpg" alt="Mine entrance" width="160" height="120"></a>
 <a href="gallery.html"><img src="photos/thumb_001.jpg" alt="Inside the tunnel" width="120" height="160"></a>
@@ -138,5 +138,13 @@ Walkthrough rendered by Mike Murrey, field camp class of 2019
 <br><a class="cta" href="#download">Download data</a>
 </footer>
 <script src="assets/then-now.js"></script>
-<script>THEN_NOW.mount(document.getElementById('then-list'));</script>
+<script>
+THEN_NOW.mount(document.getElementById('then-list'));
+fetch('photos/photos.json').then(function(r){return r.json();}).then(function(data){
+  var photos=data.filter(function(it){return it.type!=='video';}).length;
+  var videos=data.length-photos;
+  var el=document.getElementById('mediacount');
+  if(el) el.textContent=photos+' photos and '+videos+' videos';
+}).catch(function(){});
+</script>
 </body></html>
