@@ -22,7 +22,7 @@ Source: two LAS files from github.com/Stroop14/calico-mapping-lidar, release v1.
 | B | turn back-face point culling on/off |
 | [ ] | point size |
 | P | auto fly-through along the tunnel centreline |
-| HUD (top centre) | Silver King Mine title, distance from the portal along the tunnel centreline (ft · m · mi), a compass strip, the portal's lat/lon (34.95117, −116.86307) and your approximate lat/lon. True north is approximate. It is set from the adit bearing of about N17.5°E (the field camp's figure, N15–20°E) applied to the first 10 m of the centreline: `TUNNEL_BEARING_DEG` in app.js. H hides it. |
+| HUD (top centre) | Silver King Mine title, distance from the portal along the tunnel centreline (ft · m · mi), a compass strip, the portal's lat/lon (34.95117, −116.86307) and your approximate lat/lon. True north is approximate. It is set from the adit bearing of about N17.5°E (Mike Murrey's figure, N15–20°E) applied to the first 10 m of the centreline: `TUNNEL_BEARING_DEG` in app.js. H hides it. |
 | R | reset to the portal · H hides the help panel |
 
 ## What's inside
