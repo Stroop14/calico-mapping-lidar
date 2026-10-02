@@ -16,7 +16,7 @@ camera.rotation.order='YXZ';
 // a warmer lamp, and slightly richer clay and timber. This is the only colour knob.
 const GRADE=0;
 const U={uCam:{value:new THREE.Vector3()},uDir:{value:new THREE.Vector3(0,0,-1)},uLamp:{value:1.0},
-  uSize:{value:0.03},uScreen:{value:Hh()},uFov:{value:1.0},uTime:{value:0},uFogDist:{value:38.0},uCull:{value:1.0},
+  uSize:{value:0.03},uMinPx:{value:1.0},uMaxPx:{value:30.0},uScreen:{value:Hh()},uFov:{value:1.0},uTime:{value:0},uFogDist:{value:38.0},uCull:{value:1.0},
   uGrade:{value:qs.has('grade')?Math.max(0,Math.min(1,parseFloat(qs.get('grade')))):GRADE}};
 const common=`
 uniform vec3 uCam; uniform vec3 uDir; uniform float uLamp; uniform float uTime; uniform float uFogDist;
@@ -53,7 +53,7 @@ vec3 light(vec3 wp, vec3 n, vec3 base){
  return col*fog;}
 `;
 const pmat=new THREE.ShaderMaterial({uniforms:U,vertexShader:common+`
-attribute vec3 nrm; attribute float tone; uniform float uSize; uniform float uScreen; uniform float uFov; uniform float uCull;
+attribute vec3 nrm; attribute float tone; uniform float uSize; uniform float uMinPx; uniform float uMaxPx; uniform float uScreen; uniform float uFov; uniform float uCull;
 varying vec3 vCol;
 void main(){ vec4 wp=modelMatrix*vec4(position,1.0); vec4 mv=viewMatrix*wp;
  float hgt=tone*2.6/0.902; if(tone>0.95) hgt=1.0;
@@ -61,7 +61,7 @@ void main(){ vec4 wp=modelMatrix*vec4(position,1.0); vec4 mv=viewMatrix*wp;
  vCol=light(wp.xyz,nrm,base);
  gl_Position=projectionMatrix*mv;
  float sz=uSize*(tone>0.985?0.6:1.0);
- gl_PointSize=clamp(sz*uScreen/(uFov*-mv.z),1.0,30.0);
+ gl_PointSize=clamp(sz*uScreen/(uFov*-mv.z),uMinPx,uMaxPx);
  if(uCull>0.5 && tone<0.95 && dot(nrm,normalize(uCam-wp.xyz))<-0.3){gl_Position=vec4(2.0,2.0,2.0,1.0);gl_PointSize=0.0;}}`,
  fragmentShader:`uniform float uGrade; varying vec3 vCol;
 vec3 gradeClay(vec3 c){
@@ -90,18 +90,26 @@ function applyPixelRatio(){
  renderer.setPixelRatio(Math.min(devicePixelRatio||1, dprCap()));
  renderer.setSize(W(),Hh());
  U.uScreen.value=Hh()*renderer.getPixelRatio();
+ // Desktop High keeps the original 3 cm sprites. Standard (the phone) draws a
+ // larger sprite so the thinned walls still meet, without touching High.
+ if(qualityHigh){ U.uSize.value=0.03; U.uMinPx.value=1.0; U.uMaxPx.value=30.0; }
+ else { U.uSize.value=0.045; U.uMinPx.value=2.2; U.uMaxPx.value=40.0; }
 }
-function keepPoint(pos,i){
+function keepPoint(src,i){
  if(qualityHigh) return true;
+ const pos=src.pos, ny=src.nrm[3*i+1];
+ // Up-facing floor points all stay, so the ground closes and the track marks
+ // (grooves in that floor) are not thrown away. Walls stay at two of five.
+ if(ny>48) return true;
  const h=(pos[3*i]*374761393 ^ pos[3*i+1]*668265263 ^ pos[3*i+2]*2146121005)>>>0;
  return (h%5)<2;
 }
 function mountChunk(src){
  const n=src.n; let p=src.pos, nn=src.nrm, tt=src.tone, cnt=n;
  if(!qualityHigh){
-  let k=0; for(let i=0;i<n;i++) if(keepPoint(src.pos,i)) k++;
+  let k=0; for(let i=0;i<n;i++) if(keepPoint(src,i)) k++;
   p=new Uint16Array(k*3); nn=new Int8Array(k*3); tt=new Uint8Array(k); let w=0;
-  for(let i=0;i<n;i++) if(keepPoint(src.pos,i)){
+  for(let i=0;i<n;i++) if(keepPoint(src,i)){
    p[3*w]=src.pos[3*i]; p[3*w+1]=src.pos[3*i+1]; p[3*w+2]=src.pos[3*i+2];
    nn[3*w]=src.nrm[3*i]; nn[3*w+1]=src.nrm[3*i+1]; nn[3*w+2]=src.nrm[3*i+2];
    tt[w]=src.tone[i]; w++;
@@ -670,12 +678,12 @@ function update(dt){
  else if(guided&&dt>0) guidedStep(dt);
  if(!guided && !auto && dt>0 && (Math.abs(lookAxisX)>0.12||Math.abs(lookAxisY)>0.12)){
   yaw-=lookAxisX*1.8*dt; pitch=Math.max(-1.2,Math.min(1.2, pitch+lookAxisY*1.3*dt)); }
- if(!auto && !guided && dt>0){ let turn=0; if(keys.KeyA||keys.ArrowLeft) turn+=1; if(keys.KeyD||keys.ArrowRight) turn-=1; if(turn) yaw+=turn*0.9*dt; }
  easeLook(dt, auto?LOOK_RATE_AUTO:(guided?4.5:LOOK_RATE));
  camera.rotation.set(lookPitch,lookYaw,0);
  if(!auto && !guided && dt>0){
   fwd.set(-Math.sin(lookYaw),0,-Math.cos(lookYaw)); right.set(Math.cos(lookYaw),0,-Math.sin(lookYaw)); mv.set(0,0,0);
   if(keys.KeyW||keys.ArrowUp)mv.add(fwd); if(keys.KeyS||keys.ArrowDown)mv.sub(fwd);
+  if(keys.KeyD||keys.ArrowRight)mv.add(right); if(keys.KeyA||keys.ArrowLeft)mv.sub(right);
   const sm=Math.hypot(stickX,stickY);   // free view: left stick, camera-relative, same floor following
   if(sm>0.16){ const a=Math.min(1,(sm-0.16)/0.84); mv.addScaledVector(fwd,stickY/sm*a); mv.addScaledVector(right,stickX/sm*a); }
   if(keys.KeyE||keys.Space)mv.y+=1; if(keys.KeyQ||keys.ShiftLeft||keys.ShiftRight)mv.y-=1;
