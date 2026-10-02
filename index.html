@@ -2,80 +2,52 @@
 <html lang="en"><head><meta charset="utf-8">
 <title>Silver King Mine, Calico: 2019 LiDAR scan</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="description" content="Maps, a live 3D walk, then-and-now photos, and the original 2019 LiDAR scans of the Silver King Mine at Calico.">
-<link rel="stylesheet" href="assets/then-now.css">
+<meta name="description" content="Side profile, plan, and cross-sections of the Silver King Mine, then the 2019 LiDAR walkthrough.">
 <style>
 html,body{margin:0;background:#050403;color:#e8d8c4;font-family:system-ui,Segoe UI,Helvetica,Arial,sans-serif}
 img{max-width:100%;height:auto}
 a{color:#f0b27a}
 a:hover{color:#ffd2a6}
-.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 16px;width:min(1040px,100%);margin:0 auto;padding:14px 18px 6px;box-sizing:border-box}
-.brand{color:#f3c79a;font-weight:750;font-size:18px;text-decoration:none}
-.brand:hover{color:#ffd2a6}
-.top nav{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-.top nav a{text-decoration:none;color:#f0d2b0;font-weight:700;font-size:16px;padding:8px 10px;border-radius:8px}
-.top nav a:hover{color:#fff;background:rgba(255,255,255,.06)}
-.top nav a.dl{background:#0f9d9a;color:#04221f;border:2px solid #d7fffb;padding:10px 14px}
-.top nav a.dl:hover{background:#0c7f7c;color:#f3fffd}
-.maps{width:min(1040px,100%);margin:0 auto;padding:18px 18px 8px;box-sizing:border-box}
+.maps{width:min(1040px,100%);margin:0 auto;padding:28px 18px 8px;box-sizing:border-box}
 .maps h1{font-weight:600;font-size:clamp(26px,4vw,36px);margin:0 0 6px;color:#f3c79a;letter-spacing:.01em}
-.credit{margin:0 0 8px;font-size:15px;line-height:1.45;opacity:.92}
-.tribute{margin:0 0 18px;max-width:68ch;font-size:16px;line-height:1.5;color:#f0d2b0}
+.credit{margin:0 0 18px;font-size:14px;opacity:.88}
 .maps figure{margin:32px 0 8px}
 .maps figure a{display:block}
 .maps figure img{width:100%;height:auto;display:block;border-radius:8px;border:1px solid #3a2a1e;background:#0a0705}
-.maps figcaption{margin-top:8px;text-align:center;font-size:15px;line-height:1.45;color:#f0d2b0}
-.enter{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:14px;padding:54px 22px 58px;box-sizing:border-box;background:#120c09 url("assets/hero/oblique_3d.jpg") center/cover no-repeat;border-top:5px solid #0f9d9a;border-bottom:5px solid #0f9d9a}
+.maps figcaption{margin-top:8px;text-align:center;font-size:14px;line-height:1.45;color:#f0d2b0}
+.enter{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:14px;padding:54px 22px 58px;box-sizing:border-box;background:#120c09 url("assets/hero/oblique_3d.jpg") center/cover no-repeat}
 .enter::before{content:"";position:absolute;inset:0;background:linear-gradient(100deg,rgba(5,4,3,.92) 0%,rgba(5,4,3,.78) 46%,rgba(5,4,3,.55) 100%)}
-.enter h2,.enter p,.enter .go,.enter .gos{position:relative;z-index:1}
-.enter .gos{display:flex;flex-wrap:wrap;gap:12px 14px;justify-content:center;align-items:center}
-.enter .go.hd{padding:14px 18px;font-size:clamp(16px,2.2vw,22px);animation:none;background:#146e6c}
-.enter .go.hd:hover{background:#0c7f7c;color:#f3fffd}
+.enter h2,.enter p,.enter .go{position:relative;z-index:1}
 .enter h2{margin:0;max-width:16em;font-size:clamp(34px,5.4vw,60px);font-weight:800;line-height:1.05;letter-spacing:-.015em;color:#ffe0c2}
 .enter p{margin:0;max-width:36em;font-size:clamp(17px,2.3vw,22px);line-height:1.35;color:#f3d7bc}
-.go{display:inline-block;max-width:min(760px,94vw);margin-top:8px;padding:22px 28px;border:3px solid #d7fffb;border-radius:16px;background:#0f9d9a;color:#04221f;font-size:clamp(24px,4.2vw,36px);font-weight:800;letter-spacing:.2px;line-height:1.15;text-align:center;text-decoration:none;animation:softpulse 2.6s ease-in-out infinite}
-.go:hover{background:#0c7f7c;color:#f3fffd;animation:none}
-@keyframes softpulse{
- 0%,100%{box-shadow:0 0 0 0 rgba(15,157,154,.5),0 10px 28px rgba(0,0,0,.35)}
- 70%{box-shadow:0 0 0 16px rgba(15,157,154,0),0 10px 28px rgba(0,0,0,.35)}
-}
-@media (prefers-reduced-motion:reduce){.go{animation:none}}
-.rest{width:min(1040px,100%);margin:0 auto;padding:8px 18px 12px;box-sizing:border-box}
-.rest h2{margin:0 0 10px;font-size:clamp(24px,3vw,32px);font-weight:700;color:#f3c79a}
-.lead{margin:0 0 14px;font-size:17px;line-height:1.5;max-width:70ch}
-.block{margin:22px 0;padding:18px 16px 20px;border:2px solid rgba(15,157,154,.9);border-radius:16px;background:rgba(15,157,154,.07)}
-.cta{display:inline-block;margin:12px 0 4px;padding:16px 20px;border:2px solid #d7fffb;border-radius:12px;background:#0f9d9a;color:#04221f;font-size:clamp(18px,2.4vw,22px);font-weight:800;line-height:1.25;text-align:center;text-decoration:none}
-.cta:hover{background:#0c7f7c;color:#f3fffd}
-.dls{display:flex;flex-direction:column;align-items:flex-start;gap:4px}
-.strip{display:flex;gap:10px;overflow-x:auto;padding:10px;border:3px solid #0f9d9a;border-radius:12px;background:#0a0705;-webkit-overflow-scrolling:touch}
-.strip a{flex:0 0 auto;position:relative;display:block;border-radius:8px;overflow:hidden}
-.strip img{display:block;height:148px;width:auto;max-width:none}
-.strip .vid{border:3px solid #0f9d9a;box-shadow:0 0 0 2px rgba(15,157,154,.35)}
-.badge{position:absolute;top:8px;left:8px;background:#0f9d9a;color:#04221f;font:800 13px/1 system-ui,sans-serif;letter-spacing:.06em;padding:5px 7px;border-radius:5px}
-.play{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:54px;height:54px;border-radius:50%;background:rgba(4,34,31,.72);color:#f3fffd;border:3px solid #0f9d9a;font-size:26px;line-height:48px;text-align:center}
-footer{padding:28px 18px 40px;text-align:center;font-size:14px;line-height:1.55;color:#f0d2b0}
-footer .place{display:block;margin-bottom:4px;font-size:14px;font-weight:700;letter-spacing:.04em;color:#f3c79a}
-footer .cta{margin-top:14px}
-@media(max-width:700px){
- .cta,.go{display:block}
- .top nav a{font-size:15px}
- .strip img{height:120px}
-}
+.go{display:inline-block;max-width:min(720px,94vw);margin-top:8px;padding:20px 28px;border:3px solid #e9a066;border-radius:14px;background:rgba(233,160,102,.28);color:#ffd2a6;font-size:clamp(24px,4.2vw,36px);font-weight:800;letter-spacing:.2px;line-height:1.15;text-align:center;text-decoration:none}
+.go:hover{background:rgba(233,160,102,.48);color:#fff}
+.rest{width:min(980px,100%);margin:0 auto;padding:8px 18px 12px;box-sizing:border-box}
+.rest section{padding:28px 0 8px;border-top:1px solid #3a2a1e}
+.rest h2{margin:0 0 10px;font-size:clamp(22px,3vw,28px);font-weight:650;color:#f3c79a}
+.more{display:inline-block;margin:8px 0 4px;padding:12px 16px;border:2px solid #e9a066;border-radius:10px;background:rgba(233,160,102,.12);color:#ffd2a6;font-weight:750;text-decoration:none}
+.more:hover{background:rgba(233,160,102,.24);color:#fff}
+.split{position:relative;display:block;margin:12px 0;border-radius:8px;overflow:hidden;border:1px solid #3a2a1e;background:#0a0705}
+.split img{display:block;width:100%}
+.split .clip{position:absolute;left:0;top:0;bottom:0;width:50%;overflow:hidden;border-right:2px solid #e9a066}
+.split .clip img{width:200%;max-width:none;height:100%;object-fit:cover;object-position:left center}
+.cap{margin:6px 0 0;font-size:14.5px;line-height:1.45;color:#f0d2b0}
+.gallery{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}
+@media(min-width:800px){.gallery{grid-template-columns:repeat(4,1fr)}}
+.gallery button{appearance:none;padding:0;border:1px solid #3a2a1e;border-radius:8px;background:#0a0705;cursor:pointer;overflow:hidden}
+.gallery img{display:block;width:100%;height:180px;object-fit:cover}
+@media(max-width:699px){.gallery img{height:140px}}
+footer{padding:28px 18px 36px;text-align:center;font-size:12.5px;line-height:1.5;color:#f0d2b0;opacity:.88}
+footer .place{display:block;margin-bottom:4px;font-size:13px;font-weight:700;letter-spacing:.04em;color:#f3c79a;opacity:1}
+#lightbox{position:fixed;inset:0;z-index:20;background:rgba(5,4,3,.92);display:flex;align-items:center;justify-content:center;padding:18px;box-sizing:border-box}
+#lightbox[hidden]{display:none}
+#lightbox img{max-width:min(1100px,100%);max-height:86vh;border-radius:8px;border:1px solid #3a2a1e}
+#lightbox .x{position:absolute;top:12px;right:12px;appearance:none;background:rgba(10,7,5,.8);color:#ffd2a6;border:1px solid #e9a066;border-radius:8px;padding:8px 12px;font:700 14px system-ui,sans-serif;cursor:pointer}
 </style></head>
 <body>
-<header class="top">
-<a class="brand" href="index.html">Silver King Mine</a>
-<nav>
-<a href="#enter">Step inside</a>
-<a href="#then">Then and now</a>
-<a href="#photos">Photos and videos</a>
-<a class="dl" href="#download">Download data</a>
-</nav>
-</header>
 <article class="maps" id="maps">
 <h1>Silver King Mine · Maps &amp; Measurements</h1>
-<p class="credit">CSUSB geology field camp (Spring 2019)</p>
-<p class="tribute">Built from data collected during the Spring 2019 CSUSB geology field camp at the Silver King Mine, Calico. A great week of real field geology, and this is a way to walk back into it.</p>
+<p class="credit">CSUSB Geology Field Camp · 24 March 2019 · led by Dr. Erik Melchiorre</p>
 <figure>
 <a href="renders/side_profile_true.png"><img src="renders/side_profile_true_preview.jpg" alt="Side profile of the Silver King Mine at true scale, in three stacked panels"></a>
 <figcaption>Side profile at true scale (1 ft across = 1 ft up), in three stacked panels</figcaption>
@@ -100,59 +72,60 @@ footer .cta{margin-top:14px}
 <section class="enter" id="enter">
 <h2>Step inside the scan: walk the Silver King Mine live in 3D</h2>
 <p>Real 2019 laser-scan data, 5.36 million points. Runs in your browser.</p>
-<div class="gos">
 <a class="go" href="walk.html">Click here to go inside the LiDAR scan</a>
-<a class="go hd" href="walk-hd.html">Full detail version (desktop)</a>
-</div>
 </section>
 <div class="rest">
-<section class="block" id="then">
+<section id="then">
 <h2>Then and now</h2>
-<p class="lead">Black-and-white prints from the Calico trip beside colour photos from 25 March 2019. Drag the line. Then (left) is the older print. Now (right) is the colour photo.</p>
-<div id="then-list"></div>
-<a class="cta" href="slider.html">Click here to open the full Then and Now page</a>
+<a class="split" href="slider.html" aria-label="Preview of the wash and tilted rocks, then and now">
+<img src="assets/pairs/pair01_new.jpg" alt="" width="1600" height="930">
+<span class="clip"><img src="assets/pairs/pair01_old.jpg" alt="A wash and tilted rock layers: black-and-white print beside the colour photo"></span>
+</a>
+<p class="cap">Looking down a small wash toward the valley, with steeply tilted rock layers on the right. Drag the full set on the next page.</p>
+<a class="more" href="slider.html">Open the Then and Now slider</a>
 </section>
-<section class="block" id="photos">
-<h2>Photos and videos from the day</h2>
-<p class="lead"><span id="mediacount">97 photos and 5 videos</span> from the 24 March 2019 field camp: the tunnel, the portal, survey notes, and the ghost-town overlook.</p>
-<div class="strip">
-<a href="gallery.html"><img src="photos/thumb_006.jpg" alt="Mine entrance" width="160" height="120"></a>
-<a href="gallery.html"><img src="photos/thumb_001.jpg" alt="Inside the tunnel" width="120" height="160"></a>
-<a href="gallery.html"><img src="photos/thumb_026.jpg" alt="Old mine map" width="120" height="160"></a>
-<a href="gallery.html"><img src="photos/thumb_003.jpg" alt="Survey notes" width="120" height="160"></a>
-<a href="gallery.html"><img src="photos/thumb_071.jpg" alt="Ghost-town overlook" width="160" height="120"></a>
-<a class="vid" href="gallery.html#v-video_01"><img src="videos/poster_01.jpg" alt="Video: walking up to the mine entrance"><span class="badge">VIDEO</span><span class="play" aria-hidden="true">&#9654;</span></a>
-</div>
-<a class="cta" href="gallery.html">Click here to see all photos and videos</a>
-</section>
-<section class="block" id="download">
-<h2>Download the original scan data</h2>
-<p class="lead">These are the original 2019 handheld LiDAR scans, saved as LAZ files (about 50 MB each). Coordinates are in metres, in a local frame, and the two scans are separate files. Open them with CloudCompare or QGIS. The walk-through above uses a smaller, registered copy of about 5.36 million points.</p>
-<p class="lead">Collected and processed by the class during the Spring 2019 CSUSB geology field camp.</p>
-<div class="dls">
-<a class="cta" href="download/calico_scan_a.laz" download="calico_scan_a.laz">Click here to download Scan A (49.6 MB)</a>
-<a class="cta" href="download/calico_scan_b.laz" download="calico_scan_b.laz">Click here to download Scan B (50.7 MB)</a>
-<a class="cta" href="download/README.txt" download="README.txt">Click here to download the notes</a>
+<section id="photos">
+<h2>Photos from the day</h2>
+<div class="gallery">
+<button type="button" data-full="assets/photos/IMG_2933.jpg"><img src="assets/photos/IMG_2933.jpg" alt="2019 field-camp photo IMG_2933" loading="lazy" width="1400" height="1866"></button>
+<button type="button" data-full="assets/photos/IMG_2944.jpg"><img src="assets/photos/IMG_2944.jpg" alt="2019 field-camp photo IMG_2944" loading="lazy" width="1400" height="1050"></button>
+<button type="button" data-full="assets/photos/IMG_2956.jpg"><img src="assets/photos/IMG_2956.jpg" alt="2019 field-camp photo IMG_2956" loading="lazy" width="1400" height="1866"></button>
+<button type="button" data-full="assets/photos/IMG_2959.jpg"><img src="assets/photos/IMG_2959.jpg" alt="2019 field-camp photo IMG_2959" loading="lazy" width="1400" height="1866"></button>
+<button type="button" data-full="assets/photos/IMG_2960.jpg"><img src="assets/photos/IMG_2960.jpg" alt="2019 field-camp photo IMG_2960" loading="lazy" width="1400" height="1866"></button>
+<button type="button" data-full="assets/photos/IMG_3009.jpg"><img src="assets/photos/IMG_3009.jpg" alt="2019 field-camp photo IMG_3009" loading="lazy" width="1400" height="1050"></button>
+<button type="button" data-full="assets/photos/IMG_3010.jpg"><img src="assets/photos/IMG_3010.jpg" alt="2019 field-camp photo IMG_3010" loading="lazy" width="1400" height="1050"></button>
+<button type="button" data-full="assets/photos/IMG_3035.jpg"><img src="assets/photos/IMG_3035.jpg" alt="2019 field-camp photo IMG_3035" loading="lazy" width="1400" height="1050"></button>
 </div>
 </section>
 </div>
 <footer>
 <span class="place">SILVER KING MINE · CALICO HILLS, CA</span>
-CSUSB geology field camp (Spring 2019)<br>
-CSUSB Department of Geological Sciences<br>
-Field data from the class<br>
+CSUSB Geology Field Camp · 24 March 2019<br>
+Led by Dr. Erik Melchiorre, CSUSB Department of Geological Sciences<br>
+Field data: Dr. Melchiorre's field camp group<br>
 Handheld GeoSLAM LiDAR · portal 34.95117° N, 116.86307° W<br>
-Walkthrough rendered by the class of 2019
-<br><a class="cta" href="#download">Download data</a>
+Walkthrough rendered by Mike Murrey, field camp class of 2019
 </footer>
-<script src="assets/then-now.js"></script>
+<div id="lightbox" hidden>
+<button type="button" class="x">Close</button>
+<img alt="">
+</div>
 <script>
-THEN_NOW.mount(document.getElementById('then-list'));
-fetch('photos/photos.json').then(function(r){return r.json();}).then(function(data){
-  var photos=data.filter(function(it){return it.type!=='video';}).length;
-  var videos=data.length-photos;
-  var el=document.getElementById('mediacount');
-  if(el) el.textContent=photos+' photos and '+videos+' videos';
-}).catch(function(){});
+(function(){
+'use strict';
+var box=document.getElementById('lightbox'), pic=box.querySelector('img'), closeBtn=box.querySelector('.x');
+function open(src, alt){
+  pic.src=src; pic.alt=alt||'';
+  box.hidden=false;
+  closeBtn.focus();
+}
+function shut(){ box.hidden=true; pic.removeAttribute('src'); }
+document.querySelectorAll('.gallery button').forEach(function(b){
+  b.addEventListener('click', function(){ open(b.getAttribute('data-full'), b.querySelector('img').alt); });
+});
+closeBtn.addEventListener('click', shut);
+box.addEventListener('click', function(e){ if(e.target===box) shut(); });
+document.addEventListener('keydown', function(e){ if(e.key==='Escape' && !box.hidden) shut(); });
+})();
 </script>
 </body></html>
