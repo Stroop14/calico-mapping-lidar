@@ -1,75 +1,68 @@
-# LiDAR → web, the short version
+# Silver King: LAS to a walkable page
 
-You have a LAS/LAZ. Two endpoints. Pick one.
+This is what I ran on the 24 March 2019 GeoSLAM scans. Live result:
 
-## A. Orbit viewer — no AI
+https://stroop14.github.io/calico-mapping-lidar/
 
-For surface scans, UAV, outcrops, anything you want to spin and measure.
+Original LAS: [release v1.0.0](https://github.com/Stroop14/calico-mapping-lidar/releases/tag/v1.0.0)
 
-1. Export LAS or LAZ from the scanner / CloudCompare.
-2. [PotreeConverter 2.1.5](https://github.com/potree/PotreeConverter/releases/tag/2.1.5) (BSD).
-3. One command:
+Work in **feet**. If the scanner exported metric, convert once at load (× 3.28084) and keep it in feet from then on.
+
+## The walk (the actual product)
+
+1. Two clouds, 20:06 and 20:36. Register / merge. Origin at the portal (34.95117° N, 116.86307° W). Adit N17.5°E.
+
+2. Read RGB and intensity. On this unit both were zero. Do not invent scanner color.
+
+3. Voxel about **½ inch**. Keep the floor. Acceptance test: the **cart-track grooves** on the floor of the drift (ore-cart ruts, not railroad). If they disappear, the voxel is too coarse or the floor got classified away.
+
+4. First-person page, not an orbit viewer.
+   - Eye **5 ft 4 in** above the local floor (a hair under a 6-ft eye). Follows grade. Ducks under low roof.
+   - WASD, mouse-look. Phone gets a stick.
+   - Soft walls: movement is not hard-blocked by stray points. About two seconds in the rock, pull back.
+   - One **headlamp** on the camera, aimed slightly down, warm. Falloff down the drift. No sun.
+
+5. Color from **two or three handheld photos** of the wall rock, same day if you have them.
+   - walls: reddish-brown clay, cream / ochre mottling
+   - floor: paler dusty tan; keep the tracks
+   - timber portal: brown
+   - light: lamp on the camera; shadows recede down-tunnel
+
+   Match the photos. Mottling is right. A flat paint job is not.
+
+6. Last look, against the photos: wall color, floor tracks, timber, light direction. Fix what is wrong.
+
+Player code I am releasing (public domain): [`../player-controls/first-person.js`](../player-controls/first-person.js)
+
+The Silver King walk adds floor-following from the point cloud, the lamp, and the pull-back. That is in the live page, not the drop-in file.
+
+## Orbit viewer (surface / UAV only)
+
+Different product. Kerry’s usual case: spin the cloud and measure.
+
+[PotreeConverter 2.1.5](https://github.com/potree/PotreeConverter/releases/tag/2.1.5) (BSD):
 
 ```
 PotreeConverter.exe scan.las -o C:\out --generate-page mine
-```
-
-4. Serve the folder. Browser security will not open it as a file:// page.
-
-```
 cd C:\out
 python -m http.server 8000
 ```
 
 Open http://localhost:8000
 
-If the scanner recorded RGB, Potree shows it. If not, you get elevation or intensity. That is all.
+If the scanner recorded RGB, you see it. If not, elevation or intensity. That is all it does. It will not walk a drift.
 
-## B. First-person walk — this is the webpage
+## What is field work vs webpage work
 
-For a drift you want to walk. Same LAS.
-
-Live example: https://stroop14.github.io/calico-mapping-lidar/
-
-What we did on Silver King (24 March 2019, two GeoSLAM LAS, release `v1.0.0`):
-
-1. Merge / register the clouds.
-2. Voxel downsample (~1–2 cm). Keep the floor. The cart-track grooves on the floor are the visual test — if they vanish, the voxel is too coarse.
-3. Put the origin at the portal. Eye height ~1.64 m above the local floor.
-4. Color from two or three handheld photos of the wall, not from the scanner. This unit stored RGB = 0 and intensity = 0.
-5. One warm headlamp on the camera, aimed a few degrees down. Dark falloff down the drift. Not outdoor sun.
-6. WASD + mouse look. Phone gets a stick. Soft walls: you can clip; after ~2 s outside you get pulled back.
-
-Player code (public domain): [`../player-controls/first-person.js`](../player-controls/first-person.js)
-
-## Where AI is needed
-
-| Step | AI? |
+| Step | Who |
 |---|---|
-| Scan, register, export LAS | No. You already do this. |
-| PotreeConverter (orbit page) | No. One binary. |
-| First-person page, WASD, touch stick | Yes — or copy the player file. |
-| Color from 2–3 wall photos; lamp; shadows | Yes. This is matching, not mapping. |
-| Final look: tracks on the floor, timber, light direction vs the photos | Yes, as a check. Your eye still wins. |
+| Scan, register, export LAS | You. Already done. |
+| PotreeConverter orbit page | One binary. No programmer. |
+| Voxel, keep the floor, origin, bearing, eye height | The method above. I already tuned it on Silver King. |
+| First-person page, WASD, lamp, photo color, final look | Webpage work. I built that. A student can reproduce it from this list; the list is the work. |
 
-AI does not invent the geology. It wires the last 20%: the page, the controls, and making the clay look like the photos.
+The prompt in [`CURSOR-PROMPT.md`](CURSOR-PROMPT.md) is that same list, for a student who is repeating **these** steps on a new LAS. It is not a substitute for the method.
 
-## Color, stated cleanly
+## Next scan
 
-Assigned, not measured. Sample the wall rock from the photographs:
-
-- walls: reddish-brown clay, cream / ochre mottling
-- floor: paler dusty tan; keep the cart-track grooves
-- timber portal: brown
-- light: single warm source at the camera; shadows recede down-tunnel
-
-If you have a scanner with a camera, skip this and keep the real RGB.
-
-## Do it with Cursor instead of hiring a programmer
-
-1. Install [Cursor](https://cursor.com).
-2. Model: **Opus 5.5**.
-3. New chat. Attach the LAS (or a 5–20 million point subset), **two or three wall photos**, and optionally a screenshot of https://stroop14.github.io/calico-mapping-lidar/walk.html
-4. Paste [`CURSOR-PROMPT.md`](CURSOR-PROMPT.md)
-
-Original scans: [release v1.0.0](https://github.com/Stroop14/calico-mapping-lidar/releases/tag/v1.0.0)
+LAS plus two or three wall photos (clay, floor tracks, timber). Same steps.

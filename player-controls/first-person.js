@@ -2,14 +2,14 @@
  * First-person walk controls for a three.js LiDAR scene.
  * Public domain (CC0 1.0). No attribution required.
  *
- * Click the canvas to look. WASD / arrows move. Space or E up, Shift or Q down.
- * Mouse wheel changes speed. R resets.
+ * Scene units are feet. Click the canvas to look. WASD / arrows move.
+ * Space or E up, Shift or Q down. Mouse wheel changes speed. R resets.
  *
  * Usage:
  *   const fp = FirstPerson(camera, renderer.domElement, {
- *     eyeHeight: 1.64,          // metres above floorY()
- *     floorY: (x, z) => 0,      // return local floor elevation, or omit for free fly
- *     speed: 2                  // m/s
+ *     eyeHeight: 5.4,           // feet above floorY()  (5 ft 4 in)
+ *     floorY: (x, z) => 0,      // local floor elevation in feet, or omit for free fly
+ *     speed: 6                  // ft/s, walking
  *   });
  *   function tick(dt) { fp.update(dt); }
  */
@@ -21,8 +21,8 @@
 
   function FirstPerson(camera, canvas, opt) {
     opt = opt || {};
-    var eyeHeight = opt.eyeHeight == null ? 1.64 : opt.eyeHeight;
-    var speed = opt.speed == null ? 2 : opt.speed;
+    var eyeHeight = opt.eyeHeight == null ? 5.4 : opt.eyeHeight;
+    var speed = opt.speed == null ? 6 : opt.speed;
     var floorY = typeof opt.floorY === 'function' ? opt.floorY : null;
     var keys = Object.create(null);
     var yaw = camera.rotation.y || 0;
@@ -42,7 +42,7 @@
     document.addEventListener('keydown', function (e) { keys[e.code] = true; });
     document.addEventListener('keyup', function (e) { keys[e.code] = false; });
     canvas.addEventListener('wheel', function (e) {
-      speed = Math.min(40, Math.max(0.2, speed * (e.deltaY < 0 ? 1.12 : 1 / 1.12)));
+      speed = Math.min(130, Math.max(0.7, speed * (e.deltaY < 0 ? 1.12 : 1 / 1.12)));
     }, { passive: true });
 
     function pressed(a, b) { return keys[a] || keys[b]; }

@@ -1,15 +1,15 @@
 # First-person walk controls
 
-Public domain ([CC0](LICENSE)). Drop onto any three.js camera.
+Public domain ([CC0](LICENSE)). Drop onto any three.js camera. Units are **feet**.
 
 ```html
 <script src="three.min.js"></script>
 <script src="first-person.js"></script>
 <script>
   const fp = FirstPerson(camera, renderer.domElement, {
-    eyeHeight: 1.64,
-    floorY: (x, z) => /* local floor in metres, or omit */,
-    speed: 2
+    eyeHeight: 5.4,              // 5 ft 4 in
+    floorY: (x, z) => /* local floor in feet, or omit */,
+    speed: 6                     // ft/s
   });
   function loop(dt) { fp.update(dt); renderer.render(scene, camera); }
 </script>
@@ -23,4 +23,4 @@ Public domain ([CC0](LICENSE)). Drop onto any three.js camera.
 | Wheel | speed |
 | R | reset |
 
-This is the easy controller. The Silver King walkthrough adds floor following from the point cloud, a headlamp, and a pull-back if you stand in the rock — that lives in the live site, not here.
+Silver King walkthrough adds floor-following from the point cloud, a headlamp, and a pull-back if you stand in the rock. That is on the live page, not in this file.

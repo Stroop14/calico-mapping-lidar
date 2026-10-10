@@ -1,34 +1,34 @@
-Subject: LiDAR → browser walkthrough (Silver King)
+Subject: Silver King LiDAR — first-person walk, and how I built it
 
 Kerry, Erik —
 
-You already know the field half. This is the last mile: scan on a web page people can walk.
+Silver King, 24 March 2019. I took the two GeoSLAM LAS files from that day and put a first-person walk on the web:
 
-Working example (Silver King, 24 March 2019, your field camp):
 https://stroop14.github.io/calico-mapping-lidar/
 
-Two products from the same LAS.
+Walk it. Maps and a then-and-now slider are on the same page. That is the product.
 
-1. Orbit the cloud (Kerry’s usual surface / UAV case).
-   Download PotreeConverter 2.1.5 (BSD, free):
-   https://github.com/potree/PotreeConverter/releases/tag/2.1.5
-   Then:
+What I did, in order.
+
+1. The two clouds (20:06 and 20:36). Registered. Origin at the portal, 34.95117° N, 116.86307° W. Adit bearing N17.5°E (my figure from the field, N15–20°E). HUD reads in feet.
+
+2. The unit stored no RGB and intensity = 0. Color is not reflectance. I sampled the wall rock from the handheld photos: reddish-brown altered volcanic clay, cream/ochre mottling, dusty tan floor, timber at the portal. Floor stays paler than the walls. One warm headlamp on the camera, aimed a few degrees down. Shadows fall away from you down the drift — not outdoor sun.
+
+3. Half-inch voxels. I kept the floor. The cart-track grooves on the floor of the drift (ore-cart ruts, not railroad) are the check. If they vanish, the downsample is too coarse.
+
+4. Eye at 5 ft 4 in above the local floor, follows grade, ducks under low roof. WASD, mouse look. Soft walls: stray scan points do not stop you; if you stand in the rock for about two seconds you get pulled back.
+
+5. For a surface or UAV cloud you only need to orbit and measure, I use PotreeConverter (BSD). One command, no webpage work:
+
    PotreeConverter.exe scan.las -o C:\out --generate-page mine
-   Point a browser at that folder (any static host, or python -m http.server). Done. No AI.
 
-2. Walk it like a person (underground drift).
-   Same LAS. First-person camera, floor under your feet, WASD, one headlamp.
-   That is a small webpage, not a geology problem.
+   That is a different product. Same LAS. Underground, you want to walk it. That is the page I built.
 
-Color, on this scan: the GeoSLAM wrote no RGB and intensity = 0. So the clay is not measured reflectance. It is assigned from a few handheld photos of the wall rock — reddish-brown altered volcanic clay, cream/ochre mottling, dusty tan floor, timber at the portal. Light is a warm lamp on the camera, aimed slightly down. Shadows fall away from you. Cart-track grooves on the floor are the check that the downsample did not erase the drift floor.
+Player controls (public domain) and the step list:
+https://github.com/Stroop14/calico-mapping-lidar/blob/cursor/lidar-howto-professors-7bc7/howto/RECIPE.md
 
-Where AI actually helps: the page, the controls, matching those wall photos, and a last look that the tracks and lighting are right. Not the scan. Not PotreeConverter.
+If you want the next drift done this way, send the LAS and two or three wall photos (clay, floor with the cart tracks, timber if there is a portal). I will run the same steps.
 
-Recipe, drop-in player code (public domain), and a Cursor prompt:
-https://github.com/Stroop14/calico-mapping-lidar/tree/main/howto
-
-If you want it done to this standard: Cursor, model Opus 5.5, paste the prompt in howto/CURSOR-PROMPT.md, drop in the LAS plus two or three wall photos. Fifteen minutes of their time, not yours.
-
-Kerry — congratulations on retirement. Happy to walk anyone through this.
+Kerry — congratulations on retirement.
 
 Mike

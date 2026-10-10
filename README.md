@@ -6,9 +6,9 @@ CSUSB 391B Calico Mapping LiDAR scans (Spring 2019). Silver King Mine, 24 March 
 
 **Original LAS:** [release v1.0.0](https://github.com/Stroop14/calico-mapping-lidar/releases/tag/v1.0.0)
 
-For Kerry, Erik, and anyone else with a scanner who wants the same last mile:
+How this was built (feet, first-person walk, photo color):
 
-- [Letter](howto/TO-KERRY-AND-ERIK.md)
-- [Recipe](howto/RECIPE.md) — PotreeConverter for orbit; first-person walk when you need to go inside
-- [Cursor prompt](howto/CURSOR-PROMPT.md)
-- [Player controls](player-controls/) — public domain WASD
+- [Note to Kerry and Erik](howto/TO-KERRY-AND-ERIK.md)
+- [Method](howto/RECIPE.md)
+- [Player controls](player-controls/) — public domain, WASD, feet
+- [Reproduction prompt](howto/CURSOR-PROMPT.md) — encodes the same method, for a student repeating these steps
