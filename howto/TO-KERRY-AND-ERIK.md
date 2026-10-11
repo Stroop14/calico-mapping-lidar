@@ -1,33 +1,33 @@
-Subject: Silver King LiDAR — first-person walk, and how I built it
+Subject: Silver King on the web — from CloudCompare to a walk
 
 Kerry, Erik —
 
-Silver King, 24 March 2019. I took the two GeoSLAM LAS files from that day and put a first-person walk on the web:
-
 https://stroop14.github.io/calico-mapping-lidar/
 
-Walk it. Maps and a then-and-now slider are on the same page. That is the product.
+That is the two GeoSLAM files from 24 March 2019, in a browser. You walk it. You do not install a CAD package.
 
-What I did, in order.
+You already know how to collect the scan. Everything after the LAS file, in order, with how far each step actually gets you.
 
-1. The two clouds (20:06 and 20:36). Registered. Origin at the portal, 34.95117° N, 116.86307° W. Adit bearing N17.5°E (my figure from the field, N15–20°E). HUD reads in feet.
+1. CloudCompare — about 50%
+   Free program. You already have this class of tool. Open the LAS, merge the two setups, look at it, measure, thin it if it is huge, save. You can see the drift on a lab computer. Nobody else can open it without the same program. That is half the job: the geometry is real.
 
-2. The unit stored no RGB and intensity = 0. Color is not reflectance. I sampled the wall rock from the handheld photos: reddish-brown altered volcanic clay, cream/ochre mottling, dusty tan floor, timber at the portal. Floor stays paler than the walls. One warm headlamp on the camera, aimed a few degrees down. Shadows fall away from you down the drift — not outdoor sun.
+2. A free “put it on a webpage” converter (Potree) — about 75%
+   Same file. One extra program, also free. Out comes a page you spin with the mouse, like Google Earth for a point cloud. Good for a hillside, a UAV strip, an outcrop. Bad for a drift you want to walk. You are still outside the model looking in.
 
-3. Half-inch voxels. I kept the floor. The cart-track grooves on the floor of the drift (ore-cart ruts, not railroad) are the check. If they vanish, the downsample is too coarse.
+3. The walk — the last 25%
+   Same file again. Now you are standing in the heading, floor under your feet, one lamp. That page is what I built. Color is not from the scanner — that unit stored none. I took it from the handheld photos of the wall: clay, dusty floor, timber. Cart-track grooves on the floor are the check that I did not erase the ground when I thinned the points.
 
-4. Eye at 5 ft 4 in above the local floor, follows grade, ducks under low roof. WASD, mouse look. Soft walls: stray scan points do not stop you; if you stand in the rock for about two seconds you get pulled back.
+Open source, said plainly.
 
-5. For a surface or UAV cloud you only need to orbit and measure, I use PotreeConverter (BSD). One command, no webpage work:
+CloudCompare and the web converter were already free. Other people wrote them (CloudCompare: EDF / the CloudCompare project. Potree: Markus Schütz). I did not invent those.
 
-   PotreeConverter.exe scan.las -o C:\out --generate-page mine
+What I put on GitHub is the walking page and a small control file so someone can move with W-A-S-D. The control file is public domain — anyone may copy it. The rest of my page is public to look at; I am putting a license on it so you can reuse it without asking. That is my piece, not theirs.
 
-   That is a different product. Same LAS. Underground, you want to walk it. That is the page I built.
+https://github.com/Stroop14/calico-mapping-lidar
 
-Player controls (public domain) and the step list:
-https://github.com/Stroop14/calico-mapping-lidar/blob/cursor/lidar-howto-professors-7bc7/howto/RECIPE.md
+If you do not want to sit in a text window for two days: there is a helper program (Cursor). You install it, drop in the LAS and two or three wall photos, and paste the checklist I wrote (howto/CURSOR-PROMPT.md). It follows those steps. You do not write code. You look at the result and say whether the clay and the tracks look right. That is an afternoon, not a field season.
 
-If you want the next drift done this way, send the LAS and two or three wall photos (clay, floor with the cart tracks, timber if there is a portal). I will run the same steps.
+If you want the next heading done this way, send the LAS and two or three wall photos.
 
 Kerry — congratulations on retirement.
 
