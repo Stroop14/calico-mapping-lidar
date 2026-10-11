@@ -22,4 +22,4 @@ SOFTWARE.
 
 The LAS scans in GitHub releases remain field-camp data. The player-controls
 folder is dedicated to the public domain under CC0 1.0 (see that folder).
-CloudCompare, Potree, and three.js are separate projects with their own licenses.
+CloudCompare and three.js are separate projects with their own licenses.
