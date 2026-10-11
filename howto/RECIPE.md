@@ -48,9 +48,10 @@ Putting a folder on GitHub without a license is not open source. The controls we
 
 ## Wrap it with a helper, not a week of typing
 
-1. Install [Cursor](https://cursor.com). You do not need to know what a compiler is.
-2. New chat. Attach the LAS and two or three wall photos.
-3. Paste [`CURSOR-PROMPT.md`](CURSOR-PROMPT.md). That is my checklist, not a blank “make a website.”
-4. Look at the walk. If the clay or the cart tracks are wrong, say so in English. Do not start over in code.
+1. Install [Cursor](https://cursor.com).
+2. New chat. Model: **Opus 5.5**. If that is busy, **latest Grok**.
+3. Attach the LAS and two or three wall photos.
+4. Paste the whole prompt in [`CURSOR-PROMPT.md`](CURSOR-PROMPT.md) (everything under the line).
+5. Look at the walk. If the clay or the cart tracks are wrong, say so in English.
 
 Original scans: [release v1.0.0](https://github.com/Stroop14/calico-mapping-lidar/releases/tag/v1.0.0)
