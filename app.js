@@ -8,7 +8,7 @@ renderer.setSize(W(),Hh()); renderer.setClearColor(0x050403,1);
 document.body.appendChild(renderer.domElement);
 const scene=new THREE.Scene();
 LD.log('WebGL renderer created ('+(renderer.capabilities.isWebGL2?'WebGL 2':'WebGL 1')+').','ok');
-const camera=new THREE.PerspectiveCamera(72,W()/Hh(),0.05,400);
+const camera=new THREE.PerspectiveCamera(88,W()/Hh(),0.05,400);
 camera.rotation.order='YXZ';
 
 // ---------- shared uniforms / point material ----------
@@ -16,7 +16,7 @@ camera.rotation.order='YXZ';
 // a warmer lamp, and slightly richer clay and timber. This is the only colour knob.
 const GRADE=0;
 const U={uCam:{value:new THREE.Vector3()},uDir:{value:new THREE.Vector3(0,0,-1)},uLamp:{value:1.0},
-  uSize:{value:0.03},uMinPx:{value:1.0},uMaxPx:{value:30.0},uScreen:{value:Hh()},uFov:{value:1.0},uTime:{value:0},uFogDist:{value:38.0},uCull:{value:1.0},
+  uSize:{value:0.022},uMinPx:{value:1.0},uMaxPx:{value:12.0},uScreen:{value:Hh()},uFov:{value:1.0},uTime:{value:0},uFogDist:{value:52.0},uCull:{value:1.0},
   uGrade:{value:qs.has('grade')?Math.max(0,Math.min(1,parseFloat(qs.get('grade')))):GRADE}};
 const common=`
 uniform vec3 uCam; uniform vec3 uDir; uniform float uLamp; uniform float uTime; uniform float uFogDist;
@@ -25,18 +25,20 @@ float vnoise(vec3 x){vec3 i=floor(x),f=fract(x);f=f*f*(3.0-2.0*f);
  return mix(mix(mix(h3(i),h3(i+vec3(1,0,0)),f.x),mix(h3(i+vec3(0,1,0)),h3(i+vec3(1,1,0)),f.x),f.y),
             mix(mix(h3(i+vec3(0,0,1)),h3(i+vec3(1,0,1)),f.x),mix(h3(i+vec3(0,1,1)),h3(i+vec3(1,1,1)),f.x),f.y),f.z);}
 vec3 clayColor(vec3 wp, vec3 n, float hgt, float mat){
- float n1=vnoise(wp*1.1), n2=vnoise(wp*4.3), n3=vnoise(wp*17.0);
- vec3 ceilc=vec3(0.80,0.42,0.31), wallc=vec3(0.76,0.51,0.36), lowc=vec3(0.66,0.52,0.40), floorc=vec3(0.60,0.54,0.42);
- vec3 c=mix(lowc,wallc,smoothstep(0.25,1.1,hgt)); c=mix(c,ceilc,smoothstep(1.0,1.9,hgt));
- // ochre / cream / red mottling in the altered volcanic clay
- c=mix(c,vec3(0.80,0.52,0.26),smoothstep(0.55,0.85,n1)*0.55);
- c=mix(c,vec3(0.82,0.68,0.55),smoothstep(0.62,0.9,n2)*0.30);
- c=mix(c,vec3(0.66,0.30,0.24),smoothstep(0.6,0.95,1.0-n1)*0.40);
- float isFloor=(1.0-smoothstep(0.08,0.2,hgt))*smoothstep(0.55,0.8,abs(n.y));
- c=mix(c,floorc*(0.85+0.3*n2),isFloor);
- if(mat>0.955 && mat<0.985) c=vec3(0.36,0.24,0.14)*(0.7+0.6*n3);      // timber portal frame
- if(mat>0.985) c=vec3(0.56,0.34,0.25)*(0.8+0.4*n2);                    // exterior talus
- c*=0.86+0.28*n3; c=mix(vec3(dot(c,vec3(0.33))),c,1.35);
+ float n1=vnoise(wp*1.1), n2=vnoise(wp*4.3), n3=vnoise(wp*17.0), n4=vnoise(wp*38.0);
+ // Height stack like the gummy board: brown crumb underside, gray mid, dyed-sugar top.
+ vec3 floorc=vec3(0.42,0.26,0.14), midc=vec3(0.58,0.54,0.48), topc=vec3(0.86,0.38,0.26), dyec=vec3(0.92,0.58,0.22);
+ vec3 c=mix(floorc,midc,smoothstep(0.05,0.55,hgt));
+ c=mix(c,topc,smoothstep(0.7,1.6,hgt));
+ c=mix(c,dyec,smoothstep(0.55,0.9,n1)*smoothstep(0.9,1.8,hgt)*0.55);
+ c=mix(c,vec3(0.78,0.72,0.66),smoothstep(0.62,0.9,n2)*0.28);
+ float isFloor=(1.0-smoothstep(0.08,0.22,hgt))*smoothstep(0.55,0.8,abs(n.y));
+ c=mix(c,floorc*(0.78+0.28*n2),isFloor);
+ // sugar-crystal sparkle on the top faces
+ c+=vec3(1.0,0.96,0.88)*step(0.78,n4)*smoothstep(0.45,1.4,hgt)*0.22;
+ if(mat>0.955 && mat<0.985) c=vec3(0.36,0.24,0.14)*(0.7+0.6*n3);
+ if(mat>0.985) c=vec3(0.50,0.32,0.20)*(0.8+0.4*n2);
+ c*=0.88+0.22*n3; c=mix(vec3(dot(c,vec3(0.33))),c,1.28);
  return c;}
 vec3 light(vec3 wp, vec3 n, vec3 base){
  vec3 toC=uCam-wp; float d=length(toC); vec3 L=toC/max(d,1e-4);
@@ -54,16 +56,16 @@ vec3 light(vec3 wp, vec3 n, vec3 base){
 `;
 const pmat=new THREE.ShaderMaterial({uniforms:U,vertexShader:common+`
 attribute vec3 nrm; attribute float tone; uniform float uSize; uniform float uMinPx; uniform float uMaxPx; uniform float uScreen; uniform float uFov; uniform float uCull;
-varying vec3 vCol;
+varying vec3 vCol; varying vec3 vW; varying float vH;
 void main(){ vec4 wp=modelMatrix*vec4(position,1.0); vec4 mv=viewMatrix*wp;
  float hgt=tone*2.6/0.902; if(tone>0.95) hgt=1.0;
  vec3 base=clayColor(wp.xyz,nrm,hgt,tone);
- vCol=light(wp.xyz,nrm,base);
+ vCol=light(wp.xyz,nrm,base); vW=wp.xyz; vH=hgt;
  gl_Position=projectionMatrix*mv;
  float sz=uSize*(tone>0.985?0.6:1.0);
  gl_PointSize=clamp(sz*uScreen/(uFov*-mv.z),uMinPx,uMaxPx);
  if(uCull>0.5 && tone<0.95 && dot(nrm,normalize(uCam-wp.xyz))<-0.3){gl_Position=vec4(2.0,2.0,2.0,1.0);gl_PointSize=0.0;}}`,
- fragmentShader:`uniform float uGrade; varying vec3 vCol;
+ fragmentShader:common+`uniform float uGrade; varying vec3 vCol; varying vec3 vW; varying float vH;
 vec3 gradeClay(vec3 c){
  vec3 warm=c*vec3(1.035,1.005,0.975);
  float y=dot(warm,vec3(0.30,0.59,0.11));
@@ -73,8 +75,17 @@ vec3 gradeClay(vec3 c){
  con.r+=0.018*clay;
  con.g+=0.005*clay;
  return max(con,vec3(0.0));}
-void main(){ vec2 q=gl_PointCoord-0.5; if(dot(q,q)>0.25) discard;
+void main(){
+ vec2 q=gl_PointCoord-0.5;
+ float ang=atan(q.y,q.x);
+ float n=vnoise(vW*11.0);
+ // torn ice chip, not a perfect cube/disc
+ float rad=0.40+0.11*sin(ang*3.0+n*6.28318)+0.07*vnoise(vW*24.0+vec3(q,0.0));
+ if(length(q)>rad) discard;
+ float facet=abs(sin(ang*4.0+n*4.0));
  float lm=dot(vCol,vec3(0.3,0.55,0.15)); vec3 col=vCol*(1.9/(1.0+1.9*lm*0.75));
+ col*=0.86+0.24*facet;
+ col+=vec3(1.0,0.95,0.86)*step(0.84,vnoise(vW*42.0))*smoothstep(0.4,1.3,vH)*0.28;
  col=mix(col,gradeClay(col),uGrade);
  gl_FragColor=vec4(pow(max(col,vec3(0.0)),vec3(1.0/2.2)),1.0);}`});
 
@@ -92,8 +103,8 @@ function applyPixelRatio(){
  U.uScreen.value=Hh()*renderer.getPixelRatio();
  // Desktop High keeps the original 3 cm sprites. Standard (the phone) draws a
  // larger sprite so the thinned walls still meet, without touching High.
- if(qualityHigh){ U.uSize.value=0.03; U.uMinPx.value=1.0; U.uMaxPx.value=30.0; }
- else { U.uSize.value=0.045; U.uMinPx.value=2.2; U.uMaxPx.value=40.0; }
+ if(qualityHigh){ U.uSize.value=0.022; U.uMinPx.value=1.0; U.uMaxPx.value=12.0; }
+ else { U.uSize.value=0.032; U.uMinPx.value=1.6; U.uMaxPx.value=14.0; }
 }
 function keepPoint(src,i){
  if(qualityHigh) return true;
@@ -205,8 +216,8 @@ let lookYaw=0, lookPitch=0;   // steadicam: the camera eases toward yaw/pitch (m
 const path=new THREE.CatmullRomCurve3(M.path.map(p=>new THREE.Vector3().fromArray(p)),false,'centripetal');
 const pathLen=path.getLength();
 function lookAt(p){const d=new THREE.Vector3().subVectors(p,camera.position);yaw=Math.atan2(-d.x,-d.z);pitch=Math.atan2(d.y,Math.hypot(d.x,d.z));}
-// start ~6 m along the survey path: just inside the portal (past the entrance clutter), looking down the tunnel
-const START_D=6.0;
+// start just inside the portal so the drift volume stays in frame (title-safe / overscan)
+const START_D=2.4;
 function reset(){ const t=Math.min(START_D/pathLen,1); poseAt(t); guideInited=false; guideOff=0; guideV=0; peekYaw=0; peekPitch=0; }
 function flash(t){msg=t;msgT=2.5;}
 addEventListener('keydown',e=>{ if(e.code==='KeyW'||e.code==='KeyA'||e.code==='KeyS'||e.code==='KeyD'||e.code.startsWith('Arrow')) fadeDeskKeys(); if(auto && e.code!=='KeyP') userTakeover(); keys[e.code]=true;
@@ -706,7 +717,7 @@ function update(dt){
  // headlamp aims slightly below the view axis, with a faint breathing flicker
  d.y-=0.08; d.normalize(); U.uDir.value.copy(d);
  U.uLamp.value+= ((lampOn?1:0)-U.uLamp.value)*Math.min(1,dt*8+ (dt===0?1:0));
- U.uFogDist.value=lampOn?38:80;
+ U.uFogDist.value=lampOn?55:90;
  const fd=U.uFogDist.value*1.3;
  for(const o of chunkObjs) o.visible=o.userData.c.distanceTo(camera.position)-o.userData.r<fd;
 }
@@ -900,7 +911,7 @@ function buildMiniMap(){
 const navEl=document.createElement('div'); navEl.id='navhud';
 navEl.innerHTML='<div class="ttl">Silver King Mine · Calico</div><canvas width="300" height="30"></canvas><div class="hd"></div><div class="dist"></div><div class="ll"></div>';
 const navCss=document.createElement('style');
-navCss.textContent='#navhud{position:fixed;left:50%;top:10px;transform:translateX(-50%);background:rgba(10,7,5,.55);padding:5px 10px 6px;border-radius:6px;pointer-events:none;z-index:5;text-align:center;font-size:12px;line-height:1.45;color:#e8d8c4}'+
+navCss.textContent='#navhud{position:fixed;left:50%;top:22px;transform:translateX(-50%);background:rgba(10,7,5,.55);padding:5px 10px 6px;border-radius:6px;pointer-events:none;z-index:5;text-align:center;font-size:12px;line-height:1.45;color:#e8d8c4}'+
  '#navhud canvas{display:block;width:300px;height:30px}#navhud .hd{opacity:.85;font-size:11.5px}#navhud .dist{font-variant-numeric:tabular-nums;font-size:13px}#navhud .dist b{color:#f0b27a;font-weight:600}#navhud .ttl{font-weight:600;color:#f3c79a;font-size:12.5px;letter-spacing:.03em}#navhud .ll{opacity:.75;font-size:11px;font-variant-numeric:tabular-nums}'+
  'body.hidehelp #navhud{display:none}';
 document.head.appendChild(navCss); document.body.appendChild(navEl);
