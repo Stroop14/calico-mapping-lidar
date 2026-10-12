@@ -22,10 +22,11 @@ pre{margin:12px 0;padding:14px 16px;overflow:auto;background:#120c09;border:1px 
 .back{display:inline-block;margin-bottom:18px;font-size:14px}
 #drop,#photodrop{position:relative;display:flex;align-items:center;justify-content:center;min-height:160px;margin:8px 0 14px;padding:22px;border:2px dashed #e9a066;border-radius:16px;background:rgba(233,160,102,.08);color:#ffd2a6;font-size:clamp(18px,2.6vw,26px);font-weight:750;line-height:1.25;text-align:center;cursor:pointer}
 #drop{min-height:200px}
+#photodrop{min-height:110px;font-size:clamp(15px,2vw,18px);font-weight:650}
 #drop.over,#photodrop.over,.slot.over{background:rgba(233,160,102,.22)}
 #drop input,#photodrop input,.slot input{position:absolute;inset:0;opacity:0;cursor:pointer}
 .slots{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:0 0 14px}
-.slot{position:relative;min-height:84px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;border:1px solid #3a2a1e;border-radius:12px;background:#120c09;color:#f0d2b0;font-size:14px;font-weight:650;cursor:pointer}
+.slot{position:relative;min-height:96px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:8px;border:1px solid #3a2a1e;border-radius:12px;background:#120c09;color:#f0d2b0;font-size:14px;font-weight:650;cursor:pointer;text-align:center}
 .slot b{font-weight:500;font-size:12px;opacity:.8}
 .sw{display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:-2px;margin:0 4px 0 10px;border:1px solid rgba(255,210,166,.4)}
 #status{min-height:1.4em;color:#f0d2b0}
@@ -40,26 +41,25 @@ body.live main{display:none}
 <main>
 <a class="back" href="index.html">Silver King Mine</a>
 <h1>Drop a scan. Walk it.</h1>
-<p class="lead">Drop a LAS, PLY, or XYZ file. Drop photographs for the floor, the wall, and the back of the drift. The walk opens here. Download the site and put it on your own host.</p>
+<p class="lead">Drop a LAS, PLY, or XYZ file. Drop a photo of the ground, a photo of the wall, and a photo of the ceiling. Walk the tunnel and mark key points. Save the walk, view it here, then download the site.</p>
 <label id="drop">Drop the scan here, or choose a file
   <input id="file" type="file" multiple accept=".las,.laz,.ply,.xyz,.txt,.csv">
 </label>
-<label id="photodrop">Drop photographs here for the color
+<label id="photodrop">Or one photo. Bottom of the picture is the floor, middle is the wall, top is the roof.
   <input id="photos" type="file" multiple accept=".jpg,.jpeg,.png,.webp,image/*">
 </label>
 <div class="slots">
-  <label class="slot">Floor<input type="file" accept="image/*" data-slot="floor"><b>whole photo</b></label>
-  <label class="slot">Wall<input type="file" accept="image/*" data-slot="wall"><b>whole photo</b></label>
-  <label class="slot">Back<input type="file" accept="image/*" data-slot="back"><b>whole photo</b></label>
+  <label class="slot">Floor<input type="file" accept="image/*" data-slot="floor"><b>the ground</b></label>
+  <label class="slot">Wall<input type="file" accept="image/*" data-slot="wall"><b>the side of the tunnel</b></label>
+  <label class="slot">Roof<input type="file" accept="image/*" data-slot="roof"><b>the ceiling</b></label>
 </div>
 <p id="swatches"></p>
 <p id="status"></p>
-<p>The scan stays in this browser. This site does not keep a copy. A photograph dropped on Floor, Wall, or Back uses that whole picture for that color. Photographs dropped in the big photo box are read in bands: bottom is the floor, middle is the wall, top is the back.</p>
+<p>The scan stays in this browser. This site does not keep a copy. Floor is a picture of the ground. Wall is a picture of the side of the tunnel. Roof is a picture of the ceiling, the rock above your head. One photograph in the big box is enough if you do not have three: the bottom of that picture colors the floor, the middle colors the wall, and the top colors the roof.</p>
 <p>To practice on the scan that already worked, download the combined Silver King cloud, the 1.25 cm merge of the two walks: <a href="download/silver-king-combined.las.zip">silver-king-combined.las.zip</a>. Unzip it, then drop the LAS file on the box above.</p>
 
-<h2>Start and finish</h2>
-<p>When the walk opens, you are standing at one end. The orange dot is the start. The green dot is the finish. Play walks from the orange dot to the green dot. Reverse swaps the two ends.</p>
-<p>If those ends are the wrong places, press Set the ends. Click where a person walks in. Then click the far end of the tunnel. The walk follows the scan between those two clicks.</p>
+<h2>Key points</h2>
+<p>The scan opens so you can walk inside it. Walk a distance, then press Key point. Walk farther, and press Key point again. Do that through to the end. The orange dot is the first key point. The green dot is the last one. When the key points are done, press Save the walk. Then press Play to view it here, and download the site.</p>
 
 <h2>If the scans do not already line up</h2>
 <p>Do that in CloudCompare before you drop the file. Line the scans up on the overlap, then merge them into one cloud. Delete only points that are nowhere near the tunnel. Keep the walls, a minecart, and a person the scanner caught. Save LAS.</p>
@@ -91,7 +91,7 @@ python3 -m http.server 8000</pre>
   var last = null;
   var cloudUrl = "";
   var bandImages = [];
-  var slotImg = { floor: null, wall: null, back: null };
+  var slotImg = { floor: null, wall: null, roof: null };
   var clay = { floor: [153, 138, 107], low: [168, 133, 102], wall: [194, 130, 92], ceil: [204, 107, 79] };
 
   function say(t) { status.textContent = t; }
@@ -192,14 +192,14 @@ python3 -m http.server 8000</pre>
     };
     if (slotImg.floor) base.floor = whole(slotImg.floor);
     if (slotImg.wall) base.wall = whole(slotImg.wall);
-    if (slotImg.back) base.ceil = whole(slotImg.back);
+    if (slotImg.roof) base.ceil = whole(slotImg.roof);
     base.low = [0, 1, 2].map(function (ch) { return Math.round(base.floor[ch] * 0.45 + base.wall[ch] * 0.55); });
     return base;
   }
 
   function paintSwatches(colors) {
     swatches.textContent = "";
-    var rows = [["floor", colors.floor], ["wall", colors.wall], ["back", colors.ceil]];
+    var rows = [["floor", colors.floor], ["wall", colors.wall], ["roof", colors.ceil]];
     rows.forEach(function (row) {
       var chip = document.createElement("span");
       chip.className = "sw";
@@ -336,7 +336,7 @@ python3 -m http.server 8000</pre>
   }
 
   async function setSlot(name, file) {
-    var label = { floor: "Floor", wall: "Wall", back: "Back" }[name] || "Photograph";
+    var label = { floor: "Floor", wall: "Wall", roof: "Roof" }[name] || "Photograph";
     try { slotImg[name] = await loadImage(file); }
     catch (e) { say("That photograph could not be read."); return; }
     pushColors(currentColors());
@@ -349,7 +349,7 @@ python3 -m http.server 8000</pre>
       var colors = currentColors();
       var buffers = [];
       for (var s = 0; s < scans.length; s++) buffers.push({ name: scans[s].name, buffer: await scans[s].arrayBuffer() });
-      say(bandImages.length || slotImg.floor || slotImg.wall || slotImg.back ? "Building the walk from the scan and the photographs…" : "Building the walk…");
+      say(bandImages.length || slotImg.floor || slotImg.wall || slotImg.roof ? "Building the walk from the scan and the photographs…" : "Building the walk…");
       var payload = await new Promise(function (resolve, reject) {
         var worker = new Worker("tools/mine-walk/build.js");
         worker.onmessage = function (e) {
@@ -403,8 +403,20 @@ python3 -m http.server 8000</pre>
       var three = new Uint8Array(await fetch("lib/three.min.js").then(function (r) { return r.arrayBuffer(); }));
       try {
         var walk = frame.contentWindow && frame.contentWindow.WALK;
-        if (walk && walk.path && walk.path.length > 1) last.payload.path = walk.path;
-      } catch (err) {}
+        if (!walk || !walk.saved || !walk.path || walk.path.length < 2) {
+          frame.contentWindow.document.getElementById("endsHint").textContent = "Save the walk first. Mark the key points, then press Save the walk. Then download.";
+          btn.disabled = false;
+          btn.textContent = "Download the site";
+          return;
+        }
+        last.payload.path = walk.path;
+        last.payload.saved = true;
+      } catch (err) {
+        say("Save the walk first. Mark the key points, then press Save the walk.");
+        btn.disabled = false;
+        btn.textContent = "Download the site";
+        return;
+      }
       var cloud = u8("window.CLOUD=" + JSON.stringify(last.payload) + ";\n");
       var how = u8(
         "Unzip this folder. It is the walk.\n" +
@@ -412,7 +424,7 @@ python3 -m http.server 8000</pre>
         "then open http://localhost:8000/\n" +
         "Or upload the folder to the host you already use.\n" +
         "Desktop: click, mouse looks, W A S D walks, P plays.\n" +
-        "The orange dot is the start. The green dot is the finish. Play walks from start to finish. Reverse swaps them. Set the ends, then click where a person walks in and click the far end.\n" +
+        "Press Play to view the walk. The orange dot is the first key point. The green dot is the last. Reverse swaps the direction.\n" +
         "Phone: left side walks, right side looks.\n"
       );
       var blob = zipStore([

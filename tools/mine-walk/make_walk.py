@@ -305,7 +305,7 @@ def main():
     if args.photos or (args.floor and args.wall):
         floor, wall, ceil = photo_colors(args.photos, args.floor, args.wall)
         low = np.clip(floor * 0.45 + wall * 0.55, 0, 255)
-        print(f"colors from photos  floor {rgb_list(floor)}  wall {rgb_list(wall)}  back {rgb_list(ceil)}")
+        print(f"colors from photos  floor {rgb_list(floor)}  wall {rgb_list(wall)}  roof {rgb_list(ceil)}")
     else:
         # Same clay the Silver King page uses when a scan has no color.
         floor = np.array([153, 138, 107])
@@ -322,6 +322,7 @@ def main():
         "wall": rgb_list(wall),
         "ceil": rgb_list(ceil),
         "path": rel_path.round(3).tolist(),
+        "saved": True,
         "xyz": base64.b64encode(rel.tobytes()).decode("ascii"),
         "tone": base64.b64encode(tone_u8.tobytes()).decode("ascii"),
         "nrm": base64.b64encode(nrm.tobytes()).decode("ascii"),

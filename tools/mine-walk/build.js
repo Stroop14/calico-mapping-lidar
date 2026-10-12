@@ -403,6 +403,7 @@
       wall: colors.wall,
       ceil: colors.ceil,
       path: relPath,
+      saved: false,
       xyz: b64(rel),
       tone: b64(tone),
       nrm: b64(nrm)
