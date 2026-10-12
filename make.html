@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Make a walk from a scan</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="How to turn a mine scan and a few photographs into a walkable page, the same way as the Silver King walk.">
+<style>
+html,body{margin:0;background:#050403;color:#e8d8c4;font-family:system-ui,Segoe UI,Helvetica,Arial,sans-serif}
+a{color:#f0b27a}
+a:hover{color:#ffd2a6}
+main{width:min(760px,100%);margin:0 auto;padding:36px 18px 64px;box-sizing:border-box}
+h1{font-weight:650;font-size:clamp(28px,4vw,40px);margin:0 0 8px;color:#f3c79a;letter-spacing:.01em}
+.lead{margin:0 0 28px;font-size:18px;line-height:1.45;color:#f3d7bc}
+h2{margin:32px 0 10px;font-size:22px;font-weight:650;color:#f3c79a}
+p,li{font-size:16.5px;line-height:1.5}
+ol{padding-left:1.2em}
+li{margin:8px 0}
+code,pre{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+p code,li code{font-size:.92em;color:#ffd2a6}
+pre{margin:12px 0;padding:14px 16px;overflow:auto;background:#120c09;border:1px solid #3a2a1e;border-radius:8px;color:#f0d2b0;font-size:13.5px;line-height:1.45}
+#prompt{white-space:pre-wrap}
+button{appearance:none;margin:8px 0 0;padding:10px 14px;border:2px solid #e9a066;border-radius:10px;background:rgba(233,160,102,.16);color:#ffd2a6;font:700 15px system-ui,sans-serif;cursor:pointer}
+button:hover{background:rgba(233,160,102,.32);color:#fff}
+.back{display:inline-block;margin-bottom:18px;font-size:14px}
+</style>
+</head>
+<body>
+<main>
+<a class="back" href="index.html">Silver King Mine</a>
+<h1>Make a walk from a scan</h1>
+<p class="lead">One web page. A phone and a desktop open the same address. The dots, the headlamp, and the fog match the Silver King walk.</p>
+
+<h2>1. Make one cloud, then cut only what is far away</h2>
+<p>This part is by eye, in CloudCompare. A program will chew a minecart and a person if you let it decide what is junk.</p>
+<ol>
+<li>If the scans are shifted, line them up on the overlap, then merge them into one cloud. Leave every point in place until that cloud exists.</li>
+<li>Delete only points that are nowhere near the tunnel. A point miles from the drift goes. A point a long way below the drift goes. The walls stay. A minecart stays. A person the scanner caught stays. Use Segment. Skip the noise filter.</li>
+<li>Save LAS. If the file is LAZ, use File, Save, and choose LAS.</li>
+</ol>
+
+<h2>2. One command does the rest</h2>
+<p>The program is in this site’s repository, folder <code>tools/mine-walk</code>. It reads the scan and a few photographs. The bottom of a photo is the floor color, the middle is the wall, the top is the back of the drift. The scan supplies the floor height and a line down the drift at eye height, 1.6 m. It thins the cloud to about 2 cm and stops near 1.5 million points, so a phone can open it. Silver King itself is finer, 1.25 cm.</p>
+<pre>pip install numpy pillow
+python3 tools/mine-walk/make_walk.py drift.las --photos wall.jpg --out site
+cd site
+python3 -m http.server 8000</pre>
+<p>Open <a href="http://localhost:8000/">http://localhost:8000/</a>. Play walks the line. Click, then the mouse looks and W A S D walks. P plays. On a phone the left side walks and the right side looks. <code>[</code> and <code>]</code> change the dot size. The desktop starts with the smaller dots, so the resolution shows. The phone starts with larger dots, so the walls close. Same cloud.</p>
+<p>A separate floor photo and wall photo:</p>
+<pre>python3 tools/mine-walk/make_walk.py drift.las --floor floor.jpg --wall wall.jpg --out site</pre>
+<p>A finer cloud, when the machine can hold it:</p>
+<pre>python3 tools/mine-walk/make_walk.py drift.las --photos wall.jpg --cell 0.0125 --max-points 0 --out site</pre>
+<p>The <code>site</code> folder is the website. Put it on any host, or on GitHub Pages. Desktop and phone use that one address.</p>
+
+<h2>3. What the Silver King page is</h2>
+<p>The 2019 walk is the Calico field camp, with Erik. From the LAS files on, the page was built on its own. That scan stores no color, so the clay is height above the local floor. Your photographs take those three base colors. The headlamp, the fog, the mottling, and the dot size stay the ones on the walk you already have.</p>
+
+<h2>Cursor prompt</h2>
+<p>I wrote the viewer in Cursor with Claude Opus 5.5. Grok 4.7 can run the same prompt. About $20 of model use covers a project when the LAS stays on disk. Paste the steps and the errors. Leave the point cloud in the file. A smaller chatbot invents menus and closes a shaft.</p>
+<pre id="prompt">The LAS, PLY, and photographs stay on disk. Do not paste a point cloud into the chat. Paste steps and errors only.
+
+Build a publisher that turns one or more mine scans plus a few photographs into one web page a phone and a desktop both open. The picture must match the Silver King walk: the same headlamp, fog, mottling, gamma, round point sprites, and back-face cull. If app.js is in this repository, copy that point shader. Photo colors replace only the four base colors (floor, low, wall, back). Leave the Silver King title, coordinates, and credits off someone else's scan.
+
+Before the program, the person does this in CloudCompare:
+1. If scans are shifted, align them on the overlap, then merge into one congruent cloud. Do not delete points before it is one cloud.
+2. Delete only points far from the tunnel (miles away, or a long way below). Keep the drift: walls, a minecart, people the scanner caught. Do not run a blind noise filter. That cut is by eye, with Segment.
+3. Save uncompressed LAS. If the file is LAZ, tell them to use File, Save, LAS.
+
+The program is Python 3, numpy, and Pillow. Command:
+
+python3 tools/mine-walk/make_walk.py drift.las --photos wall.jpg --out site
+
+Also accept several scans, --floor and --wall, --far meters, --cell meters (default 0.02), and --max-points (default 1500000; 0 means no cap).
+
+Behavior:
+- Read uncompressed LAS (formats 0-10, XYZ at the start of each record, LAS 1.4 count when the legacy count is 0), binary or ASCII PLY, and XYZ text. Reject LAZ.
+- Drop points farther than --far from the median, or when --far is 0, farther than 1.5 times the 99th-percentile distance, and at least 1 m.
+- Voxel-downsample at --cell. If still over --max-points, grow the cell by 1.2 until it fits.
+- Local floor is the 8th percentile of height in each 0.5 m plan cell. Height above that floor is clipped to 0..2.6 m.
+- Store tone as uint8: round(clamp(height/2.6*0.902, 0, 0.90)*255). The shader then uses hgt = tone*2.6/0.902, in meters, and ordinary rock stays under the timber tags (tone &gt; 0.95).
+- Normals face empty space: for each occupied voxel, sum the directions of empty 6-neighbors, normalize, store int8 (−127..127). A fully surrounded point faces up.
+- Centerline: PCA of the long axis in plan, bins of about 2 m, eye at the local floor + 1.6 m.
+- Photographs: bottom 28% is the floor color, the middle band is the wall, the top 28% is the back. Median RGB after dropping near-black and near-white. --floor and --wall override that. With no photos, use floor (153,138,107), low (168,133,102), wall (194,130,92), back (204,107,79). With photos, low is 0.45*floor + 0.55*wall.
+- Write site/cloud.js as window.CLOUD with n, cell, floor, low, wall, ceil, path, and base64 xyz float32, tone uint8, nrm int8. Copy the viewer to site/index.html and copy lib/three.min.js (three.js r149) to site/three.min.js. Write HOW.txt: python3 -m http.server, then open the folder.
+
+Viewer, one page:
+- Clear color 0x050403. Perspective FOV 72, near 0.05. uFov = tan(fov/2)*2.
+- Desktop is High: uSize 0.03, uMinPx 1, uMaxPx 30, every point. Phone is Standard: uSize 0.045, uMinPx 2.2, uMaxPx 40. On the phone keep up-facing floor points (int8 normal y &gt; 48) and 2 of every 5 wall points. Same cloud, larger sprites.
+- Each frame set uCam to the camera, aim the lamp along the view with y reduced by 0.08, uLamp 1 when the headlamp is on, fog distance 38 (80 when the lamp is off).
+- clayColor mixes low to wall to back by height, then the same ochre, cream, and red mottling, then the floor color on up-facing points near the floor. light() is the headlamp cone (smoothstep 0.80 to 0.975), spill, distance attenuation 1/(1+0.25d+0.10d²), warm tint (1.07, 1.0, 0.88), and fog exp(-(d/uFogDist)²*2.2). Round sprites: discard outside the point-coord circle. Gamma 1/2.2. Grade stays at 0.
+- Back-face cull when the normal faces away from the camera (dot &lt; -0.3) and tone &lt; 0.95.
+- Desktop: click to look with the mouse, W A S D to walk. Phone: left side walks, right side looks. P plays the centerline. Reverse flips the path. L toggles the headlamp. [ and ] change point size.
+
+Publish the site folder on any static host. Do not build a second model for the phone, and do not build separate iOS and Android apps.</pre>
+<button type="button" id="copy">Copy the prompt</button>
+</main>
+<script>
+document.getElementById('copy').addEventListener('click', function () {
+  var text = document.getElementById('prompt').textContent;
+  var btn = this;
+  var ta = document.createElement('textarea');
+  ta.value = text;
+  document.body.appendChild(ta);
+  ta.select();
+  document.execCommand('copy');
+  ta.remove();
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text);
+  btn.textContent = 'Copied';
+  setTimeout(function () { btn.textContent = 'Copy the prompt'; }, 1600);
+});
+</script>
+</body>
+</html>

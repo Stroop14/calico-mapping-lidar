@@ -10,7 +10,6 @@ html,body{margin:0;height:100%;background:#050403;overflow:hidden;color:#f0d2b0;
 #bar span{flex:1}
 button{background:transparent;color:inherit;border:1px solid rgba(240,210,176,.45);border-radius:4px;padding:4px 10px;font:inherit}
 #err{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center}
-.sw{display:inline-block;width:10px;height:10px;border-radius:2px;vertical-align:-1px;margin:0 3px 0 8px}
 </style>
 </head>
 <body>
@@ -19,8 +18,7 @@ button{background:transparent;color:inherit;border:1px solid rgba(240,210,176,.4
   <span id="info"></span>
   <button type="button" id="play">Play</button>
   <button type="button" id="rev">Reverse</button>
-  <button type="button" id="minus">point −</button>
-  <button type="button" id="plus">point +</button>
+  <button type="button" id="lamp">Lamp</button>
 </div>
 <script src="three.min.js"></script>
 <script src="cloud.js"></script>
@@ -28,34 +26,42 @@ button{background:transparent;color:inherit;border:1px solid rgba(240,210,176,.4
 (function () {
   var err = document.getElementById('err');
   if (!window.THREE) { err.textContent = 'three.js did not load next to this page.'; return; }
-  if (!window.CLOUD) { err.textContent = 'cloud.js is missing. Run make_walk.py.'; return; }
+  if (!window.CLOUD || !CLOUD.tone || !CLOUD.nrm) {
+    err.textContent = 'cloud.js is missing the walk data. Run make_walk.py again.';
+    return;
+  }
   var C = CLOUD;
   var phone = matchMedia('(pointer: coarse)').matches || ('ontouchstart' in window);
-  var uSize = phone ? 0.05 : 0.03;
-  var uMin = phone ? 2.0 : 1.0;
-  var uMax = phone ? 40.0 : 30.0;
+  var qualityHigh = !phone;
 
   function b64(s) {
     var bin = atob(s), out = new Uint8Array(bin.length);
     for (var i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
     return out;
   }
+  function rgb(c) { return new THREE.Vector3(c[0] / 255, c[1] / 255, c[2] / 255); }
   var xyz = new Float32Array(b64(C.xyz).buffer);
-  var hv = b64(C.h);
-  var n = xyz.length / 3;
+  var toneAll = b64(C.tone);
+  var nrmAll = new Int8Array(b64(C.nrm).buffer);
+  var nAll = xyz.length / 3;
+
+  function keepPoint(i) {
+    if (qualityHigh) return true;
+    if (nrmAll[3 * i + 1] > 48) return true;
+    var h = (Math.imul(i, 374761393) ^ Math.imul(i + 1, 668265263)) >>> 0;
+    return (h % 5) < 2;
+  }
+  var keep = [];
+  for (var i = 0; i < nAll; i++) if (keepPoint(i)) keep.push(i);
+  var n = keep.length;
   var pos = new Float32Array(n * 3);
-  var col = new Float32Array(n * 3);
-  var fl = C.floor, wa = C.wall, ce = C.ceil;
-  function mix(a, b, t) { return a + (b - a) * t; }
-  function smooth(a, b, x) { var t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); }
-  for (var i = 0; i < n; i++) {
-    pos[i * 3] = xyz[i * 3]; pos[i * 3 + 1] = xyz[i * 3 + 1]; pos[i * 3 + 2] = xyz[i * 3 + 2];
-    var meters = hv[i] / 255 * 3;
-    var k = smooth(0.15, 1.15, meters);
-    var r = mix(fl[0], wa[0], k), g = mix(fl[1], wa[1], k), b = mix(fl[2], wa[2], k);
-    var k2 = smooth(1.15, 2.3, meters);
-    r = mix(r, ce[0], k2); g = mix(g, ce[1], k2); b = mix(b, ce[2], k2);
-    col[i * 3] = r / 255; col[i * 3 + 1] = g / 255; col[i * 3 + 2] = b / 255;
+  var tone = new Uint8Array(n);
+  var nrm = new Int8Array(n * 3);
+  for (var k = 0; k < n; k++) {
+    var i = keep[k];
+    pos[k * 3] = xyz[i * 3]; pos[k * 3 + 1] = xyz[i * 3 + 1]; pos[k * 3 + 2] = xyz[i * 3 + 2];
+    tone[k] = toneAll[i];
+    nrm[k * 3] = nrmAll[i * 3]; nrm[k * 3 + 1] = nrmAll[i * 3 + 1]; nrm[k * 3 + 2] = nrmAll[i * 3 + 2];
   }
 
   var renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
@@ -67,18 +73,93 @@ button{background:transparent;color:inherit;border:1px solid rgba(240,210,176,.4
   var camera = new THREE.PerspectiveCamera(72, innerWidth / innerHeight, 0.05, 800);
   camera.rotation.order = 'YXZ';
 
-  var uniforms = {
-    uSize: { value: uSize }, uMin: { value: uMin }, uMax: { value: uMax },
-    uScreen: { value: innerHeight * renderer.getPixelRatio() }
+  var U = {
+    uCam: { value: new THREE.Vector3() },
+    uDir: { value: new THREE.Vector3(0, 0, -1) },
+    uLamp: { value: 1.0 },
+    uSize: { value: qualityHigh ? 0.03 : 0.045 },
+    uMinPx: { value: qualityHigh ? 1.0 : 2.2 },
+    uMaxPx: { value: qualityHigh ? 30.0 : 40.0 },
+    uScreen: { value: innerHeight * renderer.getPixelRatio() },
+    uFov: { value: Math.tan(THREE.MathUtils.degToRad(36)) * 2 },
+    uTime: { value: 0 },
+    uFogDist: { value: 38.0 },
+    uCull: { value: 1.0 },
+    uGrade: { value: 0.0 },
+    uFloor: { value: rgb(C.floor) },
+    uLow: { value: rgb(C.low || C.floor) },
+    uWall: { value: rgb(C.wall) },
+    uCeil: { value: rgb(C.ceil) }
   };
+  var common = [
+    'uniform vec3 uCam; uniform vec3 uDir; uniform float uLamp; uniform float uTime; uniform float uFogDist;',
+    'uniform vec3 uFloor; uniform vec3 uWall; uniform vec3 uLow; uniform vec3 uCeil;',
+    'float h3(vec3 p){p=fract(p*0.3183099+0.1);p*=17.0;return fract(p.x*p.y*p.z*(p.x+p.y+p.z));}',
+    'float vnoise(vec3 x){vec3 i=floor(x),f=fract(x);f=f*f*(3.0-2.0*f);',
+    ' return mix(mix(mix(h3(i),h3(i+vec3(1,0,0)),f.x),mix(h3(i+vec3(0,1,0)),h3(i+vec3(1,1,0)),f.x),f.y),',
+    '            mix(mix(h3(i+vec3(0,0,1)),h3(i+vec3(1,0,1)),f.x),mix(h3(i+vec3(0,1,1)),h3(i+vec3(1,1,1)),f.x),f.y),f.z);}',
+    'vec3 clayColor(vec3 wp, vec3 n, float hgt, float mat){',
+    ' float n1=vnoise(wp*1.1), n2=vnoise(wp*4.3), n3=vnoise(wp*17.0);',
+    ' vec3 ceilc=uCeil, wallc=uWall, lowc=uLow, floorc=uFloor;',
+    ' vec3 c=mix(lowc,wallc,smoothstep(0.25,1.1,hgt)); c=mix(c,ceilc,smoothstep(1.0,1.9,hgt));',
+    ' c=mix(c,vec3(0.80,0.52,0.26),smoothstep(0.55,0.85,n1)*0.55);',
+    ' c=mix(c,vec3(0.82,0.68,0.55),smoothstep(0.62,0.9,n2)*0.30);',
+    ' c=mix(c,vec3(0.66,0.30,0.24),smoothstep(0.6,0.95,1.0-n1)*0.40);',
+    ' float isFloor=(1.0-smoothstep(0.08,0.2,hgt))*smoothstep(0.55,0.8,abs(n.y));',
+    ' c=mix(c,floorc*(0.85+0.3*n2),isFloor);',
+    ' if(mat>0.955 && mat<0.985) c=vec3(0.36,0.24,0.14)*(0.7+0.6*n3);',
+    ' if(mat>0.985) c=vec3(0.56,0.34,0.25)*(0.8+0.4*n2);',
+    ' c*=0.86+0.28*n3; c=mix(vec3(dot(c,vec3(0.33))),c,1.35);',
+    ' return c;}',
+    'vec3 light(vec3 wp, vec3 n, vec3 base){',
+    ' vec3 toC=uCam-wp; float d=length(toC); vec3 L=toC/max(d,1e-4);',
+    ' float ndl=abs(dot(n,L));',
+    ' float cs=dot(-L,uDir);',
+    ' float cone=smoothstep(0.80,0.975,cs);',
+    ' float spill=smoothstep(0.35,0.85,cs);',
+    ' float att=1.0/(1.0+0.25*d+0.10*d*d);',
+    ' float lamp=(0.05+1.5*cone+0.3*spill)*att*(0.15+0.85*ndl*ndl);',
+    ' float amb=0.012+0.02*max(n.y,0.0);',
+    ' float li=mix(0.55*(0.35+0.65*ndl)*(1.0/(1.0+0.004*d*d))+0.1, lamp+amb, uLamp);',
+    ' vec3 col=base*li*mix(vec3(1.0),vec3(1.07,1.0,0.88),uLamp);',
+    ' float fog=exp(-pow(d/uFogDist,2.0)*2.2);',
+    ' return col*fog;}'
+  ].join('\n');
   var mat = new THREE.ShaderMaterial({
-    uniforms: uniforms,
-    vertexShader: 'attribute vec3 color; varying vec3 vCol; uniform float uSize,uMin,uMax,uScreen; void main(){ vCol=color; vec4 mv=modelViewMatrix*vec4(position,1.0); gl_Position=projectionMatrix*mv; gl_PointSize=clamp(uSize*uScreen/max(1e-3,-mv.z),uMin,uMax); }',
-    fragmentShader: 'varying vec3 vCol; void main(){ vec2 p=gl_PointCoord-0.5; if(dot(p,p)>0.25) discard; gl_FragColor=vec4(vCol,1.0); }'
+    uniforms: U,
+    vertexShader: common + [
+      'attribute vec3 nrm; attribute float tone;',
+      'uniform float uSize; uniform float uMinPx; uniform float uMaxPx; uniform float uScreen; uniform float uFov; uniform float uCull;',
+      'varying vec3 vCol;',
+      'void main(){ vec4 wp=modelMatrix*vec4(position,1.0); vec4 mv=viewMatrix*wp;',
+      ' float hgt=tone*2.6/0.902; if(tone>0.95) hgt=1.0;',
+      ' vec3 base=clayColor(wp.xyz,nrm,hgt,tone);',
+      ' vCol=light(wp.xyz,nrm,base);',
+      ' gl_Position=projectionMatrix*mv;',
+      ' float sz=uSize*(tone>0.985?0.6:1.0);',
+      ' gl_PointSize=clamp(sz*uScreen/(uFov*-mv.z),uMinPx,uMaxPx);',
+      ' if(uCull>0.5 && tone<0.95 && dot(nrm,normalize(uCam-wp.xyz))<-0.3){gl_Position=vec4(2.0,2.0,2.0,1.0);gl_PointSize=0.0;}}'
+    ].join('\n'),
+    fragmentShader: [
+      'uniform float uGrade; varying vec3 vCol;',
+      'vec3 gradeClay(vec3 c){',
+      ' vec3 warm=c*vec3(1.035,1.005,0.975);',
+      ' float y=dot(warm,vec3(0.30,0.59,0.11));',
+      ' vec3 sat=mix(vec3(y),warm,1.10);',
+      ' vec3 con=(sat-y)*1.05+y;',
+      ' float clay=smoothstep(0.02,0.22,con.r-con.b);',
+      ' con.r+=0.018*clay; con.g+=0.005*clay;',
+      ' return max(con,vec3(0.0));}',
+      'void main(){ vec2 q=gl_PointCoord-0.5; if(dot(q,q)>0.25) discard;',
+      ' float lm=dot(vCol,vec3(0.3,0.55,0.15)); vec3 col=vCol*(1.9/(1.0+1.9*lm*0.75));',
+      ' col=mix(col,gradeClay(col),uGrade);',
+      ' gl_FragColor=vec4(pow(max(col,vec3(0.0)),vec3(1.0/2.2)),1.0);}'
+    ].join('\n')
   });
   var geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-  geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  geo.setAttribute('nrm', new THREE.BufferAttribute(nrm, 3, true));
+  geo.setAttribute('tone', new THREE.BufferAttribute(tone, 1, true));
   scene.add(new THREE.Points(geo, mat));
 
   var path = C.path.map(function (p) { return new THREE.Vector3(p[0], p[1], p[2]); });
@@ -93,37 +174,43 @@ button{background:transparent;color:inherit;border:1px solid rgba(240,210,176,.4
     return path[path.length - 1].clone();
   }
   var pathLen = 0;
-  for (var i = 0; i < path.length - 1; i++) pathLen += path[i].distanceTo(path[i + 1]);
-  var along = 0, playing = false, yaw = 0, pitch = -0.12;
+  for (var pi = 0; pi < path.length - 1; pi++) pathLen += path[pi].distanceTo(path[pi + 1]);
+  var along = 0, playing = false, yaw = 0, pitch = -0.08, lampOn = true;
   function put(s, lookAhead) {
     var p = station(s), a = station(Math.min(pathLen, s + lookAhead));
     camera.position.copy(p);
-    var dx = a.x - p.x, dz = a.z - p.z;
+    var dx = a.x - p.x, dy = a.y - p.y, dz = a.z - p.z;
     yaw = Math.atan2(-dx, -dz);
+    pitch = Math.atan2(dy, Math.hypot(dx, dz));
     camera.rotation.set(pitch, yaw, 0);
   }
   put(0, 2);
 
   var keys = {}, look = false, stickX = 0, stickY = 0;
   var bar = document.getElementById('bar'), info = document.getElementById('info');
-  function hex(c) { return '#' + c.map(function (v) { return ('0' + v.toString(16)).slice(-2); }).join(''); }
+  function pts(n) {
+    if (n >= 1000000) return (n / 1e6).toFixed(2) + ' M';
+    return n.toLocaleString();
+  }
   function paint() {
     err.hidden = true; bar.hidden = false;
-    info.innerHTML = (phone ? 'phone' : 'desktop') + ' · ' + (n / 1e6).toFixed(2) + ' M · point ' + uSize.toFixed(3)
-      + '<i class="sw" style="background:' + hex(C.floor) + '"></i>floor'
-      + '<i class="sw" style="background:' + hex(C.wall) + '"></i>wall'
-      + '<i class="sw" style="background:' + hex(C.ceil) + '"></i>back';
+    info.textContent = (qualityHigh ? 'desktop' : 'phone') + ' · ' + pts(nAll) + ' points'
+      + (qualityHigh ? '' : ' · ' + pts(n) + ' on screen')
+      + ' · ' + (lampOn ? 'headlamp' : 'flat light');
   }
   paint();
-  document.getElementById('play').onclick = function () { playing = !playing; this.textContent = playing ? 'Stop' : 'Play'; };
+  document.getElementById('play').onclick = function () {
+    playing = !playing;
+    this.textContent = playing ? 'Stop' : 'Play';
+  };
   document.getElementById('rev').onclick = function () { path.reverse(); along = 0; put(0, 2); };
-  document.getElementById('minus').onclick = function () { uSize = Math.max(0.005, uSize / 1.15); uniforms.uSize.value = uSize; paint(); };
-  document.getElementById('plus').onclick = function () { uSize = Math.min(0.4, uSize * 1.15); uniforms.uSize.value = uSize; paint(); };
+  document.getElementById('lamp').onclick = function () { lampOn = !lampOn; paint(); };
   addEventListener('keydown', function (e) {
     keys[e.code] = true;
     if (e.code === 'KeyP') document.getElementById('play').click();
-    if (e.code === 'BracketLeft') document.getElementById('minus').click();
-    if (e.code === 'BracketRight') document.getElementById('plus').click();
+    if (e.code === 'KeyL') document.getElementById('lamp').click();
+    if (e.code === 'BracketLeft') U.uSize.value = Math.max(0.005, U.uSize.value / 1.15);
+    if (e.code === 'BracketRight') U.uSize.value = Math.min(0.4, U.uSize.value * 1.15);
   });
   addEventListener('keyup', function (e) { keys[e.code] = false; });
   renderer.domElement.addEventListener('click', function () { if (!phone) renderer.domElement.requestPointerLock(); });
@@ -164,17 +251,21 @@ button{background:transparent;color:inherit;border:1px solid rgba(240,210,176,.4
   }
   renderer.domElement.addEventListener('touchend', endTouch);
   renderer.domElement.addEventListener('touchcancel', endTouch);
-  addEventListener('resize', function () {
+  function resize() {
     camera.aspect = innerWidth / innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(innerWidth, innerHeight);
-    uniforms.uScreen.value = innerHeight * renderer.getPixelRatio();
-  });
+    U.uScreen.value = innerHeight * renderer.getPixelRatio();
+    U.uFov.value = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * 2;
+  }
+  addEventListener('resize', resize);
+  resize();
 
   var clock = new THREE.Clock();
   function frame() {
     requestAnimationFrame(frame);
     var dt = Math.min(0.05, clock.getDelta());
+    U.uTime.value += dt;
     if (playing) {
       along += 1.2 * dt;
       if (along >= pathLen) { along = pathLen; playing = false; document.getElementById('play').textContent = 'Play'; }
@@ -190,10 +281,19 @@ button{background:transparent;color:inherit;border:1px solid rgba(240,210,176,.4
       if (stickX || stickY) { m.addScaledVector(f, -stickY); m.addScaledVector(r, stickX); }
       if (m.lengthSq()) camera.position.addScaledVector(m.normalize(), 2 * dt);
     }
+    U.uCam.value.copy(camera.position);
+    camera.updateMatrixWorld();
+    var d = new THREE.Vector3();
+    camera.getWorldDirection(d);
+    d.y -= 0.08;
+    d.normalize();
+    U.uDir.value.copy(d);
+    U.uLamp.value += ((lampOn ? 1 : 0) - U.uLamp.value) * Math.min(1, dt * 8 + (dt === 0 ? 1 : 0));
+    U.uFogDist.value = lampOn ? 38 : 80;
     renderer.render(scene, camera);
   }
   frame();
-  window.WALK = { n: n, pathLen: pathLen, floor: C.floor, wall: C.wall, ceil: C.ceil };
+  window.WALK = { n: nAll, shown: n, pathLen: pathLen, phone: phone, qualityHigh: qualityHigh, floor: C.floor, wall: C.wall, ceil: C.ceil };
 })();
 </script>
 </body>

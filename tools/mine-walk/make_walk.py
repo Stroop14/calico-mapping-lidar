@@ -167,6 +167,33 @@ def floor_height(xyz, cell=0.5):
     return h, floor_at, key, origin, cell, nx
 
 
+def estimate_normals(xyz, cell):
+    """Face each point toward empty space, the same job as the scan normals."""
+    q = np.floor(xyz / cell).astype(np.int32)
+    q -= q.min(axis=0)
+    occ = {}
+    for i in range(len(q)):
+        occ[(int(q[i, 0]), int(q[i, 1]), int(q[i, 2]))] = i
+    nrm = np.zeros((len(xyz), 3), dtype=np.float32)
+    neigh = ((1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1))
+    for (x, y, z), i in occ.items():
+        nx = ny = nz = 0.0
+        for dx, dy, dz in neigh:
+            if (x + dx, y + dy, z + dz) not in occ:
+                nx += dx
+                ny += dy
+                nz += dz
+        nrm[i, 0] = nx
+        nrm[i, 1] = ny
+        nrm[i, 2] = nz
+    length = np.linalg.norm(nrm, axis=1)
+    bad = length < 1e-6
+    nrm[bad] = (0.0, 1.0, 0.0)
+    length[bad] = 1.0
+    nrm /= length[:, None]
+    return np.clip(np.round(nrm * 127.0), -127, 127).astype(np.int8)
+
+
 def centerline(xyz, h, step=2.0):
     """A line along the long axis of the drift, eye 1.6 m above the floor."""
     xz = xyz[:, [0, 2]]
@@ -264,7 +291,12 @@ def main():
     print(f"voxel {cell:.4f} m -> {len(thin):,} points")
 
     h, _, _, _, _, _ = floor_height(thin, cell=0.5)
-    h = np.clip(h, 0, 3.0)
+    h = np.clip(h, 0, 2.6)
+    # Match the walk page: tone 0..0.902 is 0..2.6 m above the floor, and stays
+    # under the timber/talus tags.
+    tone = np.clip(h / 2.6 * 0.902, 0, 0.90)
+    tone_u8 = np.round(tone * 255).astype(np.uint8)
+    nrm = estimate_normals(thin, max(cell, 1e-3))
     path = centerline(thin, h)
     origin = thin.mean(axis=0)
     rel = (thin - origin).astype(np.float32)
@@ -272,22 +304,27 @@ def main():
 
     if args.photos or (args.floor and args.wall):
         floor, wall, ceil = photo_colors(args.photos, args.floor, args.wall)
+        low = np.clip(floor * 0.45 + wall * 0.55, 0, 255)
         print(f"colors from photos  floor {rgb_list(floor)}  wall {rgb_list(wall)}  back {rgb_list(ceil)}")
     else:
+        # Same clay the Silver King page uses when a scan has no color.
         floor = np.array([153, 138, 107])
+        low = np.array([168, 133, 102])
         wall = np.array([194, 130, 92])
         ceil = np.array([204, 107, 79])
-        print("no photos given, using a clay palette")
+        print("no photos given, using the Silver King clay")
 
     payload = {
         "n": int(len(rel)),
         "cell": float(cell),
         "floor": rgb_list(floor),
+        "low": rgb_list(low),
         "wall": rgb_list(wall),
         "ceil": rgb_list(ceil),
         "path": rel_path.round(3).tolist(),
         "xyz": base64.b64encode(rel.tobytes()).decode("ascii"),
-        "h": base64.b64encode(np.clip(h / 3.0 * 255, 0, 255).astype(np.uint8).tobytes()).decode("ascii"),
+        "tone": base64.b64encode(tone_u8.tobytes()).decode("ascii"),
+        "nrm": base64.b64encode(nrm.tobytes()).decode("ascii"),
     }
     # Write without a json dependency dance: the arrays are numbers, the blobs are ascii.
     import json
@@ -303,8 +340,9 @@ def main():
         "Publish it by putting the folder on a web host, or on GitHub Pages.\n"
         "On this computer: python3 -m http.server 8000\n"
         "then open http://localhost:8000/\n"
-        "Desktop: click, mouse looks, W A S D moves, P plays the walk.\n"
-        "Phone: left side walks, right side looks.\n",
+        "The page uses the same headlamp, fog, and point size as the Silver King walk.\n"
+        "Desktop: click, mouse looks, W A S D moves, P plays the walk. Smaller dots.\n"
+        "Phone: left side walks, right side looks. Larger dots, so the walls close.\n",
         encoding="utf-8",
     )
     print(f"wrote {out.resolve()}")
