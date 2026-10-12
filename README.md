@@ -6,7 +6,7 @@ CSUSB 391B Calico Mapping LiDAR scans (Spring 2019). Silver King Mine, 24 March 
 
 **Original LAS:** [release v1.0.0](https://github.com/Stroop14/calico-mapping-lidar/releases/tag/v1.0.0)
 
-CloudCompare → plan/profile from the same points → first-person walk. My walking page is MIT. The WASD controls are public domain. CloudCompare is someone else’s open-source program.
+CloudCompare → walk path (in-point / out-point) → player. Phone and computer. MIT walk page; public-domain controls. CloudCompare is someone else’s program.
 
 - [Note to Kerry and Erik](howto/TO-KERRY-AND-ERIK.md)
 - [Method](howto/RECIPE.md)
