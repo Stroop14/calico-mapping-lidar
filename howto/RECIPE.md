@@ -1,46 +1,46 @@
-# After the scanner: CloudCompare → maps → walk
+# CloudCompare → path → player
 
-Live example: https://stroop14.github.io/calico-mapping-lidar/
+Live: https://stroop14.github.io/calico-mapping-lidar/
 
-Work in **feet**. If the file comes out metric, convert once (× 3.28084) and stay in feet.
+Feet. If the LAS is metric, convert once (× 3.28084).
 
-## 50% — CloudCompare
+You already know how to put two clouds together. The rest is this.
 
-Download: https://www.cloudcompare.org/ (free, not mine).
+## 1. CloudCompare
 
-1. File → Open the LAS/LAZ.
-2. Two setups: both in, align/merge, save one cloud.
-3. Look. Measure. Thin if it is huge. Keep the floor. If the cart-track grooves vanish, you thinned too hard.
-4. Save LAS.
+https://www.cloudcompare.org/
 
-You can inspect the drift in the lab. That is half. It is not a link.
+1. File → Open the LAS.
+2. Two setups: align / merge. Save one cloud.
+3. **Shrink it.** Edit → Subsample → space **½ inch**. Keep the floor. Cart-track grooves (ore-cart ruts) must still be there.
+4. **Color while you work.** If RGB is in the file, leave it. If not (Silver King stored zeros): Edit → Colors → Height, so the floor is not the same color as the roof. That is a working color, not the clay.
+5. **Clay color** is from two or three handheld photos of the wall. You match those when the walk is built, not by painting every point by hand.
 
-## Plan and profile (the pictures on the page)
+Optional: set the view to top (orthographic) and to the side, save pictures. Those are the plan and profile on the Silver King page — same points, looking down and looking along.
 
-Not a second instrument. Same points.
+## 2. The walk path (in-point and out-point)
 
-- **Plan:** look straight down, north up, true scale. In CloudCompare: orthographic, top view, save. On Silver King I plotted the points that way so the picture lives on the webpage (the big “straight down” figure).
-- **Side profile:** along the heading, 1 ft across = 1 ft up. Same idea from the side. (There is also a 4× exaggerated profile if you want the wiggles to show.)
+This is the part that is not obvious in CloudCompare.
 
-## The walk
+1. On the floor, click the **in-point**: just inside the portal, looking into the heading. Silver King: portal 34.95117° N, 116.86307° W.
+2. Click the **out-point**: farthest station in the main drift the scanner actually saw (Silver King: northwest end, hundreds of feet in).
+3. Trace a **polyline on the floor** between them, down the middle of the drift. Point → Point, every few yards is enough. Do not thread every stray rib. That line is the walk and the guided tour.
+4. Eye height is **5 ft 4 in** above that line. The camera starts a few feet inside the in-point, looking toward the out-point. Tour follows the line out and back.
+5. Export:
+   - the thinned LAS
+   - the polyline as a simple table (x, y, z, feet) — CSV is fine
 
-First-person. Floor under you. One headlamp. Color from two or three wall photos if the scanner stored no color (this GeoSLAM did not).
+You now have the file the player needs.
 
-Controls: [`../player-controls/`](../player-controls/) (public domain).
+## 3. Hand it to the player
 
-## Who owns which bit
+Public-domain player, **computer and phone**: [`../player-controls/`](../player-controls/)
 
-| Piece | Who | License |
-|---|---|---|
-| CloudCompare | CloudCompare / EDF | Already open source (GPL) |
-| three.js | the three.js project | Already open source (MIT) |
-| WASD controls | me | Public domain (CC0) |
-| Walk page and map figures | me | MIT, this repo |
+- Computer: click to look, WASD to walk.
+- Phone: left stick to walk, drag the picture to look.
 
-## Helper
+Send the LAS, the path CSV, the wall photos, and that player folder to Cursor. Ask it to combine them into the walk (prompt below). You do not sit in a text editor for days.
 
-1. [Cursor](https://cursor.com). Model: **Opus 5.5** (or latest Grok).
-2. Attach the LAS and two or three wall photos.
-3. Paste [`CURSOR-PROMPT.md`](CURSOR-PROMPT.md).
+## 4. Fast path
 
-Original scans: [release v1.0.0](https://github.com/Stroop14/calico-mapping-lidar/releases/tag/v1.0.0)
+Cursor. Model: **Opus 5.5** (Anthropic) or **latest Grok**. Attach LAS + path + photos. Paste [`CURSOR-PROMPT.md`](CURSOR-PROMPT.md).

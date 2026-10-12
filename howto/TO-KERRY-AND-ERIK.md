@@ -1,26 +1,36 @@
-Subject: Silver King on the web — from CloudCompare to a walk
+Subject: Silver King — CloudCompare, then the walk
 
 Kerry, Erik —
 
 https://stroop14.github.io/calico-mapping-lidar/
 
-That is the two GeoSLAM files from 24 March 2019, in a browser. You walk it. The plan (straight down) and the side profile on that page are the same points, looking down and looking from the side. Not a second survey.
+You already know how to register two clouds. From there it is CloudCompare, then a walk path, then a file you hand to a player.
 
-After the LAS:
+**CloudCompare**
 
-1. CloudCompare — about 50%. Open, merge the two setups, look, thin if needed, keep the floor. Geometry is real. Still stuck on a lab machine.
+Open the LAS. Merge if there are two setups. Edit → Subsample → space **½ inch** (keep the floor; if the cart-track grooves disappear, you went too far). If the scanner stored no color (this GeoSLAM did not), color by height so floor and roof separate while you work. True wall color comes from two or three photos of the clay, later.
 
-2. Plan and profile — those overhead and side pictures. Same cloud. Look straight down, north up, true scale. Then a side view along the heading, 1 ft across = 1 ft up. CloudCompare will show you that if you set the camera to top / side. I drew them from the points so they sit on the webpage.
+Plan and side pictures on the webpage are that same cloud: look straight down, and look from the side, true scale.
 
-3. The walk — the rest. Standing in the heading, floor under your feet, one lamp. Color from the wall photos; the scanner stored none. Cart-track grooves on the floor are the check.
+**The walk path**
 
-CloudCompare was already free (EDF / CloudCompare project). I put the walk and the W-A-S-D controls on GitHub. Controls are public domain. My page is MIT.
+In CloudCompare, pick two stations on the floor:
 
-https://github.com/Stroop14/calico-mapping-lidar
+- **In-point** — portal, just inside, looking into the heading.
+- **Out-point** — farthest place the scanner reached in the main drift (Silver King: northwest dead-end).
 
-If you do not want to click through it by hand: Cursor, model **Opus 5.5** (or latest Grok), attach the LAS and two or three wall photos, paste howto/CURSOR-PROMPT.md. Same order. You look at the clay and the tracks.
+Trace a polyline down the middle of the floor between them. That is the walk. Camera sits **5 ft 4 in** above that line. The guided tour follows it out and back. Export the thinned LAS and that polyline (x, y, z in feet).
 
-If you want the next heading done this way, send the LAS and two or three wall photos.
+**Then the player**
+
+You now have a LAS, a path, and the wall photos. Send those plus the player file (phone and computer) to an AI in Cursor and tell it to combine them into the walk. You do not write the webpage.
+
+Player (public domain, desktop WASD and phone stick):
+https://github.com/Stroop14/calico-mapping-lidar/tree/cursor/lidar-howto-professors-7bc7/player-controls
+
+To skip the clicking: Cursor, **Opus 5.5** or **latest Grok**, attach the LAS, the path, and two or three wall photos, paste howto/CURSOR-PROMPT.md.
+
+If you want the next heading done this way, send the LAS and the photos.
 
 Kerry — congratulations on retirement.
 
