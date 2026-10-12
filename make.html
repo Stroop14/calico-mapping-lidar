@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Make a walk from a scan</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Drop a mine scan. The walk opens in the browser. Download the site and host it yourself.">
+<style>
+html,body{margin:0;background:#050403;color:#e8d8c4;font-family:system-ui,Segoe UI,Helvetica,Arial,sans-serif}
+a{color:#f0b27a}
+a:hover{color:#ffd2a6}
+main{width:min(760px,100%);margin:0 auto;padding:36px 18px 64px;box-sizing:border-box}
+h1{font-weight:650;font-size:clamp(28px,4vw,40px);margin:0 0 8px;color:#f3c79a;letter-spacing:.01em}
+.lead{margin:0 0 22px;font-size:18px;line-height:1.45;color:#f3d7bc}
+h2{margin:28px 0 10px;font-size:22px;font-weight:650;color:#f3c79a}
+p,li{font-size:16.5px;line-height:1.5}
+ol{padding-left:1.2em}
+li{margin:8px 0}
+code,pre{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+p code,li code{font-size:.92em;color:#ffd2a6}
+pre{margin:12px 0;padding:14px 16px;overflow:auto;background:#120c09;border:1px solid #3a2a1e;border-radius:8px;color:#f0d2b0;font-size:13.5px;line-height:1.45}
+.back{display:inline-block;margin-bottom:18px;font-size:14px}
+#drop,#photodrop{position:relative;display:flex;align-items:center;justify-content:center;min-height:160px;margin:8px 0 14px;padding:22px;border:2px dashed #e9a066;border-radius:16px;background:rgba(233,160,102,.08);color:#ffd2a6;font-size:clamp(18px,2.6vw,26px);font-weight:750;line-height:1.25;text-align:center;cursor:pointer}
+#drop{min-height:200px}
+#photodrop{min-height:110px;font-size:clamp(15px,2vw,18px);font-weight:650}
+#drop.over,#photodrop.over,.slot.over{background:rgba(233,160,102,.22)}
+#drop input,#photodrop input,.slot input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.slots{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:0 0 14px}
+.slot{position:relative;min-height:96px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:8px;border:1px solid #3a2a1e;border-radius:12px;background:#120c09;color:#f0d2b0;font-size:14px;font-weight:650;cursor:pointer;text-align:center}
+.slot b{font-weight:500;font-size:12px;opacity:.8}
+.sw{display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:-2px;margin:0 4px 0 10px;border:1px solid rgba(255,210,166,.4)}
+#status{min-height:1.4em;color:#f0d2b0}
+#view{position:fixed;inset:0;width:100%;height:100%;border:0;background:#050403;z-index:2}
+#top{position:fixed;top:10px;left:10px;right:10px;z-index:4;display:flex;gap:8px;justify-content:flex-end;pointer-events:none}
+#top button,#top a{pointer-events:auto;appearance:none;display:inline-block;padding:10px 14px;border:2px solid #e9a066;border-radius:10px;background:rgba(18,12,9,.88);color:#ffd2a6;font:700 15px system-ui,sans-serif;text-decoration:none;cursor:pointer}
+#top button:hover,#top a:hover{background:rgba(233,160,102,.35);color:#fff}
+body.live main{display:none}
+</style>
+</head>
+<body>
+<main>
+<a class="back" href="index.html">Silver King Mine</a>
+<h1>Drop a scan. Walk it.</h1>
+<p class="lead">Drop a LAS, PLY, or XYZ file. Drop a photo of the ground, a photo of the wall, and a photo of the ceiling. Walk the tunnel and mark key points. Save the walk, view it here, then download the site.</p>
+<label id="drop">Drop the scan here, or choose a file
+  <input id="file" type="file" multiple accept=".las,.laz,.ply,.xyz,.txt,.csv">
+</label>
+<label id="photodrop">Or one photo. Bottom of the picture is the floor, middle is the wall, top is the roof.
+  <input id="photos" type="file" multiple accept=".jpg,.jpeg,.png,.webp,image/*">
+</label>
+<div class="slots">
+  <label class="slot">Floor<input type="file" accept="image/*" data-slot="floor"><b>the ground</b></label>
+  <label class="slot">Wall<input type="file" accept="image/*" data-slot="wall"><b>the side of the tunnel</b></label>
+  <label class="slot">Roof<input type="file" accept="image/*" data-slot="roof"><b>the ceiling</b></label>
+</div>
+<p id="swatches"></p>
+<p id="status"></p>
+<p>The scan stays in this browser. This site does not keep a copy. Floor is a picture of the ground. Wall is a picture of the side of the tunnel. Roof is a picture of the ceiling, the rock above your head. One photograph in the big box is enough if you do not have three: the bottom of that picture colors the floor, the middle colors the wall, and the top colors the roof.</p>
+<p>To practice on the scan that already worked, download the combined Silver King cloud, the 1.25 cm merge of the two walks: <a href="download/silver-king-combined.las.zip">silver-king-combined.las.zip</a>. Unzip it, then drop the LAS file on the box above.</p>
+
+<h2>Key points</h2>
+<p>The scan opens so you can walk inside it. Walk a distance, then press Key point. Walk farther, and press Key point again. Do that through to the end. The orange dot is the first key point. The green dot is the last one. When the key points are done, press Save the walk. Then press Play to view it here, and download the site.</p>
+
+<h2>If the scans do not already line up</h2>
+<p>Do that in CloudCompare before you drop the file. Line the scans up on the overlap, then merge them into one cloud. Delete only points that are nowhere near the tunnel. Keep the walls, a minecart, and a person the scanner caught. Save LAS.</p>
+
+<h2>The same program on your own computer</h2>
+<p>You do not install anything to use this page. The folder <code>tools/mine-walk</code> is that same program as a Python file, for a scan that is too big for the browser. It needs two free add-ons, and they are not part of the scan. NumPy holds the list of point coordinates. Pillow opens the photograph files so the colors can be read. This line downloads those two add-ons onto the computer that will run the program:</p>
+<pre>pip install numpy pillow</pre>
+<p>Then point it at the scan and the photographs. A short drift is thinned to about 2 cm. Silver King itself is 1.25 cm.</p>
+<pre>python3 tools/mine-walk/make_walk.py drift.las --photos wall.jpg --out site
+cd site
+python3 -m http.server 8000</pre>
+<p><a href="walk.html">Open the Silver King walk</a></p>
+</main>
+<iframe id="view" title="Walk" hidden></iframe>
+<div id="top" hidden>
+  <a href="make.html">Another scan</a>
+  <button type="button" id="dl">Download the site</button>
+</div>
+<script>
+(function () {
+  var drop = document.getElementById("drop");
+  var input = document.getElementById("file");
+  var photodrop = document.getElementById("photodrop");
+  var photoInput = document.getElementById("photos");
+  var swatches = document.getElementById("swatches");
+  var status = document.getElementById("status");
+  var frame = document.getElementById("view");
+  var top = document.getElementById("top");
+  var last = null;
+  var cloudUrl = "";
+  var bandImages = [];
+  var slotImg = { floor: null, wall: null, roof: null };
+  var clay = { floor: [153, 138, 107], low: [168, 133, 102], wall: [194, 130, 92], ceil: [204, 107, 79] };
+
+  function say(t) { status.textContent = t; }
+  function asEl(node) { return node && node.nodeType === 1 ? node : (node && node.parentElement) || null; }
+  function slotName(node) {
+    var el = asEl(node);
+    while (el && el !== document.body) {
+      if (el.getAttribute && el.getAttribute("data-slot")) return el.getAttribute("data-slot");
+      el = el.parentElement;
+    }
+    return "";
+  }
+  function inPhotoBox(node) {
+    var el = asEl(node);
+    while (el && el !== document.body) {
+      if (el.id === "photodrop" || el.id === "photos") return true;
+      el = el.parentElement;
+    }
+    return false;
+  }
+  function clearOver() {
+    drop.classList.remove("over");
+    photodrop.classList.remove("over");
+    var slots = document.querySelectorAll(".slot");
+    for (var i = 0; i < slots.length; i++) slots[i].classList.remove("over");
+  }
+  ["dragenter", "dragover"].forEach(function (name) {
+    window.addEventListener(name, function (e) {
+      e.preventDefault();
+      clearOver();
+      var slot = slotName(e.target);
+      if (slot) {
+        var lab = asEl(e.target);
+        while (lab && !lab.classList.contains("slot")) lab = lab.parentElement;
+        if (lab) lab.classList.add("over");
+      } else if (inPhotoBox(e.target)) photodrop.classList.add("over");
+      else drop.classList.add("over");
+    });
+  });
+  window.addEventListener("dragleave", function (e) { if (!e.relatedTarget) clearOver(); });
+  window.addEventListener("drop", function (e) {
+    e.preventDefault();
+    clearOver();
+    if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) route(e.dataTransfer.files, e.target);
+  });
+  input.addEventListener("change", function () { if (input.files && input.files.length) route(input.files, input); });
+  photoInput.addEventListener("change", function () { if (photoInput.files && photoInput.files.length) route(photoInput.files, photoInput); });
+  var slotInputs = document.querySelectorAll(".slot input");
+  for (var si = 0; si < slotInputs.length; si++) {
+    slotInputs[si].addEventListener("change", function () {
+      if (this.files && this.files.length) route(this.files, this);
+    });
+  }
+
+  function isImage(name) { return /\.(jpg|jpeg|png|webp)$/i.test(name); }
+  function isScan(name) { return /\.(las|laz|ply|xyz|txt|csv)$/i.test(name); }
+
+  function rgbOf(list) {
+    function mid(ch) {
+      var a = list.map(function (p) { return p[ch]; }).sort(function (a, b) { return a - b; });
+      return a[(a.length / 2) | 0];
+    }
+    return [mid(0), mid(1), mid(2)];
+  }
+
+  function region(img, y0, y1) {
+    var canvas = document.createElement("canvas");
+    canvas.width = 64; canvas.height = 32;
+    var ctx = canvas.getContext("2d", { willReadFrequently: true });
+    ctx.drawImage(img, 0, y0, img.width, Math.max(1, y1 - y0), 0, 0, 64, 32);
+    var d = ctx.getImageData(0, 0, 64, 32).data;
+    var keep = [];
+    var all = [];
+    for (var i = 0; i < d.length; i += 4) {
+      var lum = (d[i] + d[i + 1] + d[i + 2]) / 3;
+      var px = [d[i], d[i + 1], d[i + 2]];
+      all.push(px);
+      if (lum > 18 && lum < 245) keep.push(px);
+    }
+    return rgbOf(keep.length > 30 ? keep : all);
+  }
+
+  function loadImage(file) {
+    return new Promise(function (resolve, reject) {
+      var url = URL.createObjectURL(file);
+      var img = new Image();
+      img.onload = function () { URL.revokeObjectURL(url); resolve(img); };
+      img.onerror = function () { URL.revokeObjectURL(url); reject(new Error(file.name)); };
+      img.src = url;
+    });
+  }
+
+  function whole(img) { return region(img, 0, img.height); }
+
+  function currentColors() {
+    var base = bandImages.length ? colorsFrom(bandImages) : {
+      floor: clay.floor.slice(), low: clay.low.slice(), wall: clay.wall.slice(), ceil: clay.ceil.slice()
+    };
+    if (slotImg.floor) base.floor = whole(slotImg.floor);
+    if (slotImg.wall) base.wall = whole(slotImg.wall);
+    if (slotImg.roof) base.ceil = whole(slotImg.roof);
+    base.low = [0, 1, 2].map(function (ch) { return Math.round(base.floor[ch] * 0.45 + base.wall[ch] * 0.55); });
+    return base;
+  }
+
+  function paintSwatches(colors) {
+    swatches.textContent = "";
+    var rows = [["floor", colors.floor], ["wall", colors.wall], ["roof", colors.ceil]];
+    rows.forEach(function (row) {
+      var chip = document.createElement("span");
+      chip.className = "sw";
+      chip.style.background = "rgb(" + row[1][0] + "," + row[1][1] + "," + row[1][2] + ")";
+      swatches.appendChild(chip);
+      swatches.appendChild(document.createTextNode(row[0] + " " + row[1].join(",")));
+    });
+  }
+
+  function pushColors(colors) {
+    paintSwatches(colors);
+    if (!last) return;
+    last.colors = colors;
+    last.payload.floor = colors.floor;
+    last.payload.low = colors.low;
+    last.payload.wall = colors.wall;
+    last.payload.ceil = colors.ceil;
+    try {
+      var walk = frame.contentWindow && frame.contentWindow.WALK;
+      if (walk && walk.setColors) walk.setColors(colors);
+    } catch (err) {}
+  }
+
+  function colorsFrom(images) {
+    if (!images.length) {
+      return { floor: [153, 138, 107], low: [168, 133, 102], wall: [194, 130, 92], ceil: [204, 107, 79] };
+    }
+    var floors = [], walls = [], ceils = [];
+    images.forEach(function (img) {
+      var h = img.height;
+      floors.push(region(img, Math.floor(h * 0.72), h));
+      walls.push(region(img, Math.floor(h * 0.28), Math.floor(h * 0.72)));
+      ceils.push(region(img, 0, Math.floor(h * 0.28)));
+    });
+    function med(list, ch) {
+      var a = list.map(function (c) { return c[ch]; }).sort(function (x, y) { return x - y; });
+      return a[(a.length / 2) | 0];
+    }
+    function pack(list) { return [med(list, 0), med(list, 1), med(list, 2)]; }
+    var floor = pack(floors), wall = pack(walls), ceil = pack(ceils);
+    var low = [0, 1, 2].map(function (ch) { return Math.round(floor[ch] * 0.45 + wall[ch] * 0.55); });
+    return { floor: floor, low: low, wall: wall, ceil: ceil };
+  }
+
+  function crc32(u8) {
+    if (!crc32.table) {
+      var table = new Uint32Array(256);
+      for (var n = 0; n < 256; n++) {
+        var c = n;
+        for (var k = 0; k < 8; k++) c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1);
+        table[n] = c >>> 0;
+      }
+      crc32.table = table;
+    }
+    var table = crc32.table, crc = 0xffffffff;
+    for (var i = 0; i < u8.length; i++) crc = table[(crc ^ u8[i]) & 255] ^ (crc >>> 8);
+    return (crc ^ 0xffffffff) >>> 0;
+  }
+
+  function zipStore(files) {
+    var now = new Date();
+    var time = (now.getHours() << 11) | (now.getMinutes() << 5) | ((now.getSeconds() / 2) | 0);
+    var date = ((now.getFullYear() - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate();
+    var parts = [];
+    var central = [];
+    var offset = 0;
+    files.forEach(function (f) {
+      var name = new TextEncoder().encode(f.name);
+      var crc = crc32(f.data);
+      var local = new DataView(new ArrayBuffer(30));
+      local.setUint32(0, 0x04034b50, true);
+      local.setUint16(4, 20, true);
+      local.setUint16(8, 0, true);
+      local.setUint16(10, time, true);
+      local.setUint16(12, date, true);
+      local.setUint32(14, crc, true);
+      local.setUint32(18, f.data.length, true);
+      local.setUint32(22, f.data.length, true);
+      local.setUint16(26, name.length, true);
+      var head = new Uint8Array(local.buffer);
+      parts.push(head, name, f.data);
+      var cen = new DataView(new ArrayBuffer(46));
+      cen.setUint32(0, 0x02014b50, true);
+      cen.setUint16(4, 20, true);
+      cen.setUint16(6, 20, true);
+      cen.setUint16(10, time, true);
+      cen.setUint16(12, date, true);
+      cen.setUint32(16, crc, true);
+      cen.setUint32(20, f.data.length, true);
+      cen.setUint32(24, f.data.length, true);
+      cen.setUint16(28, name.length, true);
+      cen.setUint32(42, offset, true);
+      central.push(new Uint8Array(cen.buffer), name);
+      offset += 30 + name.length + f.data.length;
+    });
+    var centralSize = 0;
+    central.forEach(function (p) { centralSize += p.length; });
+    var eocd = new DataView(new ArrayBuffer(22));
+    eocd.setUint32(0, 0x06054b50, true);
+    eocd.setUint16(8, files.length, true);
+    eocd.setUint16(10, files.length, true);
+    eocd.setUint32(12, centralSize, true);
+    eocd.setUint32(16, offset, true);
+    return new Blob(parts.concat(central, [new Uint8Array(eocd.buffer)]), { type: "application/zip" });
+  }
+
+  function u8(text) { return new TextEncoder().encode(text); }
+
+  async function show(payload) {
+    var viewer = await fetch("tools/mine-walk/viewer.html").then(function (r) { return r.text(); });
+    if (cloudUrl) URL.revokeObjectURL(cloudUrl);
+    cloudUrl = URL.createObjectURL(new Blob(["window.CLOUD=" + JSON.stringify(payload) + ";\n"], { type: "text/javascript" }));
+    frame.srcdoc = viewer
+      .replace('src="three.min.js"', 'src="lib/three.min.js"')
+      .replace('src="cloud.js"', 'src="' + cloudUrl + '"');
+    frame.hidden = false;
+    top.hidden = false;
+    document.body.classList.add("live");
+  }
+
+  function isPhoto(file) {
+    return isImage(file.name) || (file.type && file.type.indexOf("image/") === 0);
+  }
+
+  async function addBands(files) {
+    var n = 0;
+    for (var i = 0; i < files.length; i++) {
+      if (!isPhoto(files[i])) continue;
+      try { bandImages.push(await loadImage(files[i])); n++; } catch (e) {}
+    }
+    pushColors(currentColors());
+    if (!n) { say("That photograph could not be read."); return; }
+    say(last ? "Color updated from the photographs." : "Photographs saved. Drop the scan when you are ready.");
+  }
+
+  async function setSlot(name, file) {
+    var label = { floor: "Floor", wall: "Wall", roof: "Roof" }[name] || "Photograph";
+    try { slotImg[name] = await loadImage(file); }
+    catch (e) { say("That photograph could not be read."); return; }
+    pushColors(currentColors());
+    say(last ? label + " color updated." : label + " photograph saved. Drop the scan when you are ready.");
+  }
+
+  async function buildFrom(scans) {
+    say("Reading " + scans.map(function (f) { return f.name; }).join(", ") + "…");
+    try {
+      var colors = currentColors();
+      var buffers = [];
+      for (var s = 0; s < scans.length; s++) buffers.push({ name: scans[s].name, buffer: await scans[s].arrayBuffer() });
+      say(bandImages.length || slotImg.floor || slotImg.wall || slotImg.roof ? "Building the walk from the scan and the photographs…" : "Building the walk…");
+      var payload = await new Promise(function (resolve, reject) {
+        var worker = new Worker("tools/mine-walk/build.js");
+        worker.onmessage = function (e) {
+          worker.terminate();
+          if (e.data.ok) resolve(e.data.payload);
+          else reject(new Error(e.data.error));
+        };
+        worker.onerror = function (e) { worker.terminate(); reject(new Error(e.message || "The scan could not be read.")); };
+        var transfer = buffers.map(function (b) { return b.buffer; });
+        worker.postMessage({ files: buffers, colors: colors, cell: 0.02, maxPoints: 1500000 }, transfer);
+      });
+      last = { payload: payload, colors: colors };
+      say("");
+      await show(payload);
+    } catch (err) {
+      say(err.message || String(err));
+    }
+  }
+
+  async function route(fileList, target) {
+    var files = Array.prototype.slice.call(fileList || []);
+    var scans = files.filter(function (f) { return isScan(f.name); });
+    var images = files.filter(isPhoto);
+    var slot = slotName(target);
+    if (!scans.length && slot && images.length) return setSlot(slot, images[0]);
+    if (!scans.length && images.length) return addBands(images);
+    if (!scans.length) { say("Drop a LAS, PLY, or XYZ scan."); return; }
+    if (images.length && !slot) {
+      for (var i = 0; i < images.length; i++) {
+        try { bandImages.push(await loadImage(images[i])); } catch (e) {}
+      }
+    }
+    return buildFrom(scans);
+  }
+
+  frame.addEventListener("load", function () {
+    if (!last || !last.colors) return;
+    try {
+      var walk = frame.contentWindow && frame.contentWindow.WALK;
+      if (walk && walk.setColors) walk.setColors(last.colors);
+    } catch (err) {}
+  });
+
+  document.getElementById("dl").addEventListener("click", async function () {
+    if (!last) return;
+    var btn = this;
+    btn.disabled = true;
+    btn.textContent = "Preparing the download…";
+    try {
+      var viewer = await fetch("tools/mine-walk/viewer.html").then(function (r) { return r.text(); });
+      var three = new Uint8Array(await fetch("lib/three.min.js").then(function (r) { return r.arrayBuffer(); }));
+      try {
+        var walk = frame.contentWindow && frame.contentWindow.WALK;
+        if (!walk || !walk.saved || !walk.path || walk.path.length < 2) {
+          frame.contentWindow.document.getElementById("endsHint").textContent = "Save the walk first. Mark the key points, then press Save the walk. Then download.";
+          btn.disabled = false;
+          btn.textContent = "Download the site";
+          return;
+        }
+        last.payload.path = walk.path;
+        last.payload.saved = true;
+      } catch (err) {
+        say("Save the walk first. Mark the key points, then press Save the walk.");
+        btn.disabled = false;
+        btn.textContent = "Download the site";
+        return;
+      }
+      var cloud = u8("window.CLOUD=" + JSON.stringify(last.payload) + ";\n");
+      var how = u8(
+        "Unzip this folder. It is the walk.\n" +
+        "On this computer: python3 -m http.server 8000\n" +
+        "then open http://localhost:8000/\n" +
+        "Or upload the folder to the host you already use.\n" +
+        "Desktop: click, mouse looks, W A S D walks, P plays.\n" +
+        "Press Play to view the walk. The orange dot is the first key point. The green dot is the last. Reverse swaps the direction.\n" +
+        "Phone: left side walks, right side looks.\n"
+      );
+      var blob = zipStore([
+        { name: "index.html", data: u8(viewer) },
+        { name: "cloud.js", data: cloud },
+        { name: "three.min.js", data: three },
+        { name: "HOW.txt", data: how }
+      ]);
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url;
+      a.download = "mine-walk.zip";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+    } catch (err) {
+      say(err.message || String(err));
+    }
+    btn.disabled = false;
+    btn.textContent = "Download the site";
+  });
+
+  window.MINE = {
+    zipStore: zipStore,
+    ready: function () { return last; }
+  };
+})();
+</script>
+</body>
+</html>
