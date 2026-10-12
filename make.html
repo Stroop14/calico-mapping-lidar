@@ -4,110 +4,295 @@
 <meta charset="utf-8">
 <title>Make a walk from a scan</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="How to turn a mine scan and a few photographs into a walkable page, the same way as the Silver King walk.">
+<meta name="description" content="Drop a mine scan. The walk opens in the browser. Download the site and host it yourself.">
 <style>
 html,body{margin:0;background:#050403;color:#e8d8c4;font-family:system-ui,Segoe UI,Helvetica,Arial,sans-serif}
 a{color:#f0b27a}
 a:hover{color:#ffd2a6}
 main{width:min(760px,100%);margin:0 auto;padding:36px 18px 64px;box-sizing:border-box}
 h1{font-weight:650;font-size:clamp(28px,4vw,40px);margin:0 0 8px;color:#f3c79a;letter-spacing:.01em}
-.lead{margin:0 0 28px;font-size:18px;line-height:1.45;color:#f3d7bc}
-h2{margin:32px 0 10px;font-size:22px;font-weight:650;color:#f3c79a}
+.lead{margin:0 0 22px;font-size:18px;line-height:1.45;color:#f3d7bc}
+h2{margin:28px 0 10px;font-size:22px;font-weight:650;color:#f3c79a}
 p,li{font-size:16.5px;line-height:1.5}
 ol{padding-left:1.2em}
 li{margin:8px 0}
 code,pre{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
 p code,li code{font-size:.92em;color:#ffd2a6}
 pre{margin:12px 0;padding:14px 16px;overflow:auto;background:#120c09;border:1px solid #3a2a1e;border-radius:8px;color:#f0d2b0;font-size:13.5px;line-height:1.45}
-#prompt{white-space:pre-wrap}
-button{appearance:none;margin:8px 0 0;padding:10px 14px;border:2px solid #e9a066;border-radius:10px;background:rgba(233,160,102,.16);color:#ffd2a6;font:700 15px system-ui,sans-serif;cursor:pointer}
-button:hover{background:rgba(233,160,102,.32);color:#fff}
 .back{display:inline-block;margin-bottom:18px;font-size:14px}
+#drop{position:relative;display:flex;align-items:center;justify-content:center;min-height:220px;margin:8px 0 14px;padding:28px;border:2px dashed #e9a066;border-radius:16px;background:rgba(233,160,102,.08);color:#ffd2a6;font-size:clamp(20px,3vw,28px);font-weight:750;line-height:1.25;text-align:center;cursor:pointer}
+#drop.over{background:rgba(233,160,102,.22)}
+#drop input{position:absolute;inset:0;opacity:0;cursor:pointer}
+#status{min-height:1.4em;color:#f0d2b0}
+#view{position:fixed;inset:0;width:100%;height:100%;border:0;background:#050403;z-index:2}
+#top{position:fixed;top:10px;left:10px;right:10px;z-index:4;display:flex;gap:8px;justify-content:flex-end;pointer-events:none}
+#top button,#top a{pointer-events:auto;appearance:none;display:inline-block;padding:10px 14px;border:2px solid #e9a066;border-radius:10px;background:rgba(18,12,9,.88);color:#ffd2a6;font:700 15px system-ui,sans-serif;text-decoration:none;cursor:pointer}
+#top button:hover,#top a:hover{background:rgba(233,160,102,.35);color:#fff}
+body.live main{display:none}
 </style>
 </head>
 <body>
 <main>
 <a class="back" href="index.html">Silver King Mine</a>
-<h1>Make a walk from a scan</h1>
-<p class="lead">One web page. A phone and a desktop open the same address. The dots, the headlamp, and the fog match the Silver King walk.</p>
+<h1>Drop a scan. Walk it.</h1>
+<p class="lead">Drop a LAS, PLY, or XYZ file. Add photographs if you have them. The walk opens on this page, with the same headlamp and fog as the Silver King mine. Then download the site and put it on your own host.</p>
+<label id="drop">Drop the scan here, or choose a file
+  <input id="file" type="file" multiple accept=".las,.laz,.ply,.xyz,.txt,.csv,.jpg,.jpeg,.png,.webp,image/*">
+</label>
+<p id="status"></p>
+<p>The scan stays in this browser. This site does not keep a copy.</p>
 
-<h2>1. Make one cloud, then cut only what is far away</h2>
-<p>This part is by eye, in CloudCompare. A program will chew a minecart and a person if you let it decide what is junk.</p>
-<ol>
-<li>If the scans are shifted, line them up on the overlap, then merge them into one cloud. Leave every point in place until that cloud exists.</li>
-<li>Delete only points that are nowhere near the tunnel. A point miles from the drift goes. A point a long way below the drift goes. The walls stay. A minecart stays. A person the scanner caught stays. Use Segment. Skip the noise filter.</li>
-<li>Save LAS. If the file is LAZ, use File, Save, and choose LAS.</li>
-</ol>
+<h2>If the scans do not already line up</h2>
+<p>Do that in CloudCompare before you drop the file. Line the scans up on the overlap, then merge them into one cloud. Delete only points that are nowhere near the tunnel. Keep the walls, a minecart, and a person the scanner caught. Save LAS.</p>
 
-<h2>2. One command does the rest</h2>
-<p>The program is in this site’s repository, folder <code>tools/mine-walk</code>. It reads the scan and a few photographs. The bottom of a photo is the floor color, the middle is the wall, the top is the back of the drift. The scan supplies the floor height and a line down the drift at eye height, 1.6 m. It thins the cloud to about 2 cm and stops near 1.5 million points, so a phone can open it. Silver King itself is finer, 1.25 cm.</p>
+<h2>The same steps on your own computer</h2>
+<p>The program is in this site’s repository, folder <code>tools/mine-walk</code>. A short drift is thinned to about 2 cm. Silver King itself is 1.25 cm.</p>
 <pre>pip install numpy pillow
 python3 tools/mine-walk/make_walk.py drift.las --photos wall.jpg --out site
 cd site
 python3 -m http.server 8000</pre>
-<p>Open <a href="http://localhost:8000/">http://localhost:8000/</a>. Play walks the line. Click, then the mouse looks and W A S D walks. P plays. On a phone the left side walks and the right side looks. <code>[</code> and <code>]</code> change the dot size. The desktop starts with the smaller dots, so the resolution shows. The phone starts with larger dots, so the walls close. Same cloud.</p>
-<p>A separate floor photo and wall photo:</p>
-<pre>python3 tools/mine-walk/make_walk.py drift.las --floor floor.jpg --wall wall.jpg --out site</pre>
-<p>A finer cloud, when the machine can hold it:</p>
-<pre>python3 tools/mine-walk/make_walk.py drift.las --photos wall.jpg --cell 0.0125 --max-points 0 --out site</pre>
-<p>The <code>site</code> folder is the website. Put it on any host, or on GitHub Pages. Desktop and phone use that one address.</p>
-
-<h2>3. What the Silver King page is</h2>
-<p>The 2019 walk is the Calico field camp, with Erik. From the LAS files on, the page was built on its own. That scan stores no color, so the clay is height above the local floor. Your photographs take those three base colors. The headlamp, the fog, the mottling, and the dot size stay the ones on the walk you already have.</p>
-
-<h2>Cursor prompt</h2>
-<p>I wrote the viewer in Cursor with Claude Opus 5.5. Grok 4.7 can run the same prompt. About $20 of model use covers a project when the LAS stays on disk. Paste the steps and the errors. Leave the point cloud in the file. A smaller chatbot invents menus and closes a shaft.</p>
-<pre id="prompt">The LAS, PLY, and photographs stay on disk. Do not paste a point cloud into the chat. Paste steps and errors only.
-
-Build a publisher that turns one or more mine scans plus a few photographs into one web page a phone and a desktop both open. The picture must match the Silver King walk: the same headlamp, fog, mottling, gamma, round point sprites, and back-face cull. If app.js is in this repository, copy that point shader. Photo colors replace only the four base colors (floor, low, wall, back). Leave the Silver King title, coordinates, and credits off someone else's scan.
-
-Before the program, the person does this in CloudCompare:
-1. If scans are shifted, align them on the overlap, then merge into one congruent cloud. Do not delete points before it is one cloud.
-2. Delete only points far from the tunnel (miles away, or a long way below). Keep the drift: walls, a minecart, people the scanner caught. Do not run a blind noise filter. That cut is by eye, with Segment.
-3. Save uncompressed LAS. If the file is LAZ, tell them to use File, Save, LAS.
-
-The program is Python 3, numpy, and Pillow. Command:
-
-python3 tools/mine-walk/make_walk.py drift.las --photos wall.jpg --out site
-
-Also accept several scans, --floor and --wall, --far meters, --cell meters (default 0.02), and --max-points (default 1500000; 0 means no cap).
-
-Behavior:
-- Read uncompressed LAS (formats 0-10, XYZ at the start of each record, LAS 1.4 count when the legacy count is 0), binary or ASCII PLY, and XYZ text. Reject LAZ.
-- Drop points farther than --far from the median, or when --far is 0, farther than 1.5 times the 99th-percentile distance, and at least 1 m.
-- Voxel-downsample at --cell. If still over --max-points, grow the cell by 1.2 until it fits.
-- Local floor is the 8th percentile of height in each 0.5 m plan cell. Height above that floor is clipped to 0..2.6 m.
-- Store tone as uint8: round(clamp(height/2.6*0.902, 0, 0.90)*255). The shader then uses hgt = tone*2.6/0.902, in meters, and ordinary rock stays under the timber tags (tone &gt; 0.95).
-- Normals face empty space: for each occupied voxel, sum the directions of empty 6-neighbors, normalize, store int8 (−127..127). A fully surrounded point faces up.
-- Centerline: PCA of the long axis in plan, bins of about 2 m, eye at the local floor + 1.6 m.
-- Photographs: bottom 28% is the floor color, the middle band is the wall, the top 28% is the back. Median RGB after dropping near-black and near-white. --floor and --wall override that. With no photos, use floor (153,138,107), low (168,133,102), wall (194,130,92), back (204,107,79). With photos, low is 0.45*floor + 0.55*wall.
-- Write site/cloud.js as window.CLOUD with n, cell, floor, low, wall, ceil, path, and base64 xyz float32, tone uint8, nrm int8. Copy the viewer to site/index.html and copy lib/three.min.js (three.js r149) to site/three.min.js. Write HOW.txt: python3 -m http.server, then open the folder.
-
-Viewer, one page:
-- Clear color 0x050403. Perspective FOV 72, near 0.05. uFov = tan(fov/2)*2.
-- Desktop is High: uSize 0.03, uMinPx 1, uMaxPx 30, every point. Phone is Standard: uSize 0.045, uMinPx 2.2, uMaxPx 40. On the phone keep up-facing floor points (int8 normal y &gt; 48) and 2 of every 5 wall points. Same cloud, larger sprites.
-- Each frame set uCam to the camera, aim the lamp along the view with y reduced by 0.08, uLamp 1 when the headlamp is on, fog distance 38 (80 when the lamp is off).
-- clayColor mixes low to wall to back by height, then the same ochre, cream, and red mottling, then the floor color on up-facing points near the floor. light() is the headlamp cone (smoothstep 0.80 to 0.975), spill, distance attenuation 1/(1+0.25d+0.10d²), warm tint (1.07, 1.0, 0.88), and fog exp(-(d/uFogDist)²*2.2). Round sprites: discard outside the point-coord circle. Gamma 1/2.2. Grade stays at 0.
-- Back-face cull when the normal faces away from the camera (dot &lt; -0.3) and tone &lt; 0.95.
-- Desktop: click to look with the mouse, W A S D to walk. Phone: left side walks, right side looks. P plays the centerline. Reverse flips the path. L toggles the headlamp. [ and ] change point size.
-
-Publish the site folder on any static host. Do not build a second model for the phone, and do not build separate iOS and Android apps.</pre>
-<button type="button" id="copy">Copy the prompt</button>
+<p><a href="walk.html">Open the Silver King walk</a></p>
 </main>
+<iframe id="view" title="Walk" hidden></iframe>
+<div id="top" hidden>
+  <a href="make.html">Another scan</a>
+  <button type="button" id="dl">Download the site</button>
+</div>
 <script>
-document.getElementById('copy').addEventListener('click', function () {
-  var text = document.getElementById('prompt').textContent;
-  var btn = this;
-  var ta = document.createElement('textarea');
-  ta.value = text;
-  document.body.appendChild(ta);
-  ta.select();
-  document.execCommand('copy');
-  ta.remove();
-  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text);
-  btn.textContent = 'Copied';
-  setTimeout(function () { btn.textContent = 'Copy the prompt'; }, 1600);
-});
+(function () {
+  var drop = document.getElementById("drop");
+  var input = document.getElementById("file");
+  var status = document.getElementById("status");
+  var frame = document.getElementById("view");
+  var top = document.getElementById("top");
+  var last = null;
+  var cloudUrl = "";
+
+  function say(t) { status.textContent = t; }
+
+  ["dragenter", "dragover"].forEach(function (name) {
+    window.addEventListener(name, function (e) { e.preventDefault(); drop.classList.add("over"); });
+  });
+  window.addEventListener("dragleave", function () { drop.classList.remove("over"); });
+  window.addEventListener("drop", function (e) {
+    e.preventDefault();
+    drop.classList.remove("over");
+    if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) take(e.dataTransfer.files);
+  });
+  input.addEventListener("change", function () { if (input.files && input.files.length) take(input.files); });
+
+  function isImage(name) { return /\.(jpg|jpeg|png|webp)$/i.test(name); }
+  function isScan(name) { return /\.(las|laz|ply|xyz|txt|csv)$/i.test(name); }
+
+  function rgbOf(list) {
+    function mid(ch) {
+      var a = list.map(function (p) { return p[ch]; }).sort(function (a, b) { return a - b; });
+      return a[(a.length / 2) | 0];
+    }
+    return [mid(0), mid(1), mid(2)];
+  }
+
+  function region(img, y0, y1) {
+    var canvas = document.createElement("canvas");
+    canvas.width = 64; canvas.height = 32;
+    var ctx = canvas.getContext("2d", { willReadFrequently: true });
+    ctx.drawImage(img, 0, y0, img.width, Math.max(1, y1 - y0), 0, 0, 64, 32);
+    var d = ctx.getImageData(0, 0, 64, 32).data;
+    var keep = [];
+    var all = [];
+    for (var i = 0; i < d.length; i += 4) {
+      var lum = (d[i] + d[i + 1] + d[i + 2]) / 3;
+      var px = [d[i], d[i + 1], d[i + 2]];
+      all.push(px);
+      if (lum > 18 && lum < 245) keep.push(px);
+    }
+    return rgbOf(keep.length > 30 ? keep : all);
+  }
+
+  function loadImage(file) {
+    return new Promise(function (resolve, reject) {
+      var url = URL.createObjectURL(file);
+      var img = new Image();
+      img.onload = function () { URL.revokeObjectURL(url); resolve(img); };
+      img.onerror = function () { URL.revokeObjectURL(url); reject(new Error(file.name)); };
+      img.src = url;
+    });
+  }
+
+  function colorsFrom(images) {
+    if (!images.length) {
+      return { floor: [153, 138, 107], low: [168, 133, 102], wall: [194, 130, 92], ceil: [204, 107, 79] };
+    }
+    var floors = [], walls = [], ceils = [];
+    images.forEach(function (img) {
+      var h = img.height;
+      floors.push(region(img, Math.floor(h * 0.72), h));
+      walls.push(region(img, Math.floor(h * 0.28), Math.floor(h * 0.72)));
+      ceils.push(region(img, 0, Math.floor(h * 0.28)));
+    });
+    function med(list, ch) {
+      var a = list.map(function (c) { return c[ch]; }).sort(function (x, y) { return x - y; });
+      return a[(a.length / 2) | 0];
+    }
+    function pack(list) { return [med(list, 0), med(list, 1), med(list, 2)]; }
+    var floor = pack(floors), wall = pack(walls), ceil = pack(ceils);
+    var low = [0, 1, 2].map(function (ch) { return Math.round(floor[ch] * 0.45 + wall[ch] * 0.55); });
+    return { floor: floor, low: low, wall: wall, ceil: ceil };
+  }
+
+  function crc32(u8) {
+    if (!crc32.table) {
+      var table = new Uint32Array(256);
+      for (var n = 0; n < 256; n++) {
+        var c = n;
+        for (var k = 0; k < 8; k++) c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1);
+        table[n] = c >>> 0;
+      }
+      crc32.table = table;
+    }
+    var table = crc32.table, crc = 0xffffffff;
+    for (var i = 0; i < u8.length; i++) crc = table[(crc ^ u8[i]) & 255] ^ (crc >>> 8);
+    return (crc ^ 0xffffffff) >>> 0;
+  }
+
+  function zipStore(files) {
+    var now = new Date();
+    var time = (now.getHours() << 11) | (now.getMinutes() << 5) | ((now.getSeconds() / 2) | 0);
+    var date = ((now.getFullYear() - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate();
+    var parts = [];
+    var central = [];
+    var offset = 0;
+    files.forEach(function (f) {
+      var name = new TextEncoder().encode(f.name);
+      var crc = crc32(f.data);
+      var local = new DataView(new ArrayBuffer(30));
+      local.setUint32(0, 0x04034b50, true);
+      local.setUint16(4, 20, true);
+      local.setUint16(8, 0, true);
+      local.setUint16(10, time, true);
+      local.setUint16(12, date, true);
+      local.setUint32(14, crc, true);
+      local.setUint32(18, f.data.length, true);
+      local.setUint32(22, f.data.length, true);
+      local.setUint16(26, name.length, true);
+      var head = new Uint8Array(local.buffer);
+      parts.push(head, name, f.data);
+      var cen = new DataView(new ArrayBuffer(46));
+      cen.setUint32(0, 0x02014b50, true);
+      cen.setUint16(4, 20, true);
+      cen.setUint16(6, 20, true);
+      cen.setUint16(10, time, true);
+      cen.setUint16(12, date, true);
+      cen.setUint32(16, crc, true);
+      cen.setUint32(20, f.data.length, true);
+      cen.setUint32(24, f.data.length, true);
+      cen.setUint16(28, name.length, true);
+      cen.setUint32(42, offset, true);
+      central.push(new Uint8Array(cen.buffer), name);
+      offset += 30 + name.length + f.data.length;
+    });
+    var centralSize = 0;
+    central.forEach(function (p) { centralSize += p.length; });
+    var eocd = new DataView(new ArrayBuffer(22));
+    eocd.setUint32(0, 0x06054b50, true);
+    eocd.setUint16(8, files.length, true);
+    eocd.setUint16(10, files.length, true);
+    eocd.setUint32(12, centralSize, true);
+    eocd.setUint32(16, offset, true);
+    return new Blob(parts.concat(central, [new Uint8Array(eocd.buffer)]), { type: "application/zip" });
+  }
+
+  function u8(text) { return new TextEncoder().encode(text); }
+
+  async function show(payload) {
+    var viewer = await fetch("tools/mine-walk/viewer.html").then(function (r) { return r.text(); });
+    if (cloudUrl) URL.revokeObjectURL(cloudUrl);
+    cloudUrl = URL.createObjectURL(new Blob(["window.CLOUD=" + JSON.stringify(payload) + ";\n"], { type: "text/javascript" }));
+    frame.srcdoc = viewer
+      .replace('src="three.min.js"', 'src="lib/three.min.js"')
+      .replace('src="cloud.js"', 'src="' + cloudUrl + '"');
+    frame.hidden = false;
+    top.hidden = false;
+    document.body.classList.add("live");
+  }
+
+  async function take(fileList) {
+    var files = Array.prototype.slice.call(fileList);
+    var scans = files.filter(function (f) { return isScan(f.name); });
+    var photos = files.filter(function (f) { return isImage(f.name); });
+    if (!scans.length) { say("Drop a LAS, PLY, or XYZ scan."); return; }
+    say("Reading " + scans.map(function (f) { return f.name; }).join(", ") + "…");
+    try {
+      var images = [];
+      for (var i = 0; i < photos.length; i++) {
+        try { images.push(await loadImage(photos[i])); } catch (e) {}
+      }
+      var colors = colorsFrom(images);
+      var buffers = [];
+      for (var s = 0; s < scans.length; s++) buffers.push({ name: scans[s].name, buffer: await scans[s].arrayBuffer() });
+      say(photos.length ? "Building the walk from the scan and the photographs…" : "Building the walk…");
+      var payload = await new Promise(function (resolve, reject) {
+        var worker = new Worker("tools/mine-walk/build.js");
+        worker.onmessage = function (e) {
+          worker.terminate();
+          if (e.data.ok) resolve(e.data.payload);
+          else reject(new Error(e.data.error));
+        };
+        worker.onerror = function (e) { worker.terminate(); reject(new Error(e.message || "The scan could not be read.")); };
+        var transfer = buffers.map(function (b) { return b.buffer; });
+        worker.postMessage({ files: buffers, colors: colors, cell: 0.02, maxPoints: 1500000 }, transfer);
+      });
+      last = { payload: payload, colors: colors };
+      say("");
+      await show(payload);
+    } catch (err) {
+      say(err.message || String(err));
+    }
+  }
+
+  document.getElementById("dl").addEventListener("click", async function () {
+    if (!last) return;
+    var btn = this;
+    btn.disabled = true;
+    btn.textContent = "Preparing the download…";
+    try {
+      var viewer = await fetch("tools/mine-walk/viewer.html").then(function (r) { return r.text(); });
+      var three = new Uint8Array(await fetch("lib/three.min.js").then(function (r) { return r.arrayBuffer(); }));
+      var cloud = u8("window.CLOUD=" + JSON.stringify(last.payload) + ";\n");
+      var how = u8(
+        "Unzip this folder. It is the walk.\n" +
+        "On this computer: python3 -m http.server 8000\n" +
+        "then open http://localhost:8000/\n" +
+        "Or upload the folder to the host you already use.\n" +
+        "Desktop: click, mouse looks, W A S D walks, P plays.\n" +
+        "Phone: left side walks, right side looks.\n"
+      );
+      var blob = zipStore([
+        { name: "index.html", data: u8(viewer) },
+        { name: "cloud.js", data: cloud },
+        { name: "three.min.js", data: three },
+        { name: "HOW.txt", data: how }
+      ]);
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url;
+      a.download = "mine-walk.zip";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+    } catch (err) {
+      say(err.message || String(err));
+    }
+    btn.disabled = false;
+    btn.textContent = "Download the site";
+  });
+
+  window.MINE = {
+    zipStore: zipStore,
+    ready: function () { return last; }
+  };
+})();
 </script>
 </body>
 </html>

@@ -1,12 +1,14 @@
 # Publish a walk from a scan and a few photos
 
-One command. The photographs supply the floor, wall, and back colors. The scan supplies the floor height and a line down the drift. The folder it writes is the site.
+The same walk can be opened in the browser: on the site, Make a walk accepts a dropped LAS, PLY, or XYZ file and a few photographs, shows the walk, and downloads a folder you can host.
+
+One command does it on your own computer. The photographs supply the floor, wall, and back colors. The scan supplies the floor height and a line down the drift. The folder it writes is the site.
 
 ```
 python3 tools/mine-walk/make_walk.py drift_a.las drift_b.las --photos floor_and_wall.jpg another.jpg --out site
 ```
 
-The scans already have to share one frame. Line them up in CloudCompare first if they do not, and save LAS. LAZ has to be saved as LAS (File, Save). The same steps, and a Cursor prompt that rebuilds this program, are on the site at [make.html](../../make.html).
+The scans already have to share one frame. Line them up in CloudCompare first if they do not, and save LAS. LAZ has to be saved as LAS (File, Save). The same steps are written on the site at [make.html](../../make.html).
 
 A photo is read in bands: the bottom is the floor color, the middle is the wall, the top is the back. To force it, pass one photo of the floor and one of the wall:
 
