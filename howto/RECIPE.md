@@ -12,7 +12,7 @@ https://www.cloudcompare.org/
 
 1. File → Open the LAS.
 2. Two setups: align / merge. Save one cloud.
-3. **Shrink it.** Edit → Subsample → space **½ inch**. Keep the floor. Cart-track grooves (ore-cart ruts) must still be there.
+3. **Shrink it.** Edit → Subsample → space **1.25 cm (½ inch)**. That is the Silver King spacing (an earlier 2 cm cloud was too coarse). Keep the floor. Cart-track grooves (ore-cart ruts) must still be there. You should still have on the order of **5 million** points on screen (Silver King walk: 5.36 million from a 13.7 million merged cloud).
 4. **Color while you work.** If RGB is in the file, leave it. If not (Silver King stored zeros): Edit → Colors → Height, so the floor is not the same color as the roof. That is a working color, not the clay.
 5. **Clay color** is from two or three handheld photos of the wall. You match those when the walk is built, not by painting every point by hand.
 
@@ -36,8 +36,8 @@ You now have the file the player needs.
 
 Public-domain player, **computer and phone**: [`../player-controls/`](../player-controls/)
 
-- Computer: click to look, WASD to walk.
-- Phone: left stick to walk, drag the picture to look.
+- Computer: click to look, WASD to walk. Point size **3 cm (1¼ in)**, clamp 1–30 pixels. `[` `]` bigger/smaller if needed.
+- Phone: left stick to walk, drag the picture to look. Point size **4.5 cm (1¾ in)**, clamp 2–40 pixels. Walls can be thinned (keep every floor point; keep about two of five wall points) so a phone does not choke.
 
 Send the LAS, the path CSV, the wall photos, and that player folder to Cursor. Ask it to combine them into the walk (prompt below). You do not sit in a text editor for days.
 
