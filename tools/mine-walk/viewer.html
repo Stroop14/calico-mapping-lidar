@@ -10,6 +10,7 @@ html,body{margin:0;height:100%;background:#050403;overflow:hidden;color:#f0d2b0;
 #bar span{flex:1}
 button{background:transparent;color:inherit;border:1px solid rgba(240,210,176,.45);border-radius:4px;padding:4px 10px;font:inherit}
 #err{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center}
+#endsHint{position:fixed;left:12px;right:12px;top:58px;z-index:3;text-align:center;pointer-events:none;font-weight:700;text-shadow:0 1px 2px #000}
 </style>
 </head>
 <body>
@@ -18,8 +19,10 @@ button{background:transparent;color:inherit;border:1px solid rgba(240,210,176,.4
   <span id="info"></span>
   <button type="button" id="play">Play</button>
   <button type="button" id="rev">Reverse</button>
+  <button type="button" id="ends">Set the ends</button>
   <button type="button" id="lamp">Lamp</button>
 </div>
+<div id="endsHint">You are at the start. Play walks to the finish. Reverse swaps those two ends.</div>
 <script src="three.min.js"></script>
 <script src="cloud.js"></script>
 <script>
@@ -160,7 +163,31 @@ button{background:transparent;color:inherit;border:1px solid rgba(240,210,176,.4
   geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
   geo.setAttribute('nrm', new THREE.BufferAttribute(nrm, 3, true));
   geo.setAttribute('tone', new THREE.BufferAttribute(tone, 1, true));
-  scene.add(new THREE.Points(geo, mat));
+  var cloud = new THREE.Points(geo, mat);
+  scene.add(cloud);
+  function mark(color) {
+    var g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(3), 3));
+    var m = new THREE.ShaderMaterial({
+      uniforms: { uColor: { value: new THREE.Color(color) } },
+      depthTest: false,
+      vertexShader: 'void main(){ gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); gl_PointSize=18.0; }',
+      fragmentShader: 'uniform vec3 uColor; void main(){ vec2 q=gl_PointCoord-0.5; if(dot(q,q)>0.25) discard; gl_FragColor=vec4(uColor,1.0); }'
+    });
+    var p = new THREE.Points(g, m);
+    p.renderOrder = 2;
+    p.frustumCulled = false;
+    scene.add(p);
+    return p;
+  }
+  var startMark = mark(0xf0b27a);
+  var finishMark = mark(0x9ad7a0);
+  function placeMark(obj, v) {
+    var a = obj.geometry.attributes.position.array;
+    a[0] = v.x; a[1] = v.y; a[2] = v.z;
+    obj.geometry.attributes.position.needsUpdate = true;
+    obj.visible = true;
+  }
 
   var path = C.path.map(function (p) { return new THREE.Vector3(p[0], p[1], p[2]); });
   function station(s) {
@@ -174,8 +201,25 @@ button{background:transparent;color:inherit;border:1px solid rgba(240,210,176,.4
     return path[path.length - 1].clone();
   }
   var pathLen = 0;
-  for (var pi = 0; pi < path.length - 1; pi++) pathLen += path[pi].distanceTo(path[pi + 1]);
+  function measurePath() {
+    pathLen = 0;
+    for (var pi = 0; pi < path.length - 1; pi++) pathLen += path[pi].distanceTo(path[pi + 1]);
+    if (window.WALK) {
+      window.WALK.pathLen = pathLen;
+      var rows = [];
+      for (var ri = 0; ri < path.length; ri++) rows.push([path[ri].x, path[ri].y, path[ri].z]);
+      window.WALK.path = rows;
+    }
+  }
+  measurePath();
   var along = 0, playing = false, yaw = 0, pitch = -0.08, lampOn = true;
+  var pickMode = 0, startPick = null, skipLock = false;
+  var hint = document.getElementById('endsHint');
+  function refreshMarks() {
+    if (!path.length) return;
+    placeMark(startMark, path[0]);
+    placeMark(finishMark, path[path.length - 1]);
+  }
   function put(s, lookAhead) {
     var p = station(s), a = station(Math.min(pathLen, s + lookAhead));
     camera.position.copy(p);
@@ -196,15 +240,86 @@ button{background:transparent;color:inherit;border:1px solid rgba(240,210,176,.4
     err.hidden = true; bar.hidden = false;
     info.textContent = (qualityHigh ? 'desktop' : 'phone') + ' · ' + pts(nAll) + ' points'
       + (qualityHigh ? '' : ' · ' + pts(n) + ' on screen')
-      + ' · ' + (lampOn ? 'headlamp' : 'flat light');
+      + ' · ' + (lampOn ? 'headlamp' : 'flat light')
+      + ' · start → finish';
+    if (pickMode === 1) hint.textContent = 'Click the START. That is the end you walk in from.';
+    else if (pickMode === 2) hint.textContent = 'Click the FINISH. That is the far end of the tunnel.';
+    else hint.textContent = 'Orange dot: start. Green dot: finish. Play walks from start to finish. Reverse swaps them.';
   }
+  function pathBetween(a, b) {
+    var ax = b.x - a.x, az = b.z - a.z;
+    var span = Math.hypot(ax, az);
+    if (span < 0.4) return null;
+    ax /= span; az /= span;
+    var bins = Math.max(4, Math.floor(span / 2));
+    var groups = [];
+    for (var g = 0; g < bins; g++) groups.push([]);
+    var arr = geo.attributes.position.array;
+    var count = arr.length / 3;
+    for (var i = 0; i < count; i++) {
+      var dx = arr[i * 3] - a.x, dz = arr[i * 3 + 2] - a.z;
+      var t = dx * ax + dz * az;
+      if (t < -1 || t > span + 1) continue;
+      var lx = dx - ax * t, lz = dz - az * t;
+      if (lx * lx + lz * lz > 64) continue;
+      var bi = Math.max(0, Math.min(bins - 1, Math.floor(t / span * bins)));
+      groups[bi].push(arr[i * 3 + 1]);
+      groups[bi].sx = (groups[bi].sx || 0) + arr[i * 3];
+      groups[bi].sz = (groups[bi].sz || 0) + arr[i * 3 + 2];
+    }
+    var next = [];
+    for (var b = 0; b < bins; b++) {
+      var ys = groups[b];
+      if (ys.length < 8) continue;
+      ys.sort(function (u, v) { return u - v; });
+      var floor = ys[Math.min(ys.length - 1, Math.floor(0.08 * (ys.length - 1)))];
+      next.push(new THREE.Vector3(ys.sx / ys.length, floor + 1.6, ys.sz / ys.length));
+    }
+    if (next.length < 2) next = [a.clone(), b.clone()];
+    return next;
+  }
+  refreshMarks();
   paint();
   document.getElementById('play').onclick = function () {
     playing = !playing;
+    pickMode = 0;
     this.textContent = playing ? 'Stop' : 'Play';
+    paint();
   };
-  document.getElementById('rev').onclick = function () { path.reverse(); along = 0; put(0, 2); };
+  document.getElementById('rev').onclick = function () {
+    path.reverse(); along = 0; measurePath(); put(0, 2); refreshMarks(); pickMode = 0; paint();
+  };
+  document.getElementById('ends').onclick = function () {
+    playing = false;
+    document.getElementById('play').textContent = 'Play';
+    pickMode = 1;
+    if (document.pointerLockElement) document.exitPointerLock();
+    paint();
+  };
   document.getElementById('lamp').onclick = function () { lampOn = !lampOn; paint(); };
+  var raycaster = new THREE.Raycaster();
+  raycaster.params.Points.threshold = 0.45;
+  renderer.domElement.addEventListener('pointerdown', function (e) {
+    if (!pickMode) return;
+    skipLock = true;
+    e.preventDefault();
+    e.stopPropagation();
+    var rect = renderer.domElement.getBoundingClientRect();
+    var ndc = new THREE.Vector2(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1);
+    raycaster.setFromCamera(ndc, camera);
+    var hits = raycaster.intersectObject(cloud);
+    if (!hits.length) { hint.textContent = 'Click a point on the scan.'; return; }
+    if (pickMode === 1) { pickMode = 2; startPick = hits[0].point.clone(); paint(); return; }
+    var next = pathBetween(startPick, hits[0].point);
+    if (!next) { hint.textContent = 'Those two clicks are the same place. Click the finish farther along the tunnel.'; return; }
+    path = next;
+    measurePath();
+    along = 0;
+    pickMode = 0;
+    put(0, 2);
+    refreshMarks();
+    paint();
+  }, true);
   addEventListener('keydown', function (e) {
     keys[e.code] = true;
     if (e.code === 'KeyP') document.getElementById('play').click();
@@ -213,7 +328,10 @@ button{background:transparent;color:inherit;border:1px solid rgba(240,210,176,.4
     if (e.code === 'BracketRight') U.uSize.value = Math.min(0.4, U.uSize.value * 1.15);
   });
   addEventListener('keyup', function (e) { keys[e.code] = false; });
-  renderer.domElement.addEventListener('click', function () { if (!phone) renderer.domElement.requestPointerLock(); });
+  renderer.domElement.addEventListener('click', function () {
+    if (skipLock) { skipLock = false; return; }
+    if (!phone && !pickMode) renderer.domElement.requestPointerLock();
+  });
   document.addEventListener('pointerlockchange', function () { look = document.pointerLockElement === renderer.domElement; });
   document.addEventListener('mousemove', function (e) {
     if (!look || playing) return;
@@ -293,7 +411,18 @@ button{background:transparent;color:inherit;border:1px solid rgba(240,210,176,.4
     renderer.render(scene, camera);
   }
   frame();
-  window.WALK = { n: nAll, shown: n, pathLen: pathLen, phone: phone, qualityHigh: qualityHigh, floor: C.floor, wall: C.wall, ceil: C.ceil };
+  function setColors(colors) {
+    function use(key, uni) {
+      var c = colors[key];
+      if (!c) return;
+      uni.value.set(c[0] / 255, c[1] / 255, c[2] / 255);
+      C[key] = c;
+    }
+    use('floor', U.uFloor); use('low', U.uLow); use('wall', U.uWall); use('ceil', U.uCeil);
+    window.WALK.floor = C.floor; window.WALK.wall = C.wall; window.WALK.ceil = C.ceil;
+  }
+  window.WALK = { n: nAll, shown: n, pathLen: pathLen, phone: phone, qualityHigh: qualityHigh, floor: C.floor, wall: C.wall, ceil: C.ceil, path: [], setColors: setColors };
+  measurePath();
 })();
 </script>
 </body>

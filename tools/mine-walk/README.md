@@ -2,7 +2,7 @@
 
 The same walk can be opened in the browser: on the site, Make a walk accepts a dropped LAS, PLY, or XYZ file and a few photographs, shows the walk, and downloads a folder you can host.
 
-One command does it on your own computer. The photographs supply the floor, wall, and back colors. The scan supplies the floor height and a line down the drift. The folder it writes is the site.
+One command does it on your own computer. The photographs supply the floor, wall, and back colors. The scan supplies the floor height and a line down the drift. The folder it writes is the site. NumPy holds the point coordinates. Pillow opens the photograph files. Neither one is part of the scan. On the page, the orange dot is the start and the green dot is the finish. Set the ends if that automatic line is the wrong way through the drift.
 
 ```
 python3 tools/mine-walk/make_walk.py drift_a.las drift_b.las --photos floor_and_wall.jpg another.jpg --out site
@@ -23,6 +23,6 @@ cd site
 python3 -m http.server 8000
 ```
 
-Open http://localhost:8000/. Play walks the centerline. Click, then the mouse looks and W A S D moves. On a phone the left side walks and the right side looks. Reverse flips which end is the start.
+Open http://localhost:8000/. Play walks from the orange start to the green finish. Reverse swaps those two ends. Set the ends, then click where a person walks in and click the far end. Click, then the mouse looks and W A S D moves. On a phone the left side walks and the right side looks.
 
 Publish the `site` folder. Any static host or GitHub Pages can serve it. Desktop and phone open the same address.

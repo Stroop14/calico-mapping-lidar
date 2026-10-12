@@ -20,9 +20,14 @@ code,pre{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
 p code,li code{font-size:.92em;color:#ffd2a6}
 pre{margin:12px 0;padding:14px 16px;overflow:auto;background:#120c09;border:1px solid #3a2a1e;border-radius:8px;color:#f0d2b0;font-size:13.5px;line-height:1.45}
 .back{display:inline-block;margin-bottom:18px;font-size:14px}
-#drop{position:relative;display:flex;align-items:center;justify-content:center;min-height:220px;margin:8px 0 14px;padding:28px;border:2px dashed #e9a066;border-radius:16px;background:rgba(233,160,102,.08);color:#ffd2a6;font-size:clamp(20px,3vw,28px);font-weight:750;line-height:1.25;text-align:center;cursor:pointer}
-#drop.over{background:rgba(233,160,102,.22)}
-#drop input{position:absolute;inset:0;opacity:0;cursor:pointer}
+#drop,#photodrop{position:relative;display:flex;align-items:center;justify-content:center;min-height:160px;margin:8px 0 14px;padding:22px;border:2px dashed #e9a066;border-radius:16px;background:rgba(233,160,102,.08);color:#ffd2a6;font-size:clamp(18px,2.6vw,26px);font-weight:750;line-height:1.25;text-align:center;cursor:pointer}
+#drop{min-height:200px}
+#drop.over,#photodrop.over,.slot.over{background:rgba(233,160,102,.22)}
+#drop input,#photodrop input,.slot input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.slots{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:0 0 14px}
+.slot{position:relative;min-height:84px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;border:1px solid #3a2a1e;border-radius:12px;background:#120c09;color:#f0d2b0;font-size:14px;font-weight:650;cursor:pointer}
+.slot b{font-weight:500;font-size:12px;opacity:.8}
+.sw{display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:-2px;margin:0 4px 0 10px;border:1px solid rgba(255,210,166,.4)}
 #status{min-height:1.4em;color:#f0d2b0}
 #view{position:fixed;inset:0;width:100%;height:100%;border:0;background:#050403;z-index:2}
 #top{position:fixed;top:10px;left:10px;right:10px;z-index:4;display:flex;gap:8px;justify-content:flex-end;pointer-events:none}
@@ -35,20 +40,35 @@ body.live main{display:none}
 <main>
 <a class="back" href="index.html">Silver King Mine</a>
 <h1>Drop a scan. Walk it.</h1>
-<p class="lead">Drop a LAS, PLY, or XYZ file. Add photographs if you have them. The walk opens on this page, with the same headlamp and fog as the Silver King mine. Then download the site and put it on your own host.</p>
+<p class="lead">Drop a LAS, PLY, or XYZ file. Drop photographs for the floor, the wall, and the back of the drift. The walk opens here. Download the site and put it on your own host.</p>
 <label id="drop">Drop the scan here, or choose a file
-  <input id="file" type="file" multiple accept=".las,.laz,.ply,.xyz,.txt,.csv,.jpg,.jpeg,.png,.webp,image/*">
+  <input id="file" type="file" multiple accept=".las,.laz,.ply,.xyz,.txt,.csv">
 </label>
+<label id="photodrop">Drop photographs here for the color
+  <input id="photos" type="file" multiple accept=".jpg,.jpeg,.png,.webp,image/*">
+</label>
+<div class="slots">
+  <label class="slot">Floor<input type="file" accept="image/*" data-slot="floor"><b>whole photo</b></label>
+  <label class="slot">Wall<input type="file" accept="image/*" data-slot="wall"><b>whole photo</b></label>
+  <label class="slot">Back<input type="file" accept="image/*" data-slot="back"><b>whole photo</b></label>
+</div>
+<p id="swatches"></p>
 <p id="status"></p>
-<p>The scan stays in this browser. This site does not keep a copy.</p>
+<p>The scan stays in this browser. This site does not keep a copy. A photograph dropped on Floor, Wall, or Back uses that whole picture for that color. Photographs dropped in the big photo box are read in bands: bottom is the floor, middle is the wall, top is the back.</p>
+<p>To practice on the scan that already worked, download the combined Silver King cloud, the 1.25 cm merge of the two walks: <a href="download/silver-king-combined.las.zip">silver-king-combined.las.zip</a>. Unzip it, then drop the LAS file on the box above.</p>
+
+<h2>Start and finish</h2>
+<p>When the walk opens, you are standing at one end. The orange dot is the start. The green dot is the finish. Play walks from the orange dot to the green dot. Reverse swaps the two ends.</p>
+<p>If those ends are the wrong places, press Set the ends. Click where a person walks in. Then click the far end of the tunnel. The walk follows the scan between those two clicks.</p>
 
 <h2>If the scans do not already line up</h2>
 <p>Do that in CloudCompare before you drop the file. Line the scans up on the overlap, then merge them into one cloud. Delete only points that are nowhere near the tunnel. Keep the walls, a minecart, and a person the scanner caught. Save LAS.</p>
 
-<h2>The same steps on your own computer</h2>
-<p>The program is in this site’s repository, folder <code>tools/mine-walk</code>. A short drift is thinned to about 2 cm. Silver King itself is 1.25 cm.</p>
-<pre>pip install numpy pillow
-python3 tools/mine-walk/make_walk.py drift.las --photos wall.jpg --out site
+<h2>The same program on your own computer</h2>
+<p>You do not install anything to use this page. The folder <code>tools/mine-walk</code> is that same program as a Python file, for a scan that is too big for the browser. It needs two free add-ons, and they are not part of the scan. NumPy holds the list of point coordinates. Pillow opens the photograph files so the colors can be read. This line downloads those two add-ons onto the computer that will run the program:</p>
+<pre>pip install numpy pillow</pre>
+<p>Then point it at the scan and the photographs. A short drift is thinned to about 2 cm. Silver King itself is 1.25 cm.</p>
+<pre>python3 tools/mine-walk/make_walk.py drift.las --photos wall.jpg --out site
 cd site
 python3 -m http.server 8000</pre>
 <p><a href="walk.html">Open the Silver King walk</a></p>
@@ -62,24 +82,69 @@ python3 -m http.server 8000</pre>
 (function () {
   var drop = document.getElementById("drop");
   var input = document.getElementById("file");
+  var photodrop = document.getElementById("photodrop");
+  var photoInput = document.getElementById("photos");
+  var swatches = document.getElementById("swatches");
   var status = document.getElementById("status");
   var frame = document.getElementById("view");
   var top = document.getElementById("top");
   var last = null;
   var cloudUrl = "";
+  var bandImages = [];
+  var slotImg = { floor: null, wall: null, back: null };
+  var clay = { floor: [153, 138, 107], low: [168, 133, 102], wall: [194, 130, 92], ceil: [204, 107, 79] };
 
   function say(t) { status.textContent = t; }
-
+  function asEl(node) { return node && node.nodeType === 1 ? node : (node && node.parentElement) || null; }
+  function slotName(node) {
+    var el = asEl(node);
+    while (el && el !== document.body) {
+      if (el.getAttribute && el.getAttribute("data-slot")) return el.getAttribute("data-slot");
+      el = el.parentElement;
+    }
+    return "";
+  }
+  function inPhotoBox(node) {
+    var el = asEl(node);
+    while (el && el !== document.body) {
+      if (el.id === "photodrop" || el.id === "photos") return true;
+      el = el.parentElement;
+    }
+    return false;
+  }
+  function clearOver() {
+    drop.classList.remove("over");
+    photodrop.classList.remove("over");
+    var slots = document.querySelectorAll(".slot");
+    for (var i = 0; i < slots.length; i++) slots[i].classList.remove("over");
+  }
   ["dragenter", "dragover"].forEach(function (name) {
-    window.addEventListener(name, function (e) { e.preventDefault(); drop.classList.add("over"); });
+    window.addEventListener(name, function (e) {
+      e.preventDefault();
+      clearOver();
+      var slot = slotName(e.target);
+      if (slot) {
+        var lab = asEl(e.target);
+        while (lab && !lab.classList.contains("slot")) lab = lab.parentElement;
+        if (lab) lab.classList.add("over");
+      } else if (inPhotoBox(e.target)) photodrop.classList.add("over");
+      else drop.classList.add("over");
+    });
   });
-  window.addEventListener("dragleave", function () { drop.classList.remove("over"); });
+  window.addEventListener("dragleave", function (e) { if (!e.relatedTarget) clearOver(); });
   window.addEventListener("drop", function (e) {
     e.preventDefault();
-    drop.classList.remove("over");
-    if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) take(e.dataTransfer.files);
+    clearOver();
+    if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) route(e.dataTransfer.files, e.target);
   });
-  input.addEventListener("change", function () { if (input.files && input.files.length) take(input.files); });
+  input.addEventListener("change", function () { if (input.files && input.files.length) route(input.files, input); });
+  photoInput.addEventListener("change", function () { if (photoInput.files && photoInput.files.length) route(photoInput.files, photoInput); });
+  var slotInputs = document.querySelectorAll(".slot input");
+  for (var si = 0; si < slotInputs.length; si++) {
+    slotInputs[si].addEventListener("change", function () {
+      if (this.files && this.files.length) route(this.files, this);
+    });
+  }
 
   function isImage(name) { return /\.(jpg|jpeg|png|webp)$/i.test(name); }
   function isScan(name) { return /\.(las|laz|ply|xyz|txt|csv)$/i.test(name); }
@@ -117,6 +182,45 @@ python3 -m http.server 8000</pre>
       img.onerror = function () { URL.revokeObjectURL(url); reject(new Error(file.name)); };
       img.src = url;
     });
+  }
+
+  function whole(img) { return region(img, 0, img.height); }
+
+  function currentColors() {
+    var base = bandImages.length ? colorsFrom(bandImages) : {
+      floor: clay.floor.slice(), low: clay.low.slice(), wall: clay.wall.slice(), ceil: clay.ceil.slice()
+    };
+    if (slotImg.floor) base.floor = whole(slotImg.floor);
+    if (slotImg.wall) base.wall = whole(slotImg.wall);
+    if (slotImg.back) base.ceil = whole(slotImg.back);
+    base.low = [0, 1, 2].map(function (ch) { return Math.round(base.floor[ch] * 0.45 + base.wall[ch] * 0.55); });
+    return base;
+  }
+
+  function paintSwatches(colors) {
+    swatches.textContent = "";
+    var rows = [["floor", colors.floor], ["wall", colors.wall], ["back", colors.ceil]];
+    rows.forEach(function (row) {
+      var chip = document.createElement("span");
+      chip.className = "sw";
+      chip.style.background = "rgb(" + row[1][0] + "," + row[1][1] + "," + row[1][2] + ")";
+      swatches.appendChild(chip);
+      swatches.appendChild(document.createTextNode(row[0] + " " + row[1].join(",")));
+    });
+  }
+
+  function pushColors(colors) {
+    paintSwatches(colors);
+    if (!last) return;
+    last.colors = colors;
+    last.payload.floor = colors.floor;
+    last.payload.low = colors.low;
+    last.payload.wall = colors.wall;
+    last.payload.ceil = colors.ceil;
+    try {
+      var walk = frame.contentWindow && frame.contentWindow.WALK;
+      if (walk && walk.setColors) walk.setColors(colors);
+    } catch (err) {}
   }
 
   function colorsFrom(images) {
@@ -216,21 +320,36 @@ python3 -m http.server 8000</pre>
     document.body.classList.add("live");
   }
 
-  async function take(fileList) {
-    var files = Array.prototype.slice.call(fileList);
-    var scans = files.filter(function (f) { return isScan(f.name); });
-    var photos = files.filter(function (f) { return isImage(f.name); });
-    if (!scans.length) { say("Drop a LAS, PLY, or XYZ scan."); return; }
+  function isPhoto(file) {
+    return isImage(file.name) || (file.type && file.type.indexOf("image/") === 0);
+  }
+
+  async function addBands(files) {
+    var n = 0;
+    for (var i = 0; i < files.length; i++) {
+      if (!isPhoto(files[i])) continue;
+      try { bandImages.push(await loadImage(files[i])); n++; } catch (e) {}
+    }
+    pushColors(currentColors());
+    if (!n) { say("That photograph could not be read."); return; }
+    say(last ? "Color updated from the photographs." : "Photographs saved. Drop the scan when you are ready.");
+  }
+
+  async function setSlot(name, file) {
+    var label = { floor: "Floor", wall: "Wall", back: "Back" }[name] || "Photograph";
+    try { slotImg[name] = await loadImage(file); }
+    catch (e) { say("That photograph could not be read."); return; }
+    pushColors(currentColors());
+    say(last ? label + " color updated." : label + " photograph saved. Drop the scan when you are ready.");
+  }
+
+  async function buildFrom(scans) {
     say("Reading " + scans.map(function (f) { return f.name; }).join(", ") + "…");
     try {
-      var images = [];
-      for (var i = 0; i < photos.length; i++) {
-        try { images.push(await loadImage(photos[i])); } catch (e) {}
-      }
-      var colors = colorsFrom(images);
+      var colors = currentColors();
       var buffers = [];
       for (var s = 0; s < scans.length; s++) buffers.push({ name: scans[s].name, buffer: await scans[s].arrayBuffer() });
-      say(photos.length ? "Building the walk from the scan and the photographs…" : "Building the walk…");
+      say(bandImages.length || slotImg.floor || slotImg.wall || slotImg.back ? "Building the walk from the scan and the photographs…" : "Building the walk…");
       var payload = await new Promise(function (resolve, reject) {
         var worker = new Worker("tools/mine-walk/build.js");
         worker.onmessage = function (e) {
@@ -250,6 +369,30 @@ python3 -m http.server 8000</pre>
     }
   }
 
+  async function route(fileList, target) {
+    var files = Array.prototype.slice.call(fileList || []);
+    var scans = files.filter(function (f) { return isScan(f.name); });
+    var images = files.filter(isPhoto);
+    var slot = slotName(target);
+    if (!scans.length && slot && images.length) return setSlot(slot, images[0]);
+    if (!scans.length && images.length) return addBands(images);
+    if (!scans.length) { say("Drop a LAS, PLY, or XYZ scan."); return; }
+    if (images.length && !slot) {
+      for (var i = 0; i < images.length; i++) {
+        try { bandImages.push(await loadImage(images[i])); } catch (e) {}
+      }
+    }
+    return buildFrom(scans);
+  }
+
+  frame.addEventListener("load", function () {
+    if (!last || !last.colors) return;
+    try {
+      var walk = frame.contentWindow && frame.contentWindow.WALK;
+      if (walk && walk.setColors) walk.setColors(last.colors);
+    } catch (err) {}
+  });
+
   document.getElementById("dl").addEventListener("click", async function () {
     if (!last) return;
     var btn = this;
@@ -258,6 +401,10 @@ python3 -m http.server 8000</pre>
     try {
       var viewer = await fetch("tools/mine-walk/viewer.html").then(function (r) { return r.text(); });
       var three = new Uint8Array(await fetch("lib/three.min.js").then(function (r) { return r.arrayBuffer(); }));
+      try {
+        var walk = frame.contentWindow && frame.contentWindow.WALK;
+        if (walk && walk.path && walk.path.length > 1) last.payload.path = walk.path;
+      } catch (err) {}
       var cloud = u8("window.CLOUD=" + JSON.stringify(last.payload) + ";\n");
       var how = u8(
         "Unzip this folder. It is the walk.\n" +
@@ -265,6 +412,7 @@ python3 -m http.server 8000</pre>
         "then open http://localhost:8000/\n" +
         "Or upload the folder to the host you already use.\n" +
         "Desktop: click, mouse looks, W A S D walks, P plays.\n" +
+        "The orange dot is the start. The green dot is the finish. Play walks from start to finish. Reverse swaps them. Set the ends, then click where a person walks in and click the far end.\n" +
         "Phone: left side walks, right side looks.\n"
       );
       var blob = zipStore([
