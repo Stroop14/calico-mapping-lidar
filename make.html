@@ -41,7 +41,7 @@ body.live main{display:none}
 <main>
 <a class="back" href="index.html">Silver King Mine</a>
 <h1>Drop a scan. Walk it.</h1>
-<p class="lead">Drop a LAS, PLY, or XYZ file. Drop a photo of the ground, a photo of the wall, and a photo of the ceiling. Walk the tunnel and mark key points. Save the walk, view it here, then download the site.</p>
+<p class="lead">Drop a LAS, PLY, or XYZ file. You start inside the scan. Move fast with the mouse and W A S D, mark key points, end the walk, view it here, then download the site.</p>
 <label id="drop">Drop the scan here, or choose a file
   <input id="file" type="file" multiple accept=".las,.laz,.ply,.xyz,.txt,.csv">
 </label>
@@ -59,7 +59,8 @@ body.live main{display:none}
 <p>To practice on the scan that already worked, download the combined Silver King cloud, the 1.25 cm merge of the two walks: <a href="download/silver-king-combined.las.zip">silver-king-combined.las.zip</a>. Unzip it, then drop the LAS file on the box above.</p>
 
 <h2>Key points</h2>
-<p>The scan opens so you can walk inside it. Walk a distance, then press Key point. Walk farther, and press Key point again. Do that through to the end. The orange dot is the first key point. The green dot is the last one. When the key points are done, press Save the walk. Then press Play to view it here, and download the site.</p>
+<p>You start inside the scan. W A S D moves fast, and Shift is faster. Drag with the left mouse button to turn your head, or click so the mouse looks for you. Drag with the right button to slide sideways and up. The mouse wheel moves you in and out. The same list stays on the screen.</p>
+<p>Press K, or Key point, along the scan. Move a long way and press K again. The orange dot is the first key point. The green dot is the last one. At the end, press End the walk. Then press Play to view it here, and download the site.</p>
 
 <h2>If the scans do not already line up</h2>
 <p>Do that in CloudCompare before you drop the file. Line the scans up on the overlap, then merge them into one cloud. Delete only points that are nowhere near the tunnel. Keep the walls, a minecart, and a person the scanner caught. Save LAS.</p>
@@ -404,7 +405,7 @@ python3 -m http.server 8000</pre>
       try {
         var walk = frame.contentWindow && frame.contentWindow.WALK;
         if (!walk || !walk.saved || !walk.path || walk.path.length < 2) {
-          frame.contentWindow.document.getElementById("endsHint").textContent = "Save the walk first. Mark the key points, then press Save the walk. Then download.";
+          frame.contentWindow.document.getElementById("endsHint").textContent = "End the walk first. Mark the key points, then press End the walk. Then download.";
           btn.disabled = false;
           btn.textContent = "Download the site";
           return;
@@ -412,7 +413,7 @@ python3 -m http.server 8000</pre>
         last.payload.path = walk.path;
         last.payload.saved = true;
       } catch (err) {
-        say("Save the walk first. Mark the key points, then press Save the walk.");
+        say("End the walk first. Mark the key points, then press End the walk.");
         btn.disabled = false;
         btn.textContent = "Download the site";
         return;
@@ -423,7 +424,7 @@ python3 -m http.server 8000</pre>
         "On this computer: python3 -m http.server 8000\n" +
         "then open http://localhost:8000/\n" +
         "Or upload the folder to the host you already use.\n" +
-        "Desktop: click, mouse looks, W A S D walks, P plays.\n" +
+        "Desktop: W A S D moves fast, Shift is faster, left drag turns your head, right drag slides, the wheel moves in and out. P plays.\n" +
         "Press Play to view the walk. The orange dot is the first key point. The green dot is the last. Reverse swaps the direction.\n" +
         "Phone: left side walks, right side looks.\n"
       );

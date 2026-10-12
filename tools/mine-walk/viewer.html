@@ -11,7 +11,10 @@ html,body{margin:0;height:100%;background:#050403;overflow:hidden;color:#f0d2b0;
 button{background:transparent;color:inherit;border:1px solid rgba(240,210,176,.45);border-radius:4px;padding:4px 10px;font:inherit}
 button:disabled{opacity:.35}
 #err{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center}
-#endsHint{position:fixed;left:12px;right:12px;top:58px;z-index:3;text-align:center;pointer-events:none;font-weight:700;text-shadow:0 1px 2px #000}
+#endsHint{position:fixed;left:12px;right:12px;top:12px;z-index:3;text-align:center;pointer-events:none;font-weight:700;text-shadow:0 1px 2px #000}
+#controls{position:fixed;left:12px;top:52px;z-index:3;max-width:min(340px,calc(100% - 24px));padding:10px 12px;background:rgba(10,7,5,.78);border:1px solid rgba(240,210,176,.35);border-radius:8px;pointer-events:none}
+#controls b{display:block;margin-bottom:4px;color:#ffd2a6}
+#controls div{margin:2px 0}
 </style>
 </head>
 <body>
@@ -20,12 +23,20 @@ button:disabled{opacity:.35}
   <span id="info"></span>
   <button type="button" id="mark">Key point</button>
   <button type="button" id="undo">Undo</button>
-  <button type="button" id="savewalk">Save the walk</button>
+  <button type="button" id="savewalk">End the walk</button>
   <button type="button" id="play" disabled>Play</button>
   <button type="button" id="rev">Reverse</button>
   <button type="button" id="lamp">Lamp</button>
 </div>
-<div id="endsHint">Walk a distance, then press Key point. Walk farther, press Key point again. At the end, press Save the walk.</div>
+<div id="endsHint">You are in the scan. Press K for a key point. At the end, press End the walk.</div>
+<div id="controls">
+  <b>Move through the scan</b>
+  <div>W A S D moves. Hold Shift to go much faster.</div>
+  <div>Left mouse drag turns your head. A click locks the mouse for looking.</div>
+  <div>Right mouse drag slides you sideways and up.</div>
+  <div>Mouse wheel moves you in and out.</div>
+  <div id="keyline">K drops a key point. End the walk is the last point.</div>
+</div>
 <script src="three.min.js"></script>
 <script src="cloud.js"></script>
 <script>
@@ -269,6 +280,8 @@ button:disabled{opacity:.35}
     document.getElementById('mark').hidden = true;
     document.getElementById('undo').hidden = true;
     document.getElementById('savewalk').hidden = true;
+    var keyline = document.getElementById('keyline');
+    if (keyline) keyline.hidden = true;
     playBtn.disabled = false;
   }
   function paint() {
@@ -278,10 +291,10 @@ button:disabled{opacity:.35}
       + ' · ' + (lampOn ? 'headlamp' : 'flat light')
       + ' · ' + (saved ? 'walk saved' : spots.length + (spots.length === 1 ? ' key point' : ' key points'));
     if (published) hint.textContent = 'Press Play to view the walk. The orange dot is the first key point. The green dot is the last.';
-    else if (!spots.length) hint.textContent = 'Walk a distance, then press Key point.';
-    else if (spots.length === 1) hint.textContent = 'Walk a distance, then press Key point again.';
-    else if (!saved) hint.textContent = 'Keep going. At the end, when the key points are done, press Save the walk.';
-    else hint.textContent = 'Walk saved. Press Play to view it here. Then download the site.';
+    else if (!spots.length) hint.textContent = 'You are in the scan. Move with W A S D, then press K for a key point.';
+    else if (spots.length === 1) hint.textContent = 'Key point set. Move a long way, then press K again.';
+    else if (!saved) hint.textContent = 'Keep pressing K along the scan. At the end, press End the walk.';
+    else hint.textContent = 'Walk ended. Press Play to view it here. Then download the site.';
   }
   refreshMarks();
   paint();
@@ -327,8 +340,11 @@ button:disabled{opacity:.35}
     if (window.WALK) { window.WALK.saved = false; window.WALK.spots = spots.length; }
   };
   document.getElementById('savewalk').onclick = function () {
+    var here = eyeHere();
+    if (!spots.length || spots[spots.length - 1].distanceTo(here) >= 0.4) spots.push(here);
     if (spots.length < 2) {
-      hint.textContent = 'Mark where you are. Walk a distance. Mark the next key point. Then save.';
+      hint.textContent = 'Press K where you are. Move a long way. Press K again. Then End the walk.';
+      refreshMarks();
       return;
     }
     path = spots.map(function (p) { return p.clone(); });
@@ -345,21 +361,60 @@ button:disabled{opacity:.35}
   document.getElementById('lamp').onclick = function () { lampOn = !lampOn; paint(); };
   addEventListener('keydown', function (e) {
     keys[e.code] = true;
+    if (e.code === 'KeyK' && !e.repeat && !published) document.getElementById('mark').click();
     if (e.code === 'KeyP') document.getElementById('play').click();
     if (e.code === 'KeyL') document.getElementById('lamp').click();
     if (e.code === 'BracketLeft') U.uSize.value = Math.max(0.005, U.uSize.value / 1.15);
     if (e.code === 'BracketRight') U.uSize.value = Math.min(0.4, U.uSize.value * 1.15);
   });
   addEventListener('keyup', function (e) { keys[e.code] = false; });
-  renderer.domElement.addEventListener('click', function () {
-    if (!phone) renderer.domElement.requestPointerLock();
+  function lookBy(dx, dy) {
+    yaw -= dx * 0.004;
+    pitch = Math.max(-1.4, Math.min(1.4, pitch - dy * 0.004));
+    camera.rotation.set(pitch, yaw, 0);
+  }
+  function flatBasis() {
+    var f = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw));
+    var r = new THREE.Vector3().crossVectors(f, new THREE.Vector3(0, 1, 0));
+    if (r.lengthSq()) r.normalize();
+    return { f: f, r: r };
+  }
+  var dragX = 0, dragY = 0;
+  renderer.domElement.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+  renderer.domElement.addEventListener('pointerdown', function (e) {
+    dragX = e.clientX; dragY = e.clientY;
+    if (e.button === 1 || e.button === 2) e.preventDefault();
+  });
+  renderer.domElement.addEventListener('pointermove', function (e) {
+    var dx = e.clientX - dragX, dy = e.clientY - dragY;
+    dragX = e.clientX; dragY = e.clientY;
+    if (playing || look) return;
+    if (e.buttons & 1) lookBy(dx, dy);
+    else if (e.buttons & 2) {
+      var b = flatBasis();
+      camera.position.addScaledVector(b.r, -dx * 0.08);
+      camera.position.y += dy * 0.08;
+    } else if (e.buttons & 4) {
+      var dir = new THREE.Vector3();
+      camera.getWorldDirection(dir);
+      camera.position.addScaledVector(dir, -dy * 0.15);
+    }
+  });
+  renderer.domElement.addEventListener('wheel', function (e) {
+    if (playing) return;
+    e.preventDefault();
+    var dir = new THREE.Vector3();
+    camera.getWorldDirection(dir);
+    var step = (e.deltaY < 0 ? 1 : -1) * ((keys.ShiftLeft || keys.ShiftRight) ? 28 : 10);
+    camera.position.addScaledVector(dir, step);
+  }, { passive: false });
+  renderer.domElement.addEventListener('click', function (e) {
+    if (!phone && e.button === 0) renderer.domElement.requestPointerLock();
   });
   document.addEventListener('pointerlockchange', function () { look = document.pointerLockElement === renderer.domElement; });
   document.addEventListener('mousemove', function (e) {
     if (!look || playing) return;
-    yaw -= e.movementX * 0.0022;
-    pitch = Math.max(-1.4, Math.min(1.4, pitch - e.movementY * 0.0022));
-    camera.rotation.set(pitch, yaw, 0);
+    lookBy(e.movementX, e.movementY);
   });
   var moveId = null, lookId = null, ox = 0, oy = 0, lx = 0, ly = 0;
   function touchOf(list, id) { for (var i = 0; i < list.length; i++) if (list[i].identifier === id) return list[i]; }
@@ -407,19 +462,19 @@ button:disabled{opacity:.35}
     var dt = Math.min(0.05, clock.getDelta());
     U.uTime.value += dt;
     if (playing) {
-      along += 1.2 * dt;
+      along += 8 * dt;
       if (along >= pathLen) { along = pathLen; playing = false; document.getElementById('play').textContent = 'Play'; }
       put(along, 2.5);
     } else {
-      var f = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw));
-      var r = new THREE.Vector3().crossVectors(f, new THREE.Vector3(0, 1, 0)).normalize();
+      var b = flatBasis();
       var m = new THREE.Vector3();
-      if (keys.KeyW || keys.ArrowUp) m.add(f);
-      if (keys.KeyS || keys.ArrowDown) m.sub(f);
-      if (keys.KeyD || keys.ArrowRight) m.add(r);
-      if (keys.KeyA || keys.ArrowLeft) m.sub(r);
-      if (stickX || stickY) { m.addScaledVector(f, -stickY); m.addScaledVector(r, stickX); }
-      if (m.lengthSq()) camera.position.addScaledVector(m.normalize(), 2 * dt);
+      if (keys.KeyW || keys.ArrowUp) m.add(b.f);
+      if (keys.KeyS || keys.ArrowDown) m.sub(b.f);
+      if (keys.KeyD || keys.ArrowRight) m.add(b.r);
+      if (keys.KeyA || keys.ArrowLeft) m.sub(b.r);
+      if (stickX || stickY) { m.addScaledVector(b.f, -stickY); m.addScaledVector(b.r, stickX); }
+      var fast = keys.ShiftLeft || keys.ShiftRight;
+      if (m.lengthSq()) camera.position.addScaledVector(m.normalize(), (fast ? 55 : 18) * dt);
     }
     U.uCam.value.copy(camera.position);
     camera.updateMatrixWorld();

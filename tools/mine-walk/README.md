@@ -2,7 +2,7 @@
 
 The same walk can be opened in the browser: on the site, Make a walk accepts a dropped LAS, PLY, or XYZ file and a few photographs, shows the walk, and downloads a folder you can host.
 
-One command does it on your own computer. The photographs supply the floor, wall, and roof colors. The scan supplies the floor height. The folder it writes is the site. NumPy holds the point coordinates. Pillow opens the photograph files. Neither one is part of the scan. On the page, walk a distance and press Key point, walk farther and press Key point again, then press Save the walk. Play views that walk. The orange dot is the first key point and the green dot is the last. Floor is the ground, Wall is the side of the tunnel, and Roof is the ceiling.
+One command does it on your own computer. The photographs supply the floor, wall, and roof colors. The scan supplies the floor height. The folder it writes is the site. NumPy holds the point coordinates. Pillow opens the photograph files. Neither one is part of the scan. On the page you start inside the scan. W A S D moves fast, Shift is faster, the left mouse turns your head, the right mouse slides, and the wheel moves in and out. Press K for each key point, then End the walk. Play views that walk. The orange dot is the first key point and the green dot is the last. Floor is the ground, Wall is the side of the tunnel, and Roof is the ceiling.
 
 ```
 python3 tools/mine-walk/make_walk.py drift_a.las drift_b.las --photos floor_and_wall.jpg another.jpg --out site
