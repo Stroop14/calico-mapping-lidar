@@ -20,13 +20,14 @@ code,pre{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
 p code,li code{font-size:.92em;color:#ffd2a6}
 pre{margin:12px 0;padding:14px 16px;overflow:auto;background:#120c09;border:1px solid #3a2a1e;border-radius:8px;color:#f0d2b0;font-size:13.5px;line-height:1.45}
 .back{display:inline-block;margin-bottom:18px;font-size:14px}
-#drop,#photodrop{position:relative;display:flex;align-items:center;justify-content:center;min-height:160px;margin:8px 0 14px;padding:22px;border:2px dashed #e9a066;border-radius:16px;background:rgba(233,160,102,.08);color:#ffd2a6;font-size:clamp(18px,2.6vw,26px);font-weight:750;line-height:1.25;text-align:center;cursor:pointer}
-#drop{min-height:200px}
-#photodrop{min-height:110px;font-size:clamp(15px,2vw,18px);font-weight:650}
-#drop.over,#photodrop.over,.slot.over{background:rgba(233,160,102,.22)}
-#drop input,#photodrop input,.slot input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer}
+#drop{position:relative;display:flex;align-items:center;justify-content:center;min-height:160px;margin:8px 0 14px;padding:22px;border:2px dashed #e9a066;border-radius:16px;background:rgba(233,160,102,.08);color:#ffd2a6;font-size:clamp(18px,2.6vw,26px);font-weight:750;line-height:1.25;text-align:center;cursor:pointer}
+#loadmine{display:block;width:100%;margin:0 0 8px;padding:16px 18px;border:2px solid #e9a066;border-radius:16px;background:rgba(233,160,102,.18);color:#ffd2a6;font:750 clamp(18px,2.4vw,24px) system-ui,sans-serif;line-height:1.25;cursor:pointer}
+#attachphoto{position:relative;display:inline-block;margin:0 0 8px;padding:8px 14px;border:2px solid #e9a066;border-radius:10px;background:rgba(233,160,102,.18);color:#ffd2a6;font:700 15px system-ui,sans-serif;line-height:1.2;cursor:pointer}
+#loadmine:hover,#attachphoto:hover,#attachphoto.over{background:rgba(233,160,102,.35);color:#fff}
+#loadmine:disabled{opacity:.55;cursor:wait}
+#drop.over,.slot.over{background:rgba(233,160,102,.22)}
+#drop input,#attachphoto input{position:absolute;inset:0;opacity:0;cursor:pointer}
 .slot input[type=color]{width:52px;height:34px;padding:0;border:1px solid rgba(255,210,166,.55);border-radius:6px;background:transparent;cursor:pointer}
-.slot .photo{position:relative;display:inline-block;margin-top:2px;font-size:12px;font-weight:500}
 .slots{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:0 0 14px}
 .slot{position:relative;min-height:96px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:8px;border:1px solid #3a2a1e;border-radius:12px;background:#120c09;color:#f0d2b0;font-size:14px;font-weight:650;cursor:pointer;text-align:center}
 .slot b{font-weight:500;font-size:12px;opacity:.8}
@@ -37,48 +38,44 @@ pre{margin:12px 0;padding:14px 16px;overflow:auto;background:#120c09;border:1px 
 #top button,#top a{pointer-events:auto;appearance:none;display:inline-block;padding:10px 14px;border:2px solid #e9a066;border-radius:10px;background:rgba(18,12,9,.88);color:#ffd2a6;font:700 15px system-ui,sans-serif;text-decoration:none;cursor:pointer}
 #top button:hover,#top a:hover{background:rgba(233,160,102,.35);color:#fff}
 body.live main{display:none}
-body.live #colors{display:none}
-body.live #colors.open{display:block;position:fixed;top:58px;right:10px;z-index:6;width:min(380px,calc(100% - 20px));max-height:calc(100% - 72px);overflow:auto;margin:0;padding:12px 14px 14px;background:rgba(18,12,9,.94);border:2px solid #e9a066;border-radius:12px;box-sizing:border-box}
-body.live #colors.open h2{margin:0 0 6px;font-size:18px}
-body.live #colors.open #photodrop{min-height:72px;font-size:15px}
 </style>
 </head>
 <body>
 <main>
 <a class="back" href="index.html">Silver King Mine</a>
-<h1>Drop a scan. Walk it.</h1>
-<p class="lead">Drop a LAS, PLY, or XYZ file. You start inside the scan. Move fast with the mouse and W A S D, mark key points, end the walk, view it here, then download the site.</p>
-<label id="drop">Drop the scan here, or choose a file
-  <input id="file" type="file" multiple accept=".las,.laz,.ply,.xyz,.txt,.csv">
-</label>
+<h1>Color, then the scan.</h1>
+<p class="lead">Pick the color of the ground, the wall, and the ceiling. Or attach a photo and the page takes those colors from it. Then drop your LAS, PLY, or XYZ file, or load the scan Mike did. You start inside the scan. Move fast with the mouse and W A S D, mark key points, end the walk, view it here, then download the site.</p>
 <section id="colors">
 <h2>Color</h2>
-<label id="photodrop">Or one photo. Bottom of the picture is the floor, middle is the wall, top is the roof.
-  <input id="photos" type="file" multiple accept=".jpg,.jpeg,.png,.webp,image/*">
-</label>
 <div class="slots">
-  <div class="slot" data-slot="floor">Floor
+  <div class="slot">Floor
     <input id="pick-floor" type="color" value="#998a6b" aria-label="Floor color">
-    <label class="photo">Drop a photo<input type="file" accept="image/*" data-slot="floor"></label>
     <b>the ground</b>
   </div>
-  <div class="slot" data-slot="wall">Wall
+  <div class="slot">Wall
     <input id="pick-wall" type="color" value="#c2825c" aria-label="Wall color">
-    <label class="photo">Drop a photo<input type="file" accept="image/*" data-slot="wall"></label>
     <b>the side of the tunnel</b>
   </div>
-  <div class="slot" data-slot="roof">Roof
+  <div class="slot">Roof
     <input id="pick-roof" type="color" value="#cc6b4f" aria-label="Roof color">
-    <label class="photo">Drop a photo<input type="file" accept="image/*" data-slot="roof"></label>
     <b>the ceiling</b>
   </div>
 </div>
+<label id="attachphoto">Attach a photo here
+  <input id="photos" type="file" accept="image/*">
+</label>
+<p>That photo sets the colors. The bottom is the ground, the middle is the wall, and the top is the ceiling.</p>
 <p id="colorstatus"></p>
 <p id="swatches"></p>
 </section>
+<label id="drop">Drop the scan here, or choose a file
+  <input id="file" type="file" multiple accept=".las,.laz,.ply,.xyz,.txt,.csv">
+</label>
+<button type="button" id="loadmine">Click here to load the scan Mike did</button>
+<p>That button loads the combined Silver King scan, the 1.25 cm merge of the two walks. Drop a file above if you have your own.</p>
 <p id="status"></p>
-<p>The scan stays in this browser. This site does not keep a copy. Pick a color for the floor, the wall, and the roof, or drop a photo on that box. The color controls stay on the screen after the scan opens. Floor is the ground. Wall is the side of the tunnel. Roof is the ceiling, the rock above your head. One photograph in the big box is enough if you do not have three: the bottom of that picture colors the floor, the middle colors the wall, and the top colors the roof.</p>
-<p>To practice on the scan that already worked, download the combined Silver King cloud, the 1.25 cm merge of the two walks: <a href="download/silver-king-combined.las.zip">silver-king-combined.las.zip</a>. Unzip it, then drop the LAS file on the box above.</p>
+<p>The scan stays in this browser. This site does not keep a copy. Choose the ground, the wall, and the ceiling before you drop the scan. Attach a photo here and the page reads the color from it.</p>
+<p>The button above loads that scan in the page. The same file is also here if you want it on your computer: <a href="download/silver-king-combined.las.zip">silver-king-combined.las.zip</a>.</p>
 
 <h2>Key points</h2>
 <p>You start inside the scan. W A S D moves fast, and Shift is faster. Drag with the left mouse button to turn your head, or click so the mouse looks for you. Drag with the right button to slide sideways and up. The mouse wheel moves you in and out. The same list stays on the screen.</p>
@@ -98,7 +95,6 @@ python3 -m http.server 8000</pre>
 </main>
 <iframe id="view" title="Walk" hidden></iframe>
 <div id="top" hidden>
-  <button type="button" id="colorbtn">Color</button>
   <a href="make.html">Another scan</a>
   <button type="button" id="dl">Download the site</button>
 </div>
@@ -106,7 +102,7 @@ python3 -m http.server 8000</pre>
 (function () {
   var drop = document.getElementById("drop");
   var input = document.getElementById("file");
-  var photodrop = document.getElementById("photodrop");
+  var attach = document.getElementById("attachphoto");
   var photoInput = document.getElementById("photos");
   var swatches = document.getElementById("swatches");
   var status = document.getElementById("status");
@@ -115,10 +111,8 @@ python3 -m http.server 8000</pre>
   var last = null;
   var cloudUrl = "";
   var bandImages = [];
-  var slotImg = { floor: null, wall: null, roof: null };
   var clay = { floor: [153, 138, 107], low: [168, 133, 102], wall: [194, 130, 92], ceil: [204, 107, 79] };
   var picked = { floor: clay.floor.slice(), wall: clay.wall.slice(), roof: clay.ceil.slice() };
-  var colorPanel = document.getElementById("colors");
 
   function say(t) {
     status.textContent = t;
@@ -143,25 +137,17 @@ python3 -m http.server 8000</pre>
     });
   }
   function asEl(node) { return node && node.nodeType === 1 ? node : (node && node.parentElement) || null; }
-  function slotName(node) {
+  function inColor(node) {
     var el = asEl(node);
     while (el && el !== document.body) {
-      if (el.getAttribute && el.getAttribute("data-slot")) return el.getAttribute("data-slot");
-      el = el.parentElement;
-    }
-    return "";
-  }
-  function inPhotoBox(node) {
-    var el = asEl(node);
-    while (el && el !== document.body) {
-      if (el.id === "photodrop" || el.id === "photos") return true;
+      if (el.id === "colors" || el.id === "attachphoto" || el.id === "photos") return true;
       el = el.parentElement;
     }
     return false;
   }
   function clearOver() {
     drop.classList.remove("over");
-    photodrop.classList.remove("over");
+    attach.classList.remove("over");
     var slots = document.querySelectorAll(".slot");
     for (var i = 0; i < slots.length; i++) slots[i].classList.remove("over");
   }
@@ -169,12 +155,7 @@ python3 -m http.server 8000</pre>
     window.addEventListener(name, function (e) {
       e.preventDefault();
       clearOver();
-      var slot = slotName(e.target);
-      if (slot) {
-        var lab = asEl(e.target);
-        while (lab && !lab.classList.contains("slot")) lab = lab.parentElement;
-        if (lab) lab.classList.add("over");
-      } else if (inPhotoBox(e.target)) photodrop.classList.add("over");
+      if (inColor(e.target)) attach.classList.add("over");
       else drop.classList.add("over");
     });
   });
@@ -186,12 +167,6 @@ python3 -m http.server 8000</pre>
   });
   input.addEventListener("change", function () { if (input.files && input.files.length) route(input.files, input); });
   photoInput.addEventListener("change", function () { if (photoInput.files && photoInput.files.length) route(photoInput.files, photoInput); });
-  var slotInputs = document.querySelectorAll(".slot input");
-  for (var si = 0; si < slotInputs.length; si++) {
-    slotInputs[si].addEventListener("change", function () {
-      if (this.files && this.files.length) route(this.files, this);
-    });
-  }
   ["floor", "wall", "roof"].forEach(function (name) {
     var el = document.getElementById("pick-" + name);
     el.addEventListener("input", function () {
@@ -201,9 +176,7 @@ python3 -m http.server 8000</pre>
       say(last ? label + " color updated." : label + " color saved. Drop the scan when you are ready.");
     });
   });
-  document.getElementById("colorbtn").addEventListener("click", function () {
-    colorPanel.classList.toggle("open");
-  });
+  document.getElementById("loadmine").addEventListener("click", function () { loadMine(); });
 
   function isImage(name) { return /\.(jpg|jpeg|png|webp)$/i.test(name); }
   function isScan(name) { return /\.(las|laz|ply|xyz|txt|csv)$/i.test(name); }
@@ -242,8 +215,6 @@ python3 -m http.server 8000</pre>
       img.src = url;
     });
   }
-
-  function whole(img) { return region(img, 0, img.height); }
 
   function currentColors() {
     var floor = picked.floor.slice(), wall = picked.wall.slice(), ceil = picked.roof.slice();
@@ -372,8 +343,6 @@ python3 -m http.server 8000</pre>
       .replace('src="cloud.js"', 'src="' + cloudUrl + '"');
     frame.hidden = false;
     top.hidden = false;
-    document.body.appendChild(colorPanel);
-    colorPanel.classList.add("open");
     document.body.classList.add("live");
   }
 
@@ -393,17 +362,7 @@ python3 -m http.server 8000</pre>
     picked.wall = band.wall.slice();
     picked.roof = band.ceil.slice();
     pushColors(currentColors());
-    say(last ? "Color updated from the photographs." : "Photographs saved. Drop the scan when you are ready.");
-  }
-
-  async function setSlot(name, file) {
-    var label = { floor: "Floor", wall: "Wall", roof: "Roof" }[name] || "Photograph";
-    try { slotImg[name] = await loadImage(file); }
-    catch (e) { say("That photograph could not be read."); return; }
-    var rgb = whole(slotImg[name]);
-    if (name === "floor" || name === "wall" || name === "roof") picked[name] = rgb;
-    pushColors(currentColors());
-    say(last ? label + " color updated." : label + " photograph saved. Drop the scan when you are ready.");
+    say("The photograph set the ground, the wall, and the ceiling. Drop the scan when you are ready.");
   }
 
   async function buildFrom(scans) {
@@ -412,7 +371,7 @@ python3 -m http.server 8000</pre>
       var colors = currentColors();
       var buffers = [];
       for (var s = 0; s < scans.length; s++) buffers.push({ name: scans[s].name, buffer: await scans[s].arrayBuffer() });
-      say(bandImages.length || slotImg.floor || slotImg.wall || slotImg.roof ? "Building the walk from the scan and the photographs…" : "Building the walk…");
+      say(bandImages.length ? "Building the walk from the scan and the photograph…" : "Building the walk…");
       var payload = await new Promise(function (resolve, reject) {
         var worker = new Worker("tools/mine-walk/build.js");
         worker.onmessage = function (e) {
@@ -436,16 +395,90 @@ python3 -m http.server 8000</pre>
     var files = Array.prototype.slice.call(fileList || []);
     var scans = files.filter(function (f) { return isScan(f.name); });
     var images = files.filter(isPhoto);
-    var slot = slotName(target);
-    if (!scans.length && slot && images.length) return setSlot(slot, images[0]);
     if (!scans.length && images.length) return addBands(images);
     if (!scans.length) { say("Drop a LAS, PLY, or XYZ scan."); return; }
-    if (images.length && !slot) {
+    if (images.length) {
       for (var i = 0; i < images.length; i++) {
         try { bandImages.push(await loadImage(images[i])); } catch (e) {}
       }
+      if (bandImages.length) {
+        var band = colorsFrom(bandImages);
+        picked.floor = band.floor.slice();
+        picked.wall = band.wall.slice();
+        picked.roof = band.ceil.slice();
+      }
     }
     return buildFrom(scans);
+  }
+
+  async function fetchBytes(url, onProgress) {
+    var res = await fetch(url);
+    if (!res.ok) throw new Error("The scan could not be downloaded.");
+    var total = Number(res.headers.get("content-length")) || 0;
+    if (!res.body || !res.body.getReader) return await res.arrayBuffer();
+    var reader = res.body.getReader();
+    var chunks = [];
+    var got = 0;
+    while (true) {
+      var step = await reader.read();
+      if (step.done) break;
+      chunks.push(step.value);
+      got += step.value.length;
+      if (onProgress) onProgress(got, total);
+    }
+    var out = new Uint8Array(got);
+    var at = 0;
+    chunks.forEach(function (c) { out.set(c, at); at += c.length; });
+    return out.buffer;
+  }
+
+  async function unzipLas(buf) {
+    var u8 = new Uint8Array(buf);
+    var view = new DataView(buf);
+    var eocd = -1;
+    for (var i = u8.length - 22; i >= Math.max(0, u8.length - 22 - 65536); i--) {
+      if (view.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+    }
+    if (eocd < 0) throw new Error("That download is not a zip file.");
+    var cd = view.getUint32(eocd + 16, true);
+    var method = view.getUint16(cd + 10, true);
+    var compSize = view.getUint32(cd + 20, true);
+    var nameLen = view.getUint16(cd + 28, true);
+    var localOff = view.getUint32(cd + 42, true);
+    var name = new TextDecoder().decode(u8.subarray(cd + 46, cd + 46 + nameLen));
+    var localNameLen = view.getUint16(localOff + 26, true);
+    var localExtraLen = view.getUint16(localOff + 28, true);
+    var dataOff = localOff + 30 + localNameLen + localExtraLen;
+    var comp = u8.subarray(dataOff, dataOff + compSize);
+    if (method === 0) return { name: name, data: comp };
+    if (method !== 8 || typeof DecompressionStream !== "function") {
+      throw new Error("This browser could not open the zip. Unzip it and drop the LAS file.");
+    }
+    var stream = new Blob([comp]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+    var raw = new Uint8Array(await new Response(stream).arrayBuffer());
+    if (raw.length < 4 || raw[0] !== 76 || raw[1] !== 65 || raw[2] !== 83 || raw[3] !== 70) {
+      throw new Error("The file inside the zip is not a LAS scan.");
+    }
+    return { name: name, data: raw };
+  }
+
+  async function loadMine() {
+    var btn = document.getElementById("loadmine");
+    btn.disabled = true;
+    try {
+      say("Loading the scan Mike did…");
+      var zip = await fetchBytes("download/silver-king-combined.las.zip", function (got, total) {
+        var pct = total ? Math.min(99, Math.round(got / total * 100)) : 0;
+        say(total ? "Downloading the scan Mike did… " + pct + "%" : "Downloading the scan Mike did…");
+      });
+      say("Opening the scan…");
+      var las = await unzipLas(zip);
+      say("Building the walk from the scan Mike did…");
+      await buildFrom([new File([las.data], las.name || "silver-king-combined.las")]);
+    } catch (err) {
+      say(err.message || String(err));
+    }
+    btn.disabled = false;
   }
 
   frame.addEventListener("load", function () {
