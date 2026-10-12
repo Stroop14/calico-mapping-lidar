@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Mine walk</title>
+<style>
+html,body{margin:0;height:100%;background:#050403;overflow:hidden;color:#f0d2b0;font:14px/1.45 system-ui,Segoe UI,Helvetica,Arial,sans-serif}
+#bar{position:fixed;left:0;right:0;bottom:0;display:flex;gap:8px;align-items:center;padding:8px 12px;background:rgba(10,7,5,.6)}
+#bar span{flex:1}
+button{background:transparent;color:inherit;border:1px solid rgba(240,210,176,.45);border-radius:4px;padding:4px 10px;font:inherit}
+#err{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center}
+.sw{display:inline-block;width:10px;height:10px;border-radius:2px;vertical-align:-1px;margin:0 3px 0 8px}
+</style>
+</head>
+<body>
+<div id="err">Loading the cloud…</div>
+<div id="bar" hidden>
+  <span id="info"></span>
+  <button type="button" id="play">Play</button>
+  <button type="button" id="rev">Reverse</button>
+  <button type="button" id="minus">point −</button>
+  <button type="button" id="plus">point +</button>
+</div>
+<script src="three.min.js"></script>
+<script src="cloud.js"></script>
+<script>
+(function () {
+  var err = document.getElementById('err');
+  if (!window.THREE) { err.textContent = 'three.js did not load next to this page.'; return; }
+  if (!window.CLOUD) { err.textContent = 'cloud.js is missing. Run make_walk.py.'; return; }
+  var C = CLOUD;
+  var phone = matchMedia('(pointer: coarse)').matches || ('ontouchstart' in window);
+  var uSize = phone ? 0.05 : 0.03;
+  var uMin = phone ? 2.0 : 1.0;
+  var uMax = phone ? 40.0 : 30.0;
+
+  function b64(s) {
+    var bin = atob(s), out = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out;
+  }
+  var xyz = new Float32Array(b64(C.xyz).buffer);
+  var hv = b64(C.h);
+  var n = xyz.length / 3;
+  var pos = new Float32Array(n * 3);
+  var col = new Float32Array(n * 3);
+  var fl = C.floor, wa = C.wall, ce = C.ceil;
+  function mix(a, b, t) { return a + (b - a) * t; }
+  function smooth(a, b, x) { var t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); }
+  for (var i = 0; i < n; i++) {
+    pos[i * 3] = xyz[i * 3]; pos[i * 3 + 1] = xyz[i * 3 + 1]; pos[i * 3 + 2] = xyz[i * 3 + 2];
+    var meters = hv[i] / 255 * 3;
+    var k = smooth(0.15, 1.15, meters);
+    var r = mix(fl[0], wa[0], k), g = mix(fl[1], wa[1], k), b = mix(fl[2], wa[2], k);
+    var k2 = smooth(1.15, 2.3, meters);
+    r = mix(r, ce[0], k2); g = mix(g, ce[1], k2); b = mix(b, ce[2], k2);
+    col[i * 3] = r / 255; col[i * 3 + 1] = g / 255; col[i * 3 + 2] = b / 255;
+  }
+
+  var renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
+  renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
+  renderer.setSize(innerWidth, innerHeight);
+  renderer.setClearColor(0x050403, 1);
+  document.body.appendChild(renderer.domElement);
+  var scene = new THREE.Scene();
+  var camera = new THREE.PerspectiveCamera(72, innerWidth / innerHeight, 0.05, 800);
+  camera.rotation.order = 'YXZ';
+
+  var uniforms = {
+    uSize: { value: uSize }, uMin: { value: uMin }, uMax: { value: uMax },
+    uScreen: { value: innerHeight * renderer.getPixelRatio() }
+  };
+  var mat = new THREE.ShaderMaterial({
+    uniforms: uniforms,
+    vertexShader: 'attribute vec3 color; varying vec3 vCol; uniform float uSize,uMin,uMax,uScreen; void main(){ vCol=color; vec4 mv=modelViewMatrix*vec4(position,1.0); gl_Position=projectionMatrix*mv; gl_PointSize=clamp(uSize*uScreen/max(1e-3,-mv.z),uMin,uMax); }',
+    fragmentShader: 'varying vec3 vCol; void main(){ vec2 p=gl_PointCoord-0.5; if(dot(p,p)>0.25) discard; gl_FragColor=vec4(vCol,1.0); }'
+  });
+  var geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  scene.add(new THREE.Points(geo, mat));
+
+  var path = C.path.map(function (p) { return new THREE.Vector3(p[0], p[1], p[2]); });
+  function station(s) {
+    if (s <= 0) return path[0].clone();
+    var acc = 0;
+    for (var i = 0; i < path.length - 1; i++) {
+      var seg = path[i].distanceTo(path[i + 1]);
+      if (acc + seg >= s) return path[i].clone().lerp(path[i + 1], (s - acc) / Math.max(seg, 1e-4));
+      acc += seg;
+    }
+    return path[path.length - 1].clone();
+  }
+  var pathLen = 0;
+  for (var i = 0; i < path.length - 1; i++) pathLen += path[i].distanceTo(path[i + 1]);
+  var along = 0, playing = false, yaw = 0, pitch = -0.12;
+  function put(s, lookAhead) {
+    var p = station(s), a = station(Math.min(pathLen, s + lookAhead));
+    camera.position.copy(p);
+    var dx = a.x - p.x, dz = a.z - p.z;
+    yaw = Math.atan2(-dx, -dz);
+    camera.rotation.set(pitch, yaw, 0);
+  }
+  put(0, 2);
+
+  var keys = {}, look = false, stickX = 0, stickY = 0;
+  var bar = document.getElementById('bar'), info = document.getElementById('info');
+  function hex(c) { return '#' + c.map(function (v) { return ('0' + v.toString(16)).slice(-2); }).join(''); }
+  function paint() {
+    err.hidden = true; bar.hidden = false;
+    info.innerHTML = (phone ? 'phone' : 'desktop') + ' · ' + (n / 1e6).toFixed(2) + ' M · point ' + uSize.toFixed(3)
+      + '<i class="sw" style="background:' + hex(C.floor) + '"></i>floor'
+      + '<i class="sw" style="background:' + hex(C.wall) + '"></i>wall'
+      + '<i class="sw" style="background:' + hex(C.ceil) + '"></i>back';
+  }
+  paint();
+  document.getElementById('play').onclick = function () { playing = !playing; this.textContent = playing ? 'Stop' : 'Play'; };
+  document.getElementById('rev').onclick = function () { path.reverse(); along = 0; put(0, 2); };
+  document.getElementById('minus').onclick = function () { uSize = Math.max(0.005, uSize / 1.15); uniforms.uSize.value = uSize; paint(); };
+  document.getElementById('plus').onclick = function () { uSize = Math.min(0.4, uSize * 1.15); uniforms.uSize.value = uSize; paint(); };
+  addEventListener('keydown', function (e) {
+    keys[e.code] = true;
+    if (e.code === 'KeyP') document.getElementById('play').click();
+    if (e.code === 'BracketLeft') document.getElementById('minus').click();
+    if (e.code === 'BracketRight') document.getElementById('plus').click();
+  });
+  addEventListener('keyup', function (e) { keys[e.code] = false; });
+  renderer.domElement.addEventListener('click', function () { if (!phone) renderer.domElement.requestPointerLock(); });
+  document.addEventListener('pointerlockchange', function () { look = document.pointerLockElement === renderer.domElement; });
+  document.addEventListener('mousemove', function (e) {
+    if (!look || playing) return;
+    yaw -= e.movementX * 0.0022;
+    pitch = Math.max(-1.4, Math.min(1.4, pitch - e.movementY * 0.0022));
+    camera.rotation.set(pitch, yaw, 0);
+  });
+  var moveId = null, lookId = null, ox = 0, oy = 0, lx = 0, ly = 0;
+  function touchOf(list, id) { for (var i = 0; i < list.length; i++) if (list[i].identifier === id) return list[i]; }
+  renderer.domElement.addEventListener('touchstart', function (e) {
+    playing = false; document.getElementById('play').textContent = 'Play';
+    for (var i = 0; i < e.changedTouches.length; i++) {
+      var t = e.changedTouches[i];
+      if (t.clientX < innerWidth * 0.45 && moveId === null) { moveId = t.identifier; ox = t.clientX; oy = t.clientY; }
+      else if (lookId === null) { lookId = t.identifier; lx = t.clientX; ly = t.clientY; }
+    }
+  }, { passive: true });
+  renderer.domElement.addEventListener('touchmove', function (e) {
+    var t = touchOf(e.changedTouches, moveId);
+    if (t) { stickX = Math.max(-1, Math.min(1, (t.clientX - ox) / 70)); stickY = Math.max(-1, Math.min(1, (t.clientY - oy) / 70)); }
+    t = touchOf(e.changedTouches, lookId);
+    if (t) {
+      yaw -= (t.clientX - lx) * 0.005;
+      pitch = Math.max(-1.4, Math.min(1.4, pitch - (t.clientY - ly) * 0.005));
+      lx = t.clientX; ly = t.clientY;
+      camera.rotation.set(pitch, yaw, 0);
+    }
+  }, { passive: true });
+  function endTouch(e) {
+    for (var i = 0; i < e.changedTouches.length; i++) {
+      var id = e.changedTouches[i].identifier;
+      if (id === moveId) { moveId = null; stickX = stickY = 0; }
+      if (id === lookId) lookId = null;
+    }
+  }
+  renderer.domElement.addEventListener('touchend', endTouch);
+  renderer.domElement.addEventListener('touchcancel', endTouch);
+  addEventListener('resize', function () {
+    camera.aspect = innerWidth / innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth, innerHeight);
+    uniforms.uScreen.value = innerHeight * renderer.getPixelRatio();
+  });
+
+  var clock = new THREE.Clock();
+  function frame() {
+    requestAnimationFrame(frame);
+    var dt = Math.min(0.05, clock.getDelta());
+    if (playing) {
+      along += 1.2 * dt;
+      if (along >= pathLen) { along = pathLen; playing = false; document.getElementById('play').textContent = 'Play'; }
+      put(along, 2.5);
+    } else {
+      var f = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw));
+      var r = new THREE.Vector3().crossVectors(f, new THREE.Vector3(0, 1, 0)).normalize();
+      var m = new THREE.Vector3();
+      if (keys.KeyW || keys.ArrowUp) m.add(f);
+      if (keys.KeyS || keys.ArrowDown) m.sub(f);
+      if (keys.KeyD || keys.ArrowRight) m.add(r);
+      if (keys.KeyA || keys.ArrowLeft) m.sub(r);
+      if (stickX || stickY) { m.addScaledVector(f, -stickY); m.addScaledVector(r, stickX); }
+      if (m.lengthSq()) camera.position.addScaledVector(m.normalize(), 2 * dt);
+    }
+    renderer.render(scene, camera);
+  }
+  frame();
+  window.WALK = { n: n, pathLen: pathLen, floor: C.floor, wall: C.wall, ceil: C.ceil };
+})();
+</script>
+</body>
+</html>
