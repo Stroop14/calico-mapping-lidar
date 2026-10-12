@@ -24,17 +24,23 @@ pre{margin:12px 0;padding:14px 16px;overflow:auto;background:#120c09;border:1px 
 #drop{min-height:200px}
 #photodrop{min-height:110px;font-size:clamp(15px,2vw,18px);font-weight:650}
 #drop.over,#photodrop.over,.slot.over{background:rgba(233,160,102,.22)}
-#drop input,#photodrop input,.slot input{position:absolute;inset:0;opacity:0;cursor:pointer}
+#drop input,#photodrop input,.slot input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer}
+.slot input[type=color]{width:52px;height:34px;padding:0;border:1px solid rgba(255,210,166,.55);border-radius:6px;background:transparent;cursor:pointer}
+.slot .photo{position:relative;display:inline-block;margin-top:2px;font-size:12px;font-weight:500}
 .slots{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:0 0 14px}
 .slot{position:relative;min-height:96px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:8px;border:1px solid #3a2a1e;border-radius:12px;background:#120c09;color:#f0d2b0;font-size:14px;font-weight:650;cursor:pointer;text-align:center}
 .slot b{font-weight:500;font-size:12px;opacity:.8}
 .sw{display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:-2px;margin:0 4px 0 10px;border:1px solid rgba(255,210,166,.4)}
-#status{min-height:1.4em;color:#f0d2b0}
+#status,#colorstatus{min-height:1.4em;color:#f0d2b0}
 #view{position:fixed;inset:0;width:100%;height:100%;border:0;background:#050403;z-index:2}
 #top{position:fixed;top:10px;left:10px;right:10px;z-index:4;display:flex;gap:8px;justify-content:flex-end;pointer-events:none}
 #top button,#top a{pointer-events:auto;appearance:none;display:inline-block;padding:10px 14px;border:2px solid #e9a066;border-radius:10px;background:rgba(18,12,9,.88);color:#ffd2a6;font:700 15px system-ui,sans-serif;text-decoration:none;cursor:pointer}
 #top button:hover,#top a:hover{background:rgba(233,160,102,.35);color:#fff}
 body.live main{display:none}
+body.live #colors{display:none}
+body.live #colors.open{display:block;position:fixed;top:58px;right:10px;z-index:6;width:min(380px,calc(100% - 20px));max-height:calc(100% - 72px);overflow:auto;margin:0;padding:12px 14px 14px;background:rgba(18,12,9,.94);border:2px solid #e9a066;border-radius:12px;box-sizing:border-box}
+body.live #colors.open h2{margin:0 0 6px;font-size:18px}
+body.live #colors.open #photodrop{min-height:72px;font-size:15px}
 </style>
 </head>
 <body>
@@ -45,17 +51,33 @@ body.live main{display:none}
 <label id="drop">Drop the scan here, or choose a file
   <input id="file" type="file" multiple accept=".las,.laz,.ply,.xyz,.txt,.csv">
 </label>
+<section id="colors">
+<h2>Color</h2>
 <label id="photodrop">Or one photo. Bottom of the picture is the floor, middle is the wall, top is the roof.
   <input id="photos" type="file" multiple accept=".jpg,.jpeg,.png,.webp,image/*">
 </label>
 <div class="slots">
-  <label class="slot">Floor<input type="file" accept="image/*" data-slot="floor"><b>the ground</b></label>
-  <label class="slot">Wall<input type="file" accept="image/*" data-slot="wall"><b>the side of the tunnel</b></label>
-  <label class="slot">Roof<input type="file" accept="image/*" data-slot="roof"><b>the ceiling</b></label>
+  <div class="slot" data-slot="floor">Floor
+    <input id="pick-floor" type="color" value="#998a6b" aria-label="Floor color">
+    <label class="photo">Drop a photo<input type="file" accept="image/*" data-slot="floor"></label>
+    <b>the ground</b>
+  </div>
+  <div class="slot" data-slot="wall">Wall
+    <input id="pick-wall" type="color" value="#c2825c" aria-label="Wall color">
+    <label class="photo">Drop a photo<input type="file" accept="image/*" data-slot="wall"></label>
+    <b>the side of the tunnel</b>
+  </div>
+  <div class="slot" data-slot="roof">Roof
+    <input id="pick-roof" type="color" value="#cc6b4f" aria-label="Roof color">
+    <label class="photo">Drop a photo<input type="file" accept="image/*" data-slot="roof"></label>
+    <b>the ceiling</b>
+  </div>
 </div>
+<p id="colorstatus"></p>
 <p id="swatches"></p>
+</section>
 <p id="status"></p>
-<p>The scan stays in this browser. This site does not keep a copy. Floor is a picture of the ground. Wall is a picture of the side of the tunnel. Roof is a picture of the ceiling, the rock above your head. One photograph in the big box is enough if you do not have three: the bottom of that picture colors the floor, the middle colors the wall, and the top colors the roof.</p>
+<p>The scan stays in this browser. This site does not keep a copy. Pick a color for the floor, the wall, and the roof, or drop a photo on that box. The color controls stay on the screen after the scan opens. Floor is the ground. Wall is the side of the tunnel. Roof is the ceiling, the rock above your head. One photograph in the big box is enough if you do not have three: the bottom of that picture colors the floor, the middle colors the wall, and the top colors the roof.</p>
 <p>To practice on the scan that already worked, download the combined Silver King cloud, the 1.25 cm merge of the two walks: <a href="download/silver-king-combined.las.zip">silver-king-combined.las.zip</a>. Unzip it, then drop the LAS file on the box above.</p>
 
 <h2>Key points</h2>
@@ -76,6 +98,7 @@ python3 -m http.server 8000</pre>
 </main>
 <iframe id="view" title="Walk" hidden></iframe>
 <div id="top" hidden>
+  <button type="button" id="colorbtn">Color</button>
   <a href="make.html">Another scan</a>
   <button type="button" id="dl">Download the site</button>
 </div>
@@ -94,8 +117,31 @@ python3 -m http.server 8000</pre>
   var bandImages = [];
   var slotImg = { floor: null, wall: null, roof: null };
   var clay = { floor: [153, 138, 107], low: [168, 133, 102], wall: [194, 130, 92], ceil: [204, 107, 79] };
+  var picked = { floor: clay.floor.slice(), wall: clay.wall.slice(), roof: clay.ceil.slice() };
+  var colorPanel = document.getElementById("colors");
 
-  function say(t) { status.textContent = t; }
+  function say(t) {
+    status.textContent = t;
+    var line = document.getElementById("colorstatus");
+    if (line) line.textContent = t;
+  }
+  function hexOf(rgb) {
+    return "#" + rgb.map(function (n) {
+      var s = Math.max(0, Math.min(255, n | 0)).toString(16);
+      return s.length < 2 ? "0" + s : s;
+    }).join("");
+  }
+  function parseHex(h) {
+    var n = parseInt(String(h).replace("#", ""), 16);
+    if (!isFinite(n)) return [0, 0, 0];
+    return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  }
+  function syncPickers() {
+    ["floor", "wall", "roof"].forEach(function (name) {
+      var el = document.getElementById("pick-" + name);
+      if (el) el.value = hexOf(picked[name]);
+    });
+  }
   function asEl(node) { return node && node.nodeType === 1 ? node : (node && node.parentElement) || null; }
   function slotName(node) {
     var el = asEl(node);
@@ -146,6 +192,18 @@ python3 -m http.server 8000</pre>
       if (this.files && this.files.length) route(this.files, this);
     });
   }
+  ["floor", "wall", "roof"].forEach(function (name) {
+    var el = document.getElementById("pick-" + name);
+    el.addEventListener("input", function () {
+      picked[name] = parseHex(el.value);
+      pushColors(currentColors());
+      var label = { floor: "Floor", wall: "Wall", roof: "Roof" }[name];
+      say(last ? label + " color updated." : label + " color saved. Drop the scan when you are ready.");
+    });
+  });
+  document.getElementById("colorbtn").addEventListener("click", function () {
+    colorPanel.classList.toggle("open");
+  });
 
   function isImage(name) { return /\.(jpg|jpeg|png|webp)$/i.test(name); }
   function isScan(name) { return /\.(las|laz|ply|xyz|txt|csv)$/i.test(name); }
@@ -188,14 +246,9 @@ python3 -m http.server 8000</pre>
   function whole(img) { return region(img, 0, img.height); }
 
   function currentColors() {
-    var base = bandImages.length ? colorsFrom(bandImages) : {
-      floor: clay.floor.slice(), low: clay.low.slice(), wall: clay.wall.slice(), ceil: clay.ceil.slice()
-    };
-    if (slotImg.floor) base.floor = whole(slotImg.floor);
-    if (slotImg.wall) base.wall = whole(slotImg.wall);
-    if (slotImg.roof) base.ceil = whole(slotImg.roof);
-    base.low = [0, 1, 2].map(function (ch) { return Math.round(base.floor[ch] * 0.45 + base.wall[ch] * 0.55); });
-    return base;
+    var floor = picked.floor.slice(), wall = picked.wall.slice(), ceil = picked.roof.slice();
+    var low = [0, 1, 2].map(function (ch) { return Math.round(floor[ch] * 0.45 + wall[ch] * 0.55); });
+    return { floor: floor, low: low, wall: wall, ceil: ceil };
   }
 
   function paintSwatches(colors) {
@@ -212,6 +265,7 @@ python3 -m http.server 8000</pre>
 
   function pushColors(colors) {
     paintSwatches(colors);
+    syncPickers();
     if (!last) return;
     last.colors = colors;
     last.payload.floor = colors.floor;
@@ -318,6 +372,8 @@ python3 -m http.server 8000</pre>
       .replace('src="cloud.js"', 'src="' + cloudUrl + '"');
     frame.hidden = false;
     top.hidden = false;
+    document.body.appendChild(colorPanel);
+    colorPanel.classList.add("open");
     document.body.classList.add("live");
   }
 
@@ -331,8 +387,12 @@ python3 -m http.server 8000</pre>
       if (!isPhoto(files[i])) continue;
       try { bandImages.push(await loadImage(files[i])); n++; } catch (e) {}
     }
-    pushColors(currentColors());
     if (!n) { say("That photograph could not be read."); return; }
+    var band = colorsFrom(bandImages);
+    picked.floor = band.floor.slice();
+    picked.wall = band.wall.slice();
+    picked.roof = band.ceil.slice();
+    pushColors(currentColors());
     say(last ? "Color updated from the photographs." : "Photographs saved. Drop the scan when you are ready.");
   }
 
@@ -340,6 +400,8 @@ python3 -m http.server 8000</pre>
     var label = { floor: "Floor", wall: "Wall", roof: "Roof" }[name] || "Photograph";
     try { slotImg[name] = await loadImage(file); }
     catch (e) { say("That photograph could not be read."); return; }
+    var rgb = whole(slotImg[name]);
+    if (name === "floor" || name === "wall" || name === "roof") picked[name] = rgb;
     pushColors(currentColors());
     say(last ? label + " color updated." : label + " photograph saved. Drop the scan when you are ready.");
   }
