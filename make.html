@@ -2,9 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Make a walk from a scan</title>
+<title>What was sent, and how to make the walk</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="Step by step: line up the scans, clean them, color the ground, wall, and ceiling, walk the tunnel, and download the site.">
+<meta name="description" content="The Silver King files that were sent, how to prepare a scan in CloudCompare, and how to build the walk.">
 <style>
 html,body{margin:0;background:#050403;color:#e8d8c4;font-family:system-ui,Segoe UI,Helvetica,Arial,sans-serif}
 a{color:#f0b27a}
@@ -12,48 +12,50 @@ a:hover{color:#ffd2a6}
 main{width:min(820px,100%);margin:0 auto;padding:36px 18px 64px;box-sizing:border-box}
 h1{font-weight:650;font-size:clamp(28px,4vw,40px);margin:0 0 8px;color:#f3c79a;letter-spacing:.01em}
 .lead{margin:0 0 22px;font-size:18px;line-height:1.45;color:#f3d7bc}
-h2{margin:28px 0 10px;font-size:22px;font-weight:650;color:#f3c79a}
+h2{margin:36px 0 10px;font-size:26px;font-weight:650;color:#f3c79a}
+h3{margin:0 0 8px;font-size:20px;font-weight:650;color:#f3c79a}
 p,li{font-size:16.5px;line-height:1.5}
 ol{padding-left:1.2em}
 li{margin:8px 0}
+ol.steps > li{margin:22px 0}
 code,pre{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
 p code,li code{font-size:.92em;color:#ffd2a6}
 pre{margin:12px 0;padding:14px 16px;overflow:auto;background:#120c09;border:1px solid #3a2a1e;border-radius:8px;color:#f0d2b0;font-size:13.5px;line-height:1.45}
 .back{display:inline-block;margin-bottom:18px;font-size:14px}
-#drop{position:relative;display:flex;align-items:center;justify-content:center;min-height:160px;margin:8px 0 14px;padding:22px;border:2px dashed #e9a066;border-radius:16px;background:rgba(233,160,102,.08);color:#ffd2a6;font-size:clamp(18px,2.6vw,26px);font-weight:750;line-height:1.25;text-align:center;cursor:pointer}
-#loadmine{display:block;width:100%;margin:0 0 8px;padding:16px 18px;border:2px solid #e9a066;border-radius:16px;background:rgba(233,160,102,.18);color:#ffd2a6;font:750 clamp(18px,2.4vw,24px) system-ui,sans-serif;line-height:1.25;cursor:pointer}
-#attachphoto{position:relative;display:inline-block;margin:0 0 8px;padding:8px 14px;border:2px solid #e9a066;border-radius:10px;background:rgba(233,160,102,.18);color:#ffd2a6;font:700 15px system-ui,sans-serif;line-height:1.2;cursor:pointer}
-#loadmine:hover,#attachphoto:hover,#attachphoto.over{background:rgba(233,160,102,.35);color:#fff}
-#loadmine:disabled{opacity:.55;cursor:wait}
-#drop.over,.slot.over{background:rgba(233,160,102,.22)}
-#drop input,#attachphoto input{position:absolute;inset:0;opacity:0;cursor:pointer}
-.slot input[type=color]{width:52px;height:34px;padding:0;border:1px solid rgba(255,210,166,.55);border-radius:6px;background:transparent;cursor:pointer}
-.slots{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:0 0 14px}
-.slot{position:relative;min-height:96px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:8px;border:1px solid #3a2a1e;border-radius:12px;background:#120c09;color:#f0d2b0;font-size:14px;font-weight:650;cursor:pointer;text-align:center}
-.slot b{font-weight:500;font-size:12px;opacity:.8}
-.sw{display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:-2px;margin:0 4px 0 10px;border:1px solid rgba(255,210,166,.4)}
-#status,#colorstatus{min-height:1.4em;color:#f0d2b0}
-#view{position:fixed;inset:0;width:100%;height:100%;border:0;background:#050403;z-index:2}
-#top{position:fixed;top:10px;left:10px;right:10px;z-index:4;display:flex;gap:8px;justify-content:flex-end;pointer-events:none}
-#top button,#top a{pointer-events:auto;appearance:none;display:inline-block;padding:10px 14px;border:2px solid #e9a066;border-radius:10px;background:rgba(18,12,9,.88);color:#ffd2a6;font:700 15px system-ui,sans-serif;text-decoration:none;cursor:pointer}
-#top button:hover,#top a:hover{background:rgba(233,160,102,.35);color:#fff}
-body.live main{display:none}
-ol.steps > li{margin:22px 0}
-ol.steps h2{margin:0 0 8px;font-size:20px}
+a.dl{display:inline-block;margin:8px 12px 8px 0;padding:10px 14px;border:2px solid #e9a066;border-radius:10px;background:rgba(233,160,102,.16);color:#ffd2a6;font-weight:750;text-decoration:none}
+a.dl:hover{background:rgba(233,160,102,.35);color:#fff}
 </style>
 </head>
 <body>
 <main>
 <a class="back" href="index.html">Silver King Mine</a>
-<h1>Do these steps in order.</h1>
-<p class="lead">Each tunnel is this same sequence. Steps 1–8 are CloudCompare. Steps 9–18 are this page. Step 19 is the same walk built on the computer when the LAS file is too large for the browser. If the file is already one LAS and the scans already share one coordinate system, start at step 9. The finished Silver King walk is <a href="walk.html">here</a>.</p>
+<h1>What was sent, then how to make the next one.</h1>
+<p class="lead">Three parts, in this order. Part 1 is the Silver King material. Part 2 is CloudCompare, which turns separate scans into one LAS file. Part 3 is the program that turns that LAS file into a walk.</p>
+
+<h2>Part 1. What was sent</h2>
+<p>The walk is the Silver King Mine tunnel from the CSUSB geology field camp on 24 March 2019, led by Dr. Erik Melchiorre. The instrument was a handheld GeoSLAM scanner. The portal is 34.95117° N, 116.86307° W. From the LAS files on, Mike Murrey rendered the walk.</p>
+<p>The scanner recorded shape. It did not record color. The color on the walk is painted from height: ground, wall, and ceiling. A black opening over a shaft, or at the end of an adit, is a place where the scanner did not return points.</p>
+<p><a class="dl" href="walk.html">Open the walk</a></p>
+<p>That address is the walk in the browser. Desktop and phone open the same page.</p>
+<p><a class="dl" href="media/walkthrough-desktop.mp4">Download the video</a></p>
+<p>A recording of the desktop walk.</p>
+<p><a class="dl" href="download/calico-silver-king-offline.zip">Download the offline copy</a></p>
+<p>Unzip <code>calico-silver-king-offline.zip</code>. Open a terminal in the unzipped folder. On Windows, click the folder address bar, type <code>cmd</code>, and press Enter. On a Mac, open Terminal, type <code>cd</code>, then a space, and drag the folder into the window. Run:</p>
+<pre>python3 -m http.server 8000</pre>
+<p>If the computer does not find <code>python3</code>, run <code>python -m http.server 8000</code>. Open <a href="http://localhost:8000/">http://localhost:8000/</a>. The zip holds a copy of the site, including the walk, the maps, and the video, so it opens without GitHub.</p>
+<p><a class="dl" href="download/silver-king-combined.las.zip">Download the combined scan</a></p>
+<p>Unzip <code>silver-king-combined.las.zip</code>. The file inside is <code>silver-king-combined.las</code>. It is the 1.25 cm merge of the two walks: 13,657,307 points. CloudCompare and the walk program both open that LAS file. They do not open the zip.</p>
+
+<h2>Part 2. Prepare a scan in CloudCompare</h2>
+<p>This part makes one LAS file from the scanner files. Download CloudCompare, install it, and use it for the eight steps below.</p>
+<p><a class="dl" href="https://www.cloudcompare.org/">Download CloudCompare</a></p>
 <ol class="steps">
 <li>
-<h2>Install CloudCompare.</h2>
+<h3>Install CloudCompare.</h3>
 <p>CloudCompare is the free program that lines the scans up. Download it from <a href="https://www.cloudcompare.org/">cloudcompare.org</a>, install it, and open it.</p>
 </li>
 <li>
-<h2>Open the scan files.</h2>
+<h3>Open the scan files.</h3>
 <ol>
 <li>In CloudCompare, click File, then Open.</li>
 <li>Select every LAS file from the scanner. Hold Ctrl to select more than one. Click Open.</li>
@@ -62,7 +64,7 @@ ol.steps h2{margin:0 0 8px;font-size:20px}
 </ol>
 </li>
 <li>
-<h2>See whether the scans already share one coordinate system.</h2>
+<h3>See whether the scans already share one coordinate system.</h3>
 <ol>
 <li>Check the box on every scan so all of them are drawn. CloudCompare gives each one a different color when the file has no color.</li>
 <li>Rotate and zoom until you can see the whole set.</li>
@@ -71,7 +73,7 @@ ol.steps h2{margin:0 0 8px;font-size:20px}
 </ol>
 </li>
 <li>
-<h2>Line the shifted scan up on the overlap.</h2>
+<h3>Line the shifted scan up on the overlap.</h3>
 <ol>
 <li>In the DB Tree, click the name of the scan that is in the wrong place.</li>
 <li>Hold Ctrl and click the name of the scan that should stay put. Both names are highlighted.</li>
@@ -96,7 +98,7 @@ ol.steps h2{margin:0 0 8px;font-size:20px}
 </ol>
 </li>
 <li>
-<h2>Merge the two scans into one cloud.</h2>
+<h3>Merge the two scans into one cloud.</h3>
 <ol>
 <li>In the DB Tree, click one scan’s name.</li>
 <li>Hold Ctrl and click the other scan’s name. Both are highlighted.</li>
@@ -106,7 +108,7 @@ ol.steps h2{margin:0 0 8px;font-size:20px}
 </ol>
 </li>
 <li>
-<h2>Delete the points that are far from the tunnel.</h2>
+<h3>Delete the points that are far from the tunnel.</h3>
 <p>The command is Edit, then Segment. It draws a polygon on the screen and then deletes the points on one side of that polygon. A minecart and a person stay in the result because you include them inside the polygon.</p>
 <p>Tools, then Clean, then SOR filter is a different command. SOR deletes points whose distance to their neighbors is larger than the distances in the rest of the cloud. A person and a minecart are sparse next to a wall, so SOR removes them. This step does not use SOR.</p>
 <ol>
@@ -124,7 +126,7 @@ ol.steps h2{margin:0 0 8px;font-size:20px}
 </ol>
 </li>
 <li>
-<h2>Thin the cloud.</h2>
+<h3>Thin the cloud.</h3>
 <ol>
 <li>Click the cloud that remains after step 6.</li>
 <li>Hover a point in the 3D view and read the coordinates in the status bar at the bottom. If those numbers are in the tens or hundreds, the file is in meters. If they are in the tens of thousands, the file is in millimeters.</li>
@@ -133,603 +135,63 @@ ol.steps h2{margin:0 0 8px;font-size:20px}
 <li>In the minimum-distance box, type 0.02 if the file is in meters. That is 2 centimeters. Type 20 if the file is in millimeters. A short drift comes out around a million points.</li>
 <li>Click OK. CloudCompare makes a new cloud and unchecks the one you subsampled. The new cloud is the one to save. The points that remain are a subset of the old points. They are not moved.</li>
 </ol>
-<p>The Silver King file used 0.0125 meters, which is 1.25 centimeters, and kept 13,657,307 points. Use 0.02 unless the machine can hold the finer cloud. This page thins again, in step 10, to about 2 centimeters and about 1.5 million points.</p>
+<p>The Silver King file used 0.0125 meters, which is 1.25 centimeters, and kept 13,657,307 points. Use 0.02 unless the machine can hold the finer cloud. The walk program in Part 3 thins again to about 2 centimeters and about 1.5 million points.</p>
 </li>
 <li>
-<h2>Save a LAS file.</h2>
+<h3>Save a LAS file.</h3>
 <ol>
 <li>Click the new, subsampled cloud so its name is highlighted.</li>
 <li>Click File, then Save.</li>
-<li>At the bottom of the save window, open the file-type list. Choose “LAS cloud (*.las)”. BIN is CloudCompare’s own format. LAZ is compressed. This page opens LAS. It does not open LAZ or BIN.</li>
+<li>At the bottom of the save window, open the file-type list. Choose “LAS cloud (*.las)”. BIN is CloudCompare’s own format. LAZ is compressed. The walk program in Part 3 opens LAS. It does not open LAZ or BIN.</li>
 <li>Choose a folder and a file name. Click Save.</li>
 <li>If a second window asks for a LAS version, point format, or scale, leave the values that are already filled in and click OK.</li>
 </ol>
 <p>If the scanner gave you LAZ, open that LAZ in CloudCompare and save it again with the file type set to LAS cloud.</p>
 </li>
-<li>
-<h2>Set the colors on this page, before the scan.</h2>
-<p>Floor is the ground. Wall is the side of the tunnel. Roof is the ceiling, the rock above your head. Click each color box and pick the color.</p>
-<section id="colors">
-<div class="slots">
-  <div class="slot">Floor
-    <input id="pick-floor" type="color" value="#998a6b" aria-label="Floor color">
-    <b>the ground</b>
-  </div>
-  <div class="slot">Wall
-    <input id="pick-wall" type="color" value="#c2825c" aria-label="Wall color">
-    <b>the side of the tunnel</b>
-  </div>
-  <div class="slot">Roof
-    <input id="pick-roof" type="color" value="#cc6b4f" aria-label="Roof color">
-    <b>the ceiling</b>
-  </div>
-</div>
-<p>Or use one photograph. Click the button, choose the picture, and the page sets the three colors from it. The bottom of the picture is the ground. The middle is the wall. The top is the ceiling.</p>
-<label id="attachphoto">Attach a photo here
-  <input id="photos" type="file" accept="image/*">
-</label>
-<p id="colorstatus"></p>
-<p id="swatches"></p>
-</section>
-<p>The scanner recorded shape. These colors are painted on afterward. Where a shaft or the end of an adit goes black, the scanner did not bring points back.</p>
-</li>
-<li>
-<h2>Open the scan on this page.</h2>
-<p>Drop the LAS file from step 8 on the box below, or click the box and choose the file. To practice on the combined Silver King scan, use the button under the box. The same file is also <a href="download/silver-king-combined.las.zip">silver-king-combined.las.zip</a> if you want it on your computer: unzip it, then drop the LAS file on the box.</p>
-<label id="drop">Drop the scan here, or choose a file
-  <input id="file" type="file" multiple accept=".las,.laz,.ply,.xyz,.txt,.csv">
-</label>
-<button type="button" id="loadmine">Click here to load the scan Mike did</button>
-<p id="status"></p>
-<p>Wait until the tunnel is drawn. The camera is placed inside the tunnel. The scan stays in this browser. The server does not receive a copy. This page thins the cloud again to about 2 centimeters and about 1.5 million points.</p>
-<p>If the status line says the file is LAZ, return to step 8 and save LAS. If the tab stops responding or the browser closes, the file is too large for this page. Use step 19.</p>
-</li>
-<li>
-<h2>Move through the scan.</h2>
-<p>The same list stays on the screen inside the scan.</p>
-<ol>
-<li>W walks forward. S walks back. A steps left. D steps right.</li>
-<li>Hold Shift with those keys to go much faster.</li>
-<li>Drag with the left mouse button to turn your head.</li>
-<li>Click the picture once and the mouse looks for you. Press Esc when you want the normal mouse back.</li>
-<li>Drag with the right mouse button to slide sideways and up.</li>
-<li>Roll the mouse wheel to move in and out. Hold Shift and roll the wheel to move farther.</li>
-<li>On a phone, drag the left side of the screen to walk. Drag the right side to look. It is the same page and the same cloud. The phone draws larger dots so the walls meet. A desktop draws smaller dots so the detail shows.</li>
-<li>Press the [ key to make the dots smaller. Press the ] key to make them larger.</li>
 </ol>
-</li>
-<li>
-<h2>Mark key points along the tunnel.</h2>
+
+<h2>Part 3. Make the walk</h2>
+<p>This part takes the LAS file from Part 2 and writes a folder you can open in a browser. The program stores a path down the middle of the tunnel. Press Play to follow it.</p>
+<p><a class="dl" href="download/mine-walk-program.zip">Download the walk program</a></p>
 <ol>
-<li>Move to the place where the walk should start. Use step 11.</li>
-<li>Press the K key, or click the button labeled Key point. The first marker is orange.</li>
-<li>Move at least half a meter. Press K again. The page rejects a new key point closer than 0.4 meters to the previous one.</li>
-<li>Repeat along the tunnel. Markers between the first and the last are drawn pale.</li>
-<li>Undo removes the last key point.</li>
-</ol>
-</li>
-<li>
-<h2>End the walk on the last point.</h2>
-<p>Move to the last place the walk should include. Click End the walk. The page adds that position as the last key point if it is at least 0.4 meters from the previous one, then stores the path. The last marker is green. End the walk requires at least two key points. With only one, the button does not store a path.</p>
-</li>
-<li>
-<h2>Play it.</h2>
-<p>Press Play to watch the walk. Press Stop to stop. Press Reverse to swap the direction. Press Lamp to turn the headlamp off and on.</p>
-</li>
-<li>
-<h2>Download the site.</h2>
-<p>Click Download the site. The file is mine-walk.zip. The button checks that End the walk has been pressed and that the path has at least two points. If either check fails, the hint line in the walk tells you to end the walk first, and no zip is written.</p>
-</li>
-<li>
-<h2>Unzip the download.</h2>
-<p>Unzip mine-walk.zip. The folder holds index.html, cloud.js, three.min.js, and HOW.txt. That folder is the walk.</p>
-</li>
-<li>
-<h2>Look at it on your computer.</h2>
-<ol>
-<li>Open a terminal in that unzipped folder. On Windows, click the folder bar, type <code>cmd</code>, and press Enter. On a Mac, open Terminal, type <code>cd</code>, then a space, and drag the folder into the window.</li>
-<li>Run <code>python3 -m http.server 8000</code>. If the computer says python3 is missing, run <code>python -m http.server 8000</code>.</li>
-<li>Open <a href="http://localhost:8000/">http://localhost:8000/</a> in the browser.</li>
-<li>Press Play.</li>
-</ol>
-</li>
-<li>
-<h2>Put it on the web.</h2>
-<p>Upload the unzipped folder to the web host you already use. Desktop and phone open the same address. Press Another scan, at the top of the walk, to come back to this list and start over.</p>
-</li>
-<li>
-<h2>If the browser cannot hold the file, do it on the computer.</h2>
-<ol>
-<li>Download <a href="https://github.com/Stroop14/calico-mapping-lidar/archive/refs/heads/gh-pages.zip">this zip of the program</a> and unzip it. The folder is named calico-mapping-lidar-gh-pages.</li>
+<li>Unzip <code>mine-walk-program.zip</code>. The folder contains <code>HOW.txt</code>, <code>tools/mine-walk/make_walk.py</code>, <code>tools/mine-walk/viewer.html</code>, and <code>lib/three.min.js</code>.</li>
 <li>Install Python from <a href="https://www.python.org/downloads/">python.org</a> if the computer does not have it. On the Windows installer, check Add python.exe to PATH.</li>
-<li>Copy your LAS file and your photograph into that folder.</li>
-<li>Open a terminal in that folder, the same way as step 17.</li>
-<li>Run <code>pip install numpy pillow</code>. NumPy holds the point coordinates. Pillow opens the photograph. They are not part of the scan.</li>
-<li>Run <code>python3 tools/mine-walk/make_walk.py yourscan.las --photos yourphoto.jpg --out site</code>. Use the real file names. On Windows, if python3 is missing, use <code>python</code> instead of <code>python3</code>.</li>
-<li>One photograph is read in bands: the bottom is the ground, the middle is the wall, and the top is the ceiling. If you have a separate ground photo and a separate wall photo, run <code>python3 tools/mine-walk/make_walk.py yourscan.las --floor ground.jpg --wall wall.jpg --out site</code>.</li>
-<li>For a finer cloud like Silver King, add <code>--cell 0.0125</code> before <code>--out site</code>.</li>
-<li>Run <code>cd site</code>, then <code>python3 -m http.server 8000</code>, then open <a href="http://localhost:8000/">http://localhost:8000/</a>.</li>
-<li>Press Play. This program lays the path down the middle of the tunnel for you. The orange dot is the start. The green dot is the end. Reverse swaps the direction.</li>
-<li>Upload the <code>site</code> folder the same way as step 18.</li>
+<li>Open a terminal in the unzipped folder, the same way as in Part 1.</li>
+<li>Run <code>pip install numpy pillow</code>. NumPy holds the list of point coordinates. Pillow opens the photograph. They are not part of the scan.</li>
+<li>Copy the LAS file from Part 2 into that folder. Copy one photograph of the tunnel into the same folder.</li>
+<li>Run the command below. Replace the file names with the real names. On Windows, if <code>python3</code> is not found, use <code>python</code>.</li>
 </ol>
-</li>
-<li>
-<h2>Or hand the same steps to Cursor.</h2>
-<p>Grok 4.7 or Opus 5.5 can follow this. Paste it, and put your LAS file and your photograph in the folder with it.</p>
-<pre>Build a walk-through of one mine LiDAR scan as one web page. Phone and desktop open the same page and the same cloud. Desktop point size is smaller. Phone point size is larger, so a thinned wall still reads as a surface.
+<pre>python3 tools/mine-walk/make_walk.py yourscan.las --photos yourphoto.jpg --out site</pre>
+<p>The photograph is split into three bands. The bottom band is the ground color. The middle band is the wall color. The top band is the ceiling color. The scanner still has no color of its own. The photograph supplies the three colors.</p>
+<p>If the ground and the wall are two separate photographs:</p>
+<pre>python3 tools/mine-walk/make_walk.py yourscan.las --floor ground.jpg --wall wall.jpg --out site</pre>
+<p>The default spacing is 0.02 meters, and the program keeps at most 1,500,000 points. For 1.25 centimeters, the Silver King spacing, put <code>--cell 0.0125</code> before <code>--out site</code>. <code>--max-points 0</code> keeps every point that remains after that spacing.</p>
+<ol start="7">
+<li>Run these two commands, then open the address in a browser.</li>
+</ol>
+<pre>cd site
+python3 -m http.server 8000</pre>
+<p>Open <a href="http://localhost:8000/">http://localhost:8000/</a>.</p>
+<ol start="8">
+<li>Press Play. The orange dot is the first point of the path. The green dot is the last point. Reverse swaps the direction. Lamp turns the headlamp off and on.</li>
+<li>To move yourself instead of playing the path: W walks forward, S walks back, A steps left, D steps right. Hold Shift to go faster. Drag with the left mouse button to turn. Click once and the mouse looks for you; press Esc to release it. Drag with the right mouse button to slide sideways and up. The wheel moves in and out. On a phone, drag the left side of the screen to walk and the right side to look. Press [ to make the dots smaller and ] to make them larger. The phone draws larger dots than the desktop. Both use the same cloud.</li>
+<li>Upload the <code>site</code> folder to a web host. Phone and desktop open that same address.</li>
+</ol>
+<p>The same sequence, for Cursor with Grok 4.7 or Opus 5.5. Put the LAS file and the photograph in the folder, and paste this:</p>
+<pre>Build a walk-through of one mine LiDAR scan as one web page. Phone and desktop open the same page and the same cloud. Desktop dots are smaller. Phone dots are larger, so a thinned wall still reads as a surface.
 
 CloudCompare, in this order:
-1. File, Open. Open every LAS. In the 3D view, left-drag rotates, right-drag pans, the wheel zooms.
-2. If the tunnels do not already occupy the same space: select both clouds. Tools, Registration, Align (point pairs picking). Aligned moves, Reference stays. Pick at least four of the same spots, in the same order, on each cloud. Click align, then the green check. Leave fixed scale checked. If a small gap remains: Tools, Registration, Fine registration (ICP). Data moves (red), Model stays (yellow). Set Final overlap to the percent of the moving scan that actually overlaps the other, often about 50 when the walks share half their length. Leave Adjust scale unchecked.
-3. Select both clouds. Edit, Merge. Use the new cloud. Uncheck the originals.
-4. Edit, Segment. Space pauses so you can rotate. Space again to draw. Left-click a polygon around the tunnel, including walls, ground, ceiling, a minecart, and any person. Right-click closes the polygon and does not add a vertex. Click Segment Inside (keep points inside). Click the trash-can button, Confirm and delete hidden points. Do not use Tools, Clean, SOR filter. SOR removes sparse objects such as a person or a cart.
-5. Edit, Subsample. Method: Spatial. Minimum distance 0.02 if the coordinates are meters, or 20 if they are millimeters. File, Save. File type: LAS cloud (*.las). Not LAZ. Not BIN.
+1. File, Open. Left-drag rotates, right-drag pans, the wheel zooms.
+2. If the tunnels do not occupy the same space: Tools, Registration, Align (point pairs picking). Aligned moves. Reference stays. Pick at least four of the same spots, in the same order, on each cloud. Click align, then the green check. Leave fixed scale checked. If a gap remains: Tools, Registration, Fine registration (ICP). Data is red and moves. Model is yellow and stays. Set Final overlap to the percent of the moving scan that covers the other. Leave Adjust scale unchecked.
+3. Edit, Merge. Use the new cloud.
+4. Edit, Segment. Space pauses so the view can rotate. Space again to draw. Left-click a polygon around the tunnel, including the walls, the ground, the ceiling, a minecart, and any person. Right-click closes the polygon. Click Segment Inside. Click Confirm and delete hidden points. Do not use Tools, Clean, SOR filter. SOR removes sparse objects such as a person or a cart.
+5. Edit, Subsample. Method: Spatial. Minimum distance 0.02 if the coordinates are meters, or 20 if they are millimeters. File, Save. File type: LAS cloud (*.las).
 
-Then one web page:
-6. Before the scan is loaded, set three colors: ground, wall, ceiling. One photo may set all three: bottom of the photo is ground, middle is wall, top is ceiling.
-7. Load the LAS. The camera starts inside the tunnel.
-8. W A S D moves. Shift is faster. Left drag looks. Right drag slides. Wheel moves in and out. On a phone, the left side of the screen walks and the right side looks.
-9. K, or the Key point button, stores a station. Stations closer than 0.4 m are rejected. The first marker is orange. Middle markers are pale. End the walk stores the current position as the last station and turns it green. At least two stations are required.
-10. Play runs the path. Download writes a zip of the site. The scan is not uploaded.</pre>
-</li>
-</ol>
+Then:
+6. One photograph sets three colors: bottom is ground, middle is wall, top is ceiling.
+7. Build one web page from that LAS. The camera starts inside the tunnel. Store a path down the middle. Play follows it. The first point is orange. The last point is green.
+8. W A S D moves. Shift is faster. Left drag looks. Right drag slides. The wheel moves in and out. On a phone, the left side walks and the right side looks.
+9. The result is a folder that can be hosted. The scan is not uploaded.</pre>
 </main>
-<iframe id="view" title="Walk" hidden></iframe>
-<div id="top" hidden>
-  <a href="make.html">Another scan</a>
-  <button type="button" id="dl">Download the site</button>
-</div>
-<script>
-(function () {
-  var drop = document.getElementById("drop");
-  var input = document.getElementById("file");
-  var attach = document.getElementById("attachphoto");
-  var photoInput = document.getElementById("photos");
-  var swatches = document.getElementById("swatches");
-  var status = document.getElementById("status");
-  var frame = document.getElementById("view");
-  var top = document.getElementById("top");
-  var last = null;
-  var cloudUrl = "";
-  var bandImages = [];
-  var clay = { floor: [153, 138, 107], low: [168, 133, 102], wall: [194, 130, 92], ceil: [204, 107, 79] };
-  var picked = { floor: clay.floor.slice(), wall: clay.wall.slice(), roof: clay.ceil.slice() };
-
-  function say(t) {
-    status.textContent = t;
-    var line = document.getElementById("colorstatus");
-    if (line) line.textContent = t;
-  }
-  function hexOf(rgb) {
-    return "#" + rgb.map(function (n) {
-      var s = Math.max(0, Math.min(255, n | 0)).toString(16);
-      return s.length < 2 ? "0" + s : s;
-    }).join("");
-  }
-  function parseHex(h) {
-    var n = parseInt(String(h).replace("#", ""), 16);
-    if (!isFinite(n)) return [0, 0, 0];
-    return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
-  }
-  function syncPickers() {
-    ["floor", "wall", "roof"].forEach(function (name) {
-      var el = document.getElementById("pick-" + name);
-      if (el) el.value = hexOf(picked[name]);
-    });
-  }
-  function asEl(node) { return node && node.nodeType === 1 ? node : (node && node.parentElement) || null; }
-  function inColor(node) {
-    var el = asEl(node);
-    while (el && el !== document.body) {
-      if (el.id === "colors" || el.id === "attachphoto" || el.id === "photos") return true;
-      el = el.parentElement;
-    }
-    return false;
-  }
-  function clearOver() {
-    drop.classList.remove("over");
-    attach.classList.remove("over");
-    var slots = document.querySelectorAll(".slot");
-    for (var i = 0; i < slots.length; i++) slots[i].classList.remove("over");
-  }
-  ["dragenter", "dragover"].forEach(function (name) {
-    window.addEventListener(name, function (e) {
-      e.preventDefault();
-      clearOver();
-      if (inColor(e.target)) attach.classList.add("over");
-      else drop.classList.add("over");
-    });
-  });
-  window.addEventListener("dragleave", function (e) { if (!e.relatedTarget) clearOver(); });
-  window.addEventListener("drop", function (e) {
-    e.preventDefault();
-    clearOver();
-    if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) route(e.dataTransfer.files, e.target);
-  });
-  input.addEventListener("change", function () { if (input.files && input.files.length) route(input.files, input); });
-  photoInput.addEventListener("change", function () { if (photoInput.files && photoInput.files.length) route(photoInput.files, photoInput); });
-  ["floor", "wall", "roof"].forEach(function (name) {
-    var el = document.getElementById("pick-" + name);
-    el.addEventListener("input", function () {
-      picked[name] = parseHex(el.value);
-      pushColors(currentColors());
-      var label = { floor: "Floor", wall: "Wall", roof: "Roof" }[name];
-      say(last ? label + " color updated." : label + " color saved. Drop the scan when you are ready.");
-    });
-  });
-  document.getElementById("loadmine").addEventListener("click", function () { loadMine(); });
-
-  function isImage(name) { return /\.(jpg|jpeg|png|webp)$/i.test(name); }
-  function isScan(name) { return /\.(las|laz|ply|xyz|txt|csv)$/i.test(name); }
-
-  function rgbOf(list) {
-    function mid(ch) {
-      var a = list.map(function (p) { return p[ch]; }).sort(function (a, b) { return a - b; });
-      return a[(a.length / 2) | 0];
-    }
-    return [mid(0), mid(1), mid(2)];
-  }
-
-  function region(img, y0, y1) {
-    var canvas = document.createElement("canvas");
-    canvas.width = 64; canvas.height = 32;
-    var ctx = canvas.getContext("2d", { willReadFrequently: true });
-    ctx.drawImage(img, 0, y0, img.width, Math.max(1, y1 - y0), 0, 0, 64, 32);
-    var d = ctx.getImageData(0, 0, 64, 32).data;
-    var keep = [];
-    var all = [];
-    for (var i = 0; i < d.length; i += 4) {
-      var lum = (d[i] + d[i + 1] + d[i + 2]) / 3;
-      var px = [d[i], d[i + 1], d[i + 2]];
-      all.push(px);
-      if (lum > 18 && lum < 245) keep.push(px);
-    }
-    return rgbOf(keep.length > 30 ? keep : all);
-  }
-
-  function loadImage(file) {
-    return new Promise(function (resolve, reject) {
-      var url = URL.createObjectURL(file);
-      var img = new Image();
-      img.onload = function () { URL.revokeObjectURL(url); resolve(img); };
-      img.onerror = function () { URL.revokeObjectURL(url); reject(new Error(file.name)); };
-      img.src = url;
-    });
-  }
-
-  function currentColors() {
-    var floor = picked.floor.slice(), wall = picked.wall.slice(), ceil = picked.roof.slice();
-    var low = [0, 1, 2].map(function (ch) { return Math.round(floor[ch] * 0.45 + wall[ch] * 0.55); });
-    return { floor: floor, low: low, wall: wall, ceil: ceil };
-  }
-
-  function paintSwatches(colors) {
-    swatches.textContent = "";
-    var rows = [["floor", colors.floor], ["wall", colors.wall], ["roof", colors.ceil]];
-    rows.forEach(function (row) {
-      var chip = document.createElement("span");
-      chip.className = "sw";
-      chip.style.background = "rgb(" + row[1][0] + "," + row[1][1] + "," + row[1][2] + ")";
-      swatches.appendChild(chip);
-      swatches.appendChild(document.createTextNode(row[0] + " " + row[1].join(",")));
-    });
-  }
-
-  function pushColors(colors) {
-    paintSwatches(colors);
-    syncPickers();
-    if (!last) return;
-    last.colors = colors;
-    last.payload.floor = colors.floor;
-    last.payload.low = colors.low;
-    last.payload.wall = colors.wall;
-    last.payload.ceil = colors.ceil;
-    try {
-      var walk = frame.contentWindow && frame.contentWindow.WALK;
-      if (walk && walk.setColors) walk.setColors(colors);
-    } catch (err) {}
-  }
-
-  function colorsFrom(images) {
-    if (!images.length) {
-      return { floor: [153, 138, 107], low: [168, 133, 102], wall: [194, 130, 92], ceil: [204, 107, 79] };
-    }
-    var floors = [], walls = [], ceils = [];
-    images.forEach(function (img) {
-      var h = img.height;
-      floors.push(region(img, Math.floor(h * 0.72), h));
-      walls.push(region(img, Math.floor(h * 0.28), Math.floor(h * 0.72)));
-      ceils.push(region(img, 0, Math.floor(h * 0.28)));
-    });
-    function med(list, ch) {
-      var a = list.map(function (c) { return c[ch]; }).sort(function (x, y) { return x - y; });
-      return a[(a.length / 2) | 0];
-    }
-    function pack(list) { return [med(list, 0), med(list, 1), med(list, 2)]; }
-    var floor = pack(floors), wall = pack(walls), ceil = pack(ceils);
-    var low = [0, 1, 2].map(function (ch) { return Math.round(floor[ch] * 0.45 + wall[ch] * 0.55); });
-    return { floor: floor, low: low, wall: wall, ceil: ceil };
-  }
-
-  function crc32(u8) {
-    if (!crc32.table) {
-      var table = new Uint32Array(256);
-      for (var n = 0; n < 256; n++) {
-        var c = n;
-        for (var k = 0; k < 8; k++) c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1);
-        table[n] = c >>> 0;
-      }
-      crc32.table = table;
-    }
-    var table = crc32.table, crc = 0xffffffff;
-    for (var i = 0; i < u8.length; i++) crc = table[(crc ^ u8[i]) & 255] ^ (crc >>> 8);
-    return (crc ^ 0xffffffff) >>> 0;
-  }
-
-  function zipStore(files) {
-    var now = new Date();
-    var time = (now.getHours() << 11) | (now.getMinutes() << 5) | ((now.getSeconds() / 2) | 0);
-    var date = ((now.getFullYear() - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate();
-    var parts = [];
-    var central = [];
-    var offset = 0;
-    files.forEach(function (f) {
-      var name = new TextEncoder().encode(f.name);
-      var crc = crc32(f.data);
-      var local = new DataView(new ArrayBuffer(30));
-      local.setUint32(0, 0x04034b50, true);
-      local.setUint16(4, 20, true);
-      local.setUint16(8, 0, true);
-      local.setUint16(10, time, true);
-      local.setUint16(12, date, true);
-      local.setUint32(14, crc, true);
-      local.setUint32(18, f.data.length, true);
-      local.setUint32(22, f.data.length, true);
-      local.setUint16(26, name.length, true);
-      var head = new Uint8Array(local.buffer);
-      parts.push(head, name, f.data);
-      var cen = new DataView(new ArrayBuffer(46));
-      cen.setUint32(0, 0x02014b50, true);
-      cen.setUint16(4, 20, true);
-      cen.setUint16(6, 20, true);
-      cen.setUint16(10, time, true);
-      cen.setUint16(12, date, true);
-      cen.setUint32(16, crc, true);
-      cen.setUint32(20, f.data.length, true);
-      cen.setUint32(24, f.data.length, true);
-      cen.setUint16(28, name.length, true);
-      cen.setUint32(42, offset, true);
-      central.push(new Uint8Array(cen.buffer), name);
-      offset += 30 + name.length + f.data.length;
-    });
-    var centralSize = 0;
-    central.forEach(function (p) { centralSize += p.length; });
-    var eocd = new DataView(new ArrayBuffer(22));
-    eocd.setUint32(0, 0x06054b50, true);
-    eocd.setUint16(8, files.length, true);
-    eocd.setUint16(10, files.length, true);
-    eocd.setUint32(12, centralSize, true);
-    eocd.setUint32(16, offset, true);
-    return new Blob(parts.concat(central, [new Uint8Array(eocd.buffer)]), { type: "application/zip" });
-  }
-
-  function u8(text) { return new TextEncoder().encode(text); }
-
-  async function show(payload) {
-    var viewer = await fetch("tools/mine-walk/viewer.html").then(function (r) { return r.text(); });
-    if (cloudUrl) URL.revokeObjectURL(cloudUrl);
-    cloudUrl = URL.createObjectURL(new Blob(["window.CLOUD=" + JSON.stringify(payload) + ";\n"], { type: "text/javascript" }));
-    frame.srcdoc = viewer
-      .replace('src="three.min.js"', 'src="lib/three.min.js"')
-      .replace('src="cloud.js"', 'src="' + cloudUrl + '"');
-    frame.hidden = false;
-    top.hidden = false;
-    document.body.classList.add("live");
-  }
-
-  function isPhoto(file) {
-    return isImage(file.name) || (file.type && file.type.indexOf("image/") === 0);
-  }
-
-  async function addBands(files) {
-    var n = 0;
-    for (var i = 0; i < files.length; i++) {
-      if (!isPhoto(files[i])) continue;
-      try { bandImages.push(await loadImage(files[i])); n++; } catch (e) {}
-    }
-    if (!n) { say("That photograph could not be read."); return; }
-    var band = colorsFrom(bandImages);
-    picked.floor = band.floor.slice();
-    picked.wall = band.wall.slice();
-    picked.roof = band.ceil.slice();
-    pushColors(currentColors());
-    say("The photograph set the ground, the wall, and the ceiling. Drop the scan when you are ready.");
-  }
-
-  async function buildFrom(scans) {
-    say("Reading " + scans.map(function (f) { return f.name; }).join(", ") + "…");
-    try {
-      var colors = currentColors();
-      var buffers = [];
-      for (var s = 0; s < scans.length; s++) buffers.push({ name: scans[s].name, buffer: await scans[s].arrayBuffer() });
-      say(bandImages.length ? "Building the walk from the scan and the photograph…" : "Building the walk…");
-      var payload = await new Promise(function (resolve, reject) {
-        var worker = new Worker("tools/mine-walk/build.js");
-        worker.onmessage = function (e) {
-          worker.terminate();
-          if (e.data.ok) resolve(e.data.payload);
-          else reject(new Error(e.data.error));
-        };
-        worker.onerror = function (e) { worker.terminate(); reject(new Error(e.message || "The scan could not be read.")); };
-        var transfer = buffers.map(function (b) { return b.buffer; });
-        worker.postMessage({ files: buffers, colors: colors, cell: 0.02, maxPoints: 1500000 }, transfer);
-      });
-      last = { payload: payload, colors: colors };
-      say("");
-      await show(payload);
-    } catch (err) {
-      say(err.message || String(err));
-    }
-  }
-
-  async function route(fileList, target) {
-    var files = Array.prototype.slice.call(fileList || []);
-    var scans = files.filter(function (f) { return isScan(f.name); });
-    var images = files.filter(isPhoto);
-    if (!scans.length && images.length) return addBands(images);
-    if (!scans.length) { say("Drop a LAS, PLY, or XYZ scan."); return; }
-    if (images.length) {
-      for (var i = 0; i < images.length; i++) {
-        try { bandImages.push(await loadImage(images[i])); } catch (e) {}
-      }
-      if (bandImages.length) {
-        var band = colorsFrom(bandImages);
-        picked.floor = band.floor.slice();
-        picked.wall = band.wall.slice();
-        picked.roof = band.ceil.slice();
-      }
-    }
-    return buildFrom(scans);
-  }
-
-  async function fetchBytes(url, onProgress) {
-    var res = await fetch(url);
-    if (!res.ok) throw new Error("The scan could not be downloaded.");
-    var total = Number(res.headers.get("content-length")) || 0;
-    if (!res.body || !res.body.getReader) return await res.arrayBuffer();
-    var reader = res.body.getReader();
-    var chunks = [];
-    var got = 0;
-    while (true) {
-      var step = await reader.read();
-      if (step.done) break;
-      chunks.push(step.value);
-      got += step.value.length;
-      if (onProgress) onProgress(got, total);
-    }
-    var out = new Uint8Array(got);
-    var at = 0;
-    chunks.forEach(function (c) { out.set(c, at); at += c.length; });
-    return out.buffer;
-  }
-
-  async function unzipLas(buf) {
-    var u8 = new Uint8Array(buf);
-    var view = new DataView(buf);
-    var eocd = -1;
-    for (var i = u8.length - 22; i >= Math.max(0, u8.length - 22 - 65536); i--) {
-      if (view.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
-    }
-    if (eocd < 0) throw new Error("That download is not a zip file.");
-    var cd = view.getUint32(eocd + 16, true);
-    var method = view.getUint16(cd + 10, true);
-    var compSize = view.getUint32(cd + 20, true);
-    var nameLen = view.getUint16(cd + 28, true);
-    var localOff = view.getUint32(cd + 42, true);
-    var name = new TextDecoder().decode(u8.subarray(cd + 46, cd + 46 + nameLen));
-    var localNameLen = view.getUint16(localOff + 26, true);
-    var localExtraLen = view.getUint16(localOff + 28, true);
-    var dataOff = localOff + 30 + localNameLen + localExtraLen;
-    var comp = u8.subarray(dataOff, dataOff + compSize);
-    if (method === 0) return { name: name, data: comp };
-    if (method !== 8 || typeof DecompressionStream !== "function") {
-      throw new Error("This browser could not open the zip. Unzip it and drop the LAS file.");
-    }
-    var stream = new Blob([comp]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
-    var raw = new Uint8Array(await new Response(stream).arrayBuffer());
-    if (raw.length < 4 || raw[0] !== 76 || raw[1] !== 65 || raw[2] !== 83 || raw[3] !== 70) {
-      throw new Error("The file inside the zip is not a LAS scan.");
-    }
-    return { name: name, data: raw };
-  }
-
-  async function loadMine() {
-    var btn = document.getElementById("loadmine");
-    btn.disabled = true;
-    try {
-      say("Loading the scan Mike did…");
-      var zip = await fetchBytes("download/silver-king-combined.las.zip", function (got, total) {
-        var pct = total ? Math.min(99, Math.round(got / total * 100)) : 0;
-        say(total ? "Downloading the scan Mike did… " + pct + "%" : "Downloading the scan Mike did…");
-      });
-      say("Opening the scan…");
-      var las = await unzipLas(zip);
-      say("Building the walk from the scan Mike did…");
-      await buildFrom([new File([las.data], las.name || "silver-king-combined.las")]);
-    } catch (err) {
-      say(err.message || String(err));
-    }
-    btn.disabled = false;
-  }
-
-  frame.addEventListener("load", function () {
-    if (!last || !last.colors) return;
-    try {
-      var walk = frame.contentWindow && frame.contentWindow.WALK;
-      if (walk && walk.setColors) walk.setColors(last.colors);
-    } catch (err) {}
-  });
-
-  document.getElementById("dl").addEventListener("click", async function () {
-    if (!last) return;
-    var btn = this;
-    btn.disabled = true;
-    btn.textContent = "Preparing the download…";
-    try {
-      var viewer = await fetch("tools/mine-walk/viewer.html").then(function (r) { return r.text(); });
-      var three = new Uint8Array(await fetch("lib/three.min.js").then(function (r) { return r.arrayBuffer(); }));
-      try {
-        var walk = frame.contentWindow && frame.contentWindow.WALK;
-        if (!walk || !walk.saved || !walk.path || walk.path.length < 2) {
-          frame.contentWindow.document.getElementById("endsHint").textContent = "End the walk first. Mark the key points, then press End the walk. Then download.";
-          btn.disabled = false;
-          btn.textContent = "Download the site";
-          return;
-        }
-        last.payload.path = walk.path;
-        last.payload.saved = true;
-      } catch (err) {
-        say("End the walk first. Mark the key points, then press End the walk.");
-        btn.disabled = false;
-        btn.textContent = "Download the site";
-        return;
-      }
-      var cloud = u8("window.CLOUD=" + JSON.stringify(last.payload) + ";\n");
-      var how = u8(
-        "Unzip this folder. It is the walk.\n" +
-        "On this computer: python3 -m http.server 8000\n" +
-        "then open http://localhost:8000/\n" +
-        "Or upload the folder to the host you already use.\n" +
-        "Desktop: W A S D moves fast, Shift is faster, left drag turns your head, right drag slides, the wheel moves in and out. P plays.\n" +
-        "Press Play to view the walk. The orange dot is the first key point. The green dot is the last. Reverse swaps the direction.\n" +
-        "Phone: left side walks, right side looks.\n"
-      );
-      var blob = zipStore([
-        { name: "index.html", data: u8(viewer) },
-        { name: "cloud.js", data: cloud },
-        { name: "three.min.js", data: three },
-        { name: "HOW.txt", data: how }
-      ]);
-      var url = URL.createObjectURL(blob);
-      var a = document.createElement("a");
-      a.href = url;
-      a.download = "mine-walk.zip";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
-    } catch (err) {
-      say(err.message || String(err));
-    }
-    btn.disabled = false;
-    btn.textContent = "Download the site";
-  });
-
-  window.MINE = {
-    zipStore: zipStore,
-    ready: function () { return last; }
-  };
-})();
-</script>
 </body>
 </html>
