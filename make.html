@@ -4,12 +4,12 @@
 <meta charset="utf-8">
 <title>Make a walk from a scan</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="Drop a mine scan. The walk opens in the browser. Download the site and host it yourself.">
+<meta name="description" content="Step by step: line up the scans, clean them, color the ground, wall, and ceiling, walk the tunnel, and download the site.">
 <style>
 html,body{margin:0;background:#050403;color:#e8d8c4;font-family:system-ui,Segoe UI,Helvetica,Arial,sans-serif}
 a{color:#f0b27a}
 a:hover{color:#ffd2a6}
-main{width:min(760px,100%);margin:0 auto;padding:36px 18px 64px;box-sizing:border-box}
+main{width:min(820px,100%);margin:0 auto;padding:36px 18px 64px;box-sizing:border-box}
 h1{font-weight:650;font-size:clamp(28px,4vw,40px);margin:0 0 8px;color:#f3c79a;letter-spacing:.01em}
 .lead{margin:0 0 22px;font-size:18px;line-height:1.45;color:#f3d7bc}
 h2{margin:28px 0 10px;font-size:22px;font-weight:650;color:#f3c79a}
@@ -38,15 +38,76 @@ pre{margin:12px 0;padding:14px 16px;overflow:auto;background:#120c09;border:1px 
 #top button,#top a{pointer-events:auto;appearance:none;display:inline-block;padding:10px 14px;border:2px solid #e9a066;border-radius:10px;background:rgba(18,12,9,.88);color:#ffd2a6;font:700 15px system-ui,sans-serif;text-decoration:none;cursor:pointer}
 #top button:hover,#top a:hover{background:rgba(233,160,102,.35);color:#fff}
 body.live main{display:none}
+ol.steps > li{margin:22px 0}
+ol.steps h2{margin:0 0 8px;font-size:20px}
 </style>
 </head>
 <body>
 <main>
 <a class="back" href="index.html">Silver King Mine</a>
-<h1>Color, then the scan.</h1>
-<p class="lead">Pick the color of the ground, the wall, and the ceiling. Or attach a photo and the page takes those colors from it. Then drop your LAS, PLY, or XYZ file, or load the scan Mike did. You start inside the scan. Move fast with the mouse and W A S D, mark key points, end the walk, view it here, then download the site.</p>
+<h1>Do these steps in order.</h1>
+<p class="lead">Every step is written out. Follow them from the top. If your scans are already one LAS file and they already sit in the same place, start at step 9. To practice on the Silver King scan Mike already combined, start at step 9 as well. The finished Silver King walk is <a href="walk.html">here</a>.</p>
+<ol class="steps">
+<li>
+<h2>Install CloudCompare.</h2>
+<p>CloudCompare is the free program that lines the scans up. Download it from <a href="https://www.cloudcompare.org/">cloudcompare.org</a>, install it, and open it.</p>
+</li>
+<li>
+<h2>Open the scan files.</h2>
+<p>In CloudCompare, click File, then Open. Select every LAS file from the scanner. You can select more than one. Click Open. Each scan shows up in the list on the left.</p>
+</li>
+<li>
+<h2>See if they already sit together.</h2>
+<p>Click each scan in the left list so it shows. If the tunnels already occupy the same place, with the walls on top of each other, go to step 6. If one tunnel is shifted away from the other, do step 4 and step 5.</p>
+</li>
+<li>
+<h2>Line them up on the overlap.</h2>
+<ol>
+<li>In the left list, click the scan that is in the wrong place. That is the one that will move.</li>
+<li>Hold Ctrl and click the scan that is already in the right place. That one stays put.</li>
+<li>Click Tools, then Registration, then Align (point pairs picking).</li>
+<li>The window has two views. The top lists say which scan moves and which scan stays. If they are backwards, change those lists, or click Reset and pick again.</li>
+<li>On the overlap, click a spot you can recognize, such as a corner, a timber, a rock, or a rail. Then click that same spot in the other view. The pair shows up in the list.</li>
+<li>Do that for at least four spots, spread along the overlap.</li>
+<li>Click Align. The moving scan jumps onto the one that stays.</li>
+<li>If they are close but still a little off, close that tool. Click Tools, then Registration, then Fine registration. Set the overlap to about how much of the two scans actually cover the same ground. Half is a fair start when each walk only shares part of the tunnel. Click OK.</li>
+</ol>
+</li>
+<li>
+<h2>Merge them into one cloud.</h2>
+<p>In the left list, click one scan, hold Ctrl, and click the other. Click Edit, then Merge. One cloud remains. Leave every point in it. The delete step comes after the merge, when it is one cloud.</p>
+</li>
+<li>
+<h2>Delete only what is far from the tunnel.</h2>
+<ol>
+<li>Click the merged cloud in the left list.</li>
+<li>Click Edit, then Segment.</li>
+<li>Left-click a fence around the tunnel and everything near it: the walls, the ceiling, the ground, a minecart, and a person the scanner caught.</li>
+<li>Right-click to close the fence.</li>
+<li>Click Segment In. That keeps the points inside the fence.</li>
+<li>Click the check mark to confirm. The points outside the fence are gone.</li>
+</ol>
+<p>Leave the noise filter alone. A noise filter chews up a minecart and a person. The fence is the cut, and you draw it by eye.</p>
+</li>
+<li>
+<h2>Thin it so a phone can open it.</h2>
+<ol>
+<li>Click the cloud.</li>
+<li>Click Edit, then Subsample.</li>
+<li>Set the method to Space.</li>
+<li>Set the minimum space between points to 0.02. That is 2 centimeters. A short drift comes out around a million points.</li>
+<li>Click OK.</li>
+</ol>
+<p>Silver King itself is 1.25 centimeters, which is 0.0125 in that same box, and about 13.7 million points. Use 0.02 unless the computer can hold the finer cloud.</p>
+</li>
+<li>
+<h2>Save a LAS file.</h2>
+<p>Click File, then Save. In the file-type list, choose LAS. Remember the folder you saved it in. A LAZ file will not open on this page. If the file you have is LAZ, open it here and save it again as LAS.</p>
+</li>
+<li>
+<h2>Set the colors on this page, before the scan.</h2>
+<p>Floor is the ground. Wall is the side of the tunnel. Roof is the ceiling, the rock above your head. Click each color box and pick the color.</p>
 <section id="colors">
-<h2>Color</h2>
 <div class="slots">
   <div class="slot">Floor
     <input id="pick-floor" type="color" value="#998a6b" aria-label="Floor color">
@@ -61,37 +122,109 @@ body.live main{display:none}
     <b>the ceiling</b>
   </div>
 </div>
+<p>Or use one photograph. Click the button, choose the picture, and the page sets the three colors from it. The bottom of the picture is the ground. The middle is the wall. The top is the ceiling.</p>
 <label id="attachphoto">Attach a photo here
   <input id="photos" type="file" accept="image/*">
 </label>
-<p>That photo sets the colors. The bottom is the ground, the middle is the wall, and the top is the ceiling.</p>
 <p id="colorstatus"></p>
 <p id="swatches"></p>
 </section>
+<p>The scanner recorded shape. These colors are painted on afterward. Where a shaft or the end of an adit goes black, the scanner did not bring points back.</p>
+</li>
+<li>
+<h2>Open the scan on this page.</h2>
+<p>Drop the LAS file from step 8 on the box below, or click the box and choose the file. To practice on the combined Silver King scan, use the button under the box. The same file is also <a href="download/silver-king-combined.las.zip">silver-king-combined.las.zip</a> if you want it on your computer: unzip it, then drop the LAS file on the box.</p>
 <label id="drop">Drop the scan here, or choose a file
   <input id="file" type="file" multiple accept=".las,.laz,.ply,.xyz,.txt,.csv">
 </label>
 <button type="button" id="loadmine">Click here to load the scan Mike did</button>
-<p>That button loads the combined Silver King scan, the 1.25 cm merge of the two walks. Drop a file above if you have your own.</p>
 <p id="status"></p>
-<p>The scan stays in this browser. This site does not keep a copy. Choose the ground, the wall, and the ceiling before you drop the scan. Attach a photo here and the page reads the color from it.</p>
-<p>The button above loads that scan in the page. The same file is also here if you want it on your computer: <a href="download/silver-king-combined.las.zip">silver-king-combined.las.zip</a>.</p>
+<p>Wait until the tunnel is on the screen. You start inside the scan. This page keeps the scan in the browser. It does not keep a copy on the server. This page thins a short drift again to about 2 centimeters and about 1.5 million points, so a phone can open it.</p>
+<p>If the page says the file is LAZ, go back to step 8. If the browser sits still or closes, the file is too big for the page. Go to step 19 and do it on the computer.</p>
+</li>
+<li>
+<h2>Move through the scan.</h2>
+<p>The same list stays on the screen inside the scan.</p>
+<ol>
+<li>W walks forward. S walks back. A steps left. D steps right.</li>
+<li>Hold Shift with those keys to go much faster.</li>
+<li>Drag with the left mouse button to turn your head.</li>
+<li>Click the picture once and the mouse looks for you. Press Esc when you want the normal mouse back.</li>
+<li>Drag with the right mouse button to slide sideways and up.</li>
+<li>Roll the mouse wheel to move in and out. Hold Shift and roll the wheel to move farther.</li>
+<li>On a phone, drag the left side of the screen to walk. Drag the right side to look. It is the same page and the same cloud. The phone draws larger dots so the walls meet. A desktop draws smaller dots so the detail shows.</li>
+<li>Press the [ key to make the dots smaller. Press the ] key to make them larger.</li>
+</ol>
+</li>
+<li>
+<h2>Mark key points along the tunnel.</h2>
+<ol>
+<li>Stand where the walk should start.</li>
+<li>Press the K key, or press the button labeled Key point. The orange dot is the first key point.</li>
+<li>Walk a long way. Press K again. A point that is too close to the last one is ignored, so move farther and press K again.</li>
+<li>Keep doing that through the tunnel. The middle dots are pale.</li>
+<li>Press Undo to remove the last key point.</li>
+</ol>
+</li>
+<li>
+<h2>End the walk on the last point.</h2>
+<p>Stand at the last place the walk should stop. Press End the walk. That spot is the last key point, and it turns green. You need at least two key points before End the walk will take.</p>
+</li>
+<li>
+<h2>Play it.</h2>
+<p>Press Play to watch the walk. Press Stop to stop. Press Reverse to swap the direction. Press Lamp to turn the headlamp off and on.</p>
+</li>
+<li>
+<h2>Download the site.</h2>
+<p>Press Download the site. The file is named mine-walk.zip. End the walk before you download. Until the walk is ended, the download waits.</p>
+</li>
+<li>
+<h2>Unzip the download.</h2>
+<p>Unzip mine-walk.zip. The folder holds index.html, cloud.js, three.min.js, and HOW.txt. That folder is the walk.</p>
+</li>
+<li>
+<h2>Look at it on your computer.</h2>
+<ol>
+<li>Open a terminal in that unzipped folder. On Windows, click the folder bar, type <code>cmd</code>, and press Enter. On a Mac, open Terminal, type <code>cd</code>, then a space, and drag the folder into the window.</li>
+<li>Run <code>python3 -m http.server 8000</code>. If the computer says python3 is missing, run <code>python -m http.server 8000</code>.</li>
+<li>Open <a href="http://localhost:8000/">http://localhost:8000/</a> in the browser.</li>
+<li>Press Play.</li>
+</ol>
+</li>
+<li>
+<h2>Put it on the web.</h2>
+<p>Upload the unzipped folder to the web host you already use. Desktop and phone open the same address. Press Another scan, at the top of the walk, to come back to this list and start over.</p>
+</li>
+<li>
+<h2>If the browser cannot hold the file, do it on the computer.</h2>
+<ol>
+<li>Download <a href="https://github.com/Stroop14/calico-mapping-lidar/archive/refs/heads/gh-pages.zip">this zip of the program</a> and unzip it. The folder is named calico-mapping-lidar-gh-pages.</li>
+<li>Install Python from <a href="https://www.python.org/downloads/">python.org</a> if the computer does not have it. On the Windows installer, check Add python.exe to PATH.</li>
+<li>Copy your LAS file and your photograph into that folder.</li>
+<li>Open a terminal in that folder, the same way as step 17.</li>
+<li>Run <code>pip install numpy pillow</code>. NumPy holds the point coordinates. Pillow opens the photograph. They are not part of the scan.</li>
+<li>Run <code>python3 tools/mine-walk/make_walk.py yourscan.las --photos yourphoto.jpg --out site</code>. Use the real file names. On Windows, if python3 is missing, use <code>python</code> instead of <code>python3</code>.</li>
+<li>One photograph is read in bands: the bottom is the ground, the middle is the wall, and the top is the ceiling. If you have a separate ground photo and a separate wall photo, run <code>python3 tools/mine-walk/make_walk.py yourscan.las --floor ground.jpg --wall wall.jpg --out site</code>.</li>
+<li>For a finer cloud like Silver King, add <code>--cell 0.0125</code> before <code>--out site</code>.</li>
+<li>Run <code>cd site</code>, then <code>python3 -m http.server 8000</code>, then open <a href="http://localhost:8000/">http://localhost:8000/</a>.</li>
+<li>Press Play. This program lays the path down the middle of the tunnel for you. The orange dot is the start. The green dot is the end. Reverse swaps the direction.</li>
+<li>Upload the <code>site</code> folder the same way as step 18.</li>
+</ol>
+</li>
+<li>
+<h2>Or hand the same steps to Cursor.</h2>
+<p>Grok 4.7 or Opus 5.5 can follow this. Paste it, and put your LAS file and your photograph in the folder with it.</p>
+<pre>Build a walk-through of a mine LiDAR scan as one web page for a phone and a desktop.
 
-<h2>Key points</h2>
-<p>You start inside the scan. W A S D moves fast, and Shift is faster. Drag with the left mouse button to turn your head, or click so the mouse looks for you. Drag with the right button to slide sideways and up. The mouse wheel moves you in and out. The same list stays on the screen.</p>
-<p>Press K, or Key point, along the scan. Move a long way and press K again. The orange dot is the first key point. The green dot is the last one. At the end, press End the walk. Then press Play to view it here, and download the site.</p>
-
-<h2>If the scans do not already line up</h2>
-<p>Do that in CloudCompare before you drop the file. Line the scans up on the overlap, then merge them into one cloud. Delete only points that are nowhere near the tunnel. Keep the walls, a minecart, and a person the scanner caught. Save LAS.</p>
-
-<h2>The same program on your own computer</h2>
-<p>You do not install anything to use this page. The folder <code>tools/mine-walk</code> is that same program as a Python file, for a scan that is too big for the browser. It needs two free add-ons, and they are not part of the scan. NumPy holds the list of point coordinates. Pillow opens the photograph files so the colors can be read. This line downloads those two add-ons onto the computer that will run the program:</p>
-<pre>pip install numpy pillow</pre>
-<p>Then point it at the scan and the photographs. A short drift is thinned to about 2 cm. Silver King itself is 1.25 cm.</p>
-<pre>python3 tools/mine-walk/make_walk.py drift.las --photos wall.jpg --out site
-cd site
-python3 -m http.server 8000</pre>
-<p><a href="walk.html">Open the Silver King walk</a></p>
+1. If there is more than one scan, open them in CloudCompare. Line them up on the overlap with Tools, Registration, Align (point pairs picking), at least four pairs. If they are close but still off, run Fine registration and set the overlap to the part they share. Then Edit, Merge, so they are one cloud.
+2. Edit, Segment. Fence the tunnel by eye and keep the inside: walls, ceiling, ground, a minecart, and any person the scanner caught. Leave the noise filter alone.
+3. Edit, Subsample, method Space, minimum space 0.02 meters for a short drift. Save LAS. A LAZ file has to be saved as LAS.
+4. One web page. The same cloud on both screens. Smaller dots on a desktop. Larger dots on a phone so the walls meet.
+5. Color is three choices: ground, wall, and ceiling. A color picker sets each one. One photo can set them: the bottom of the photo is the ground, the middle is the wall, the top is the ceiling.
+6. Start the view inside the scan. W A S D moves, Shift is faster, left mouse looks, right mouse slides, the wheel moves in and out. On a phone the left side walks and the right side looks.
+7. K drops key points along the tunnel. The last point ends the walk. Orange is the first. Green is the last. They can play it and download the site as a folder. The scan is not uploaded.</pre>
+</li>
+</ol>
 </main>
 <iframe id="view" title="Walk" hidden></iframe>
 <div id="top" hidden>
