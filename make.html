@@ -46,7 +46,7 @@ ol.steps h2{margin:0 0 8px;font-size:20px}
 <main>
 <a class="back" href="index.html">Silver King Mine</a>
 <h1>Do these steps in order.</h1>
-<p class="lead">Every step is written out. Follow them from the top. If your scans are already one LAS file and they already sit in the same place, start at step 9. To practice on the Silver King scan Mike already combined, start at step 9 as well. The finished Silver King walk is <a href="walk.html">here</a>.</p>
+<p class="lead">Each tunnel is this same sequence. Steps 1–8 are CloudCompare. Steps 9–18 are this page. Step 19 is the same walk built on the computer when the LAS file is too large for the browser. If the file is already one LAS and the scans already share one coordinate system, start at step 9. The finished Silver King walk is <a href="walk.html">here</a>.</p>
 <ol class="steps">
 <li>
 <h2>Install CloudCompare.</h2>
@@ -54,55 +54,97 @@ ol.steps h2{margin:0 0 8px;font-size:20px}
 </li>
 <li>
 <h2>Open the scan files.</h2>
-<p>In CloudCompare, click File, then Open. Select every LAS file from the scanner. You can select more than one. Click Open. Each scan shows up in the list on the left.</p>
-</li>
-<li>
-<h2>See if they already sit together.</h2>
-<p>Click each scan in the left list so it shows. If the tunnels already occupy the same place, with the walls on top of each other, go to step 6. If one tunnel is shifted away from the other, do step 4 and step 5.</p>
-</li>
-<li>
-<h2>Line them up on the overlap.</h2>
 <ol>
-<li>In the left list, click the scan that is in the wrong place. That is the one that will move.</li>
-<li>Hold Ctrl and click the scan that is already in the right place. That one stays put.</li>
+<li>In CloudCompare, click File, then Open.</li>
+<li>Select every LAS file from the scanner. Hold Ctrl to select more than one. Click Open.</li>
+<li>Each file becomes one row in the DB Tree, the list on the left. The checkbox on a row shows or hides that cloud. Click the name to select it. A selected name is highlighted.</li>
+<li>The mouse in the 3D view: hold the left button and drag to rotate. Hold the right button and drag to slide the view. Roll the wheel to zoom. This is the normal mouse. Step 6 changes it while a polygon is being drawn.</li>
+</ol>
+</li>
+<li>
+<h2>See whether the scans already share one coordinate system.</h2>
+<ol>
+<li>Check the box on every scan so all of them are drawn. CloudCompare gives each one a different color when the file has no color.</li>
+<li>Rotate and zoom until you can see the whole set.</li>
+<li>If the walls of both walks occupy the same place, and the two colors are mixed on the same wall, they already share a coordinate system. Go to step 6.</li>
+<li>If you see two separate tunnels, or one tunnel floating away from the other, they do not share a coordinate system. Do step 4, then step 5, then step 6.</li>
+</ol>
+</li>
+<li>
+<h2>Line the shifted scan up on the overlap.</h2>
+<ol>
+<li>In the DB Tree, click the name of the scan that is in the wrong place.</li>
+<li>Hold Ctrl and click the name of the scan that should stay put. Both names are highlighted.</li>
 <li>Click Tools, then Registration, then Align (point pairs picking).</li>
-<li>The window has two views. The top lists say which scan moves and which scan stays. If they are backwards, change those lists, or click Reset and pick again.</li>
-<li>On the overlap, click a spot you can recognize, such as a corner, a timber, a rock, or a rail. Then click that same spot in the other view. The pair shows up in the list.</li>
-<li>Do that for at least four spots, spread along the overlap.</li>
-<li>Click Align. The moving scan jumps onto the one that stays.</li>
-<li>If they are close but still a little off, close that tool. Click Tools, then Registration, then Fine registration. Set the overlap to about how much of the two scans actually cover the same ground. Half is a fair start when each walk only shares part of the tunnel. Click OK.</li>
+<li>The first window assigns roles. Aligned is the cloud that will move. Reference is the cloud that will not move. Set the two drop-downs. If they are reversed, click Swap. Click OK.</li>
+<li>Both clouds are now in one view, and a window opens at the upper right. It has an Aligned table, a Reference table, a checkbox for each cloud, an align button, a reset button, a green check mark, and a red X.</li>
+<li>Uncheck Reference so only the cloud that moves is visible.</li>
+<li>Left-click a spot that also exists in the other scan: a corner, the end of a timber, a rock edge, a rail. A marker whose name starts with A is drawn, and a row is added to the Aligned table.</li>
+<li>Left-click at least three more spots on that same cloud, spread along the overlap. Four pairs hold better than three. The row order is the pair order. Write the order down if you will not remember it: first spot, second spot, third spot, fourth spot.</li>
+<li>Uncheck Aligned. Check Reference.</li>
+<li>Left-click those same physical spots, in the same order. The first click on this cloud must be the same place as the first A marker. Markers whose names start with R are added to the Reference table. The two tables need the same number of rows.</li>
+<li>Check both clouds.</li>
+<li>Click align. The moving cloud shifts. The window shows an RMS, the leftover mismatch, and an error on each row.</li>
+<li>If one row’s error is much larger than the others, click the X on that row in both tables, pick that pair again, and click align again.</li>
+<li>Leave fixed scale checked. Unchecking it rescales one scan. These files came from the same kind of instrument.</li>
+<li>Click the green check mark to keep the move. A report window opens. Close it. Clicking the red X throws the move away. Reset puts the moving cloud back where it was before this tool.</li>
+<li>Rotate the result. If the walls now occupy the same place, go to step 5. If they are close and still separated by a small gap, do the next three clicks.</li>
+<li>Click Tools, then Registration, then Fine registration (ICP).</li>
+<li>In that window, Data is the cloud that moves. CloudCompare draws it red. Model is the cloud that stays. CloudCompare draws it yellow. Click Swap if red and yellow are reversed.</li>
+<li>Set Final overlap to the percentage of the moving scan that covers the same tunnel as the scan that stays. When about half of the moving scan overlaps the other, type 50. The value already in the box is 100. At 100, CloudCompare treats every point of the moving scan as part of the same object, and a scan that only shares a section of the tunnel is shifted off that section.</li>
+<li>Leave Adjust scale unchecked. Click OK. Wait until the red cloud stops moving.</li>
 </ol>
 </li>
 <li>
-<h2>Merge them into one cloud.</h2>
-<p>In the left list, click one scan, hold Ctrl, and click the other. Click Edit, then Merge. One cloud remains. Leave every point in it. The delete step comes after the merge, when it is one cloud.</p>
-</li>
-<li>
-<h2>Delete only what is far from the tunnel.</h2>
+<h2>Merge the two scans into one cloud.</h2>
 <ol>
-<li>Click the merged cloud in the left list.</li>
-<li>Click Edit, then Segment.</li>
-<li>Left-click a fence around the tunnel and everything near it: the walls, the ceiling, the ground, a minecart, and a person the scanner caught.</li>
-<li>Right-click to close the fence.</li>
-<li>Click Segment In. That keeps the points inside the fence.</li>
-<li>Click the check mark to confirm. The points outside the fence are gone.</li>
+<li>In the DB Tree, click one scan’s name.</li>
+<li>Hold Ctrl and click the other scan’s name. Both are highlighted.</li>
+<li>Click Edit, then Merge.</li>
+<li>A new row appears in the DB Tree. That row is the combined cloud. The two original scans are still in the list.</li>
+<li>Uncheck the two originals. Leave the new cloud checked. Steps 6, 7, and 8 use the new cloud. The originals stay on disk as the files you opened.</li>
 </ol>
-<p>Leave the noise filter alone. A noise filter chews up a minecart and a person. The fence is the cut, and you draw it by eye.</p>
 </li>
 <li>
-<h2>Thin it so a phone can open it.</h2>
+<h2>Delete the points that are far from the tunnel.</h2>
+<p>The command is Edit, then Segment. It draws a polygon on the screen and then deletes the points on one side of that polygon. A minecart and a person stay in the result because you include them inside the polygon.</p>
+<p>Tools, then Clean, then SOR filter is a different command. SOR deletes points whose distance to their neighbors is larger than the distances in the rest of the cloud. A person and a minecart are sparse next to a wall, so SOR removes them. This step does not use SOR.</p>
 <ol>
-<li>Click the cloud.</li>
+<li>In the DB Tree, click the merged cloud so its name is highlighted. The original scans stay unchecked.</li>
+<li>Click Edit, then Segment. A toolbar is added at the upper right of the 3D view.</li>
+<li>Press the Space bar. The Pause segmentation button is down. Shortcut: Space. While that button is down, the mouse is the normal mouse: left button rotates, right button slides the view, wheel zooms. Turn the cloud until the tunnel is one group and the stray points are visibly far from it.</li>
+<li>Press the Space bar again. Pause is off. Left-clicks now add corners of a polygon. The right button no longer slides the view.</li>
+<li>The toolbar’s selection mode should be polygonal. The tooltip on that button says “Polygonal selection”. If it says rectangular, click the arrow next to it and choose polygonal, or press Tab.</li>
+<li>Left-click a corner out past the tunnel, with the walls, the ground, the ceiling, the minecart, and any person inside the shape you are drawing. Left-click the next corner. Repeat until the polygon surrounds the whole tunnel. Between clicks, the current edge follows the mouse.</li>
+<li>Right-click once. That closes the polygon. The right-click does not add a corner.</li>
+<li>Click the toolbar button whose tooltip is “Segment Inside”. The second line of the tooltip says “keep points inside”. Shortcut: I. Points outside the polygon vanish from the view. They are hidden. They are not deleted yet. The tool returns to pause, so the left button rotates again.</li>
+<li>Rotate the cloud. Look at both ends, the cart, and the people. If something that belongs in the tunnel is missing, click the button whose tooltip is “Reset segmentation” (“Clear segmentation”). The hidden points return. Press Space to leave pause, and draw a wider polygon.</li>
+<li>When the view shows the tunnel and the things in it, and the far points are hidden, click the trash-can button. The tooltip is “Confirm and delete hidden points”. Shortcut: Delete. CloudCompare deletes the hidden points and leaves one cloud.</li>
+<li>Escape cancels the tool and deletes nothing. Enter confirms a split into two clouds and does not delete the hidden points. For one cloud with the far points removed, use the trash-can button.</li>
+</ol>
+</li>
+<li>
+<h2>Thin the cloud.</h2>
+<ol>
+<li>Click the cloud that remains after step 6.</li>
+<li>Hover a point in the 3D view and read the coordinates in the status bar at the bottom. If those numbers are in the tens or hundreds, the file is in meters. If they are in the tens of thousands, the file is in millimeters.</li>
 <li>Click Edit, then Subsample.</li>
-<li>Set the method to Space.</li>
-<li>Set the minimum space between points to 0.02. That is 2 centimeters. A short drift comes out around a million points.</li>
-<li>Click OK.</li>
+<li>Set the method to Spatial. Random, Random (%), and Octree are the other methods in that list. Spatial is the method with a minimum distance between kept points.</li>
+<li>In the minimum-distance box, type 0.02 if the file is in meters. That is 2 centimeters. Type 20 if the file is in millimeters. A short drift comes out around a million points.</li>
+<li>Click OK. CloudCompare makes a new cloud and unchecks the one you subsampled. The new cloud is the one to save. The points that remain are a subset of the old points. They are not moved.</li>
 </ol>
-<p>Silver King itself is 1.25 centimeters, which is 0.0125 in that same box, and about 13.7 million points. Use 0.02 unless the computer can hold the finer cloud.</p>
+<p>The Silver King file used 0.0125 meters, which is 1.25 centimeters, and kept 13,657,307 points. Use 0.02 unless the machine can hold the finer cloud. This page thins again, in step 10, to about 2 centimeters and about 1.5 million points.</p>
 </li>
 <li>
 <h2>Save a LAS file.</h2>
-<p>Click File, then Save. In the file-type list, choose LAS. Remember the folder you saved it in. A LAZ file will not open on this page. If the file you have is LAZ, open it here and save it again as LAS.</p>
+<ol>
+<li>Click the new, subsampled cloud so its name is highlighted.</li>
+<li>Click File, then Save.</li>
+<li>At the bottom of the save window, open the file-type list. Choose “LAS cloud (*.las)”. BIN is CloudCompare’s own format. LAZ is compressed. This page opens LAS. It does not open LAZ or BIN.</li>
+<li>Choose a folder and a file name. Click Save.</li>
+<li>If a second window asks for a LAS version, point format, or scale, leave the values that are already filled in and click OK.</li>
+</ol>
+<p>If the scanner gave you LAZ, open that LAZ in CloudCompare and save it again with the file type set to LAS cloud.</p>
 </li>
 <li>
 <h2>Set the colors on this page, before the scan.</h2>
@@ -139,8 +181,8 @@ ol.steps h2{margin:0 0 8px;font-size:20px}
 </label>
 <button type="button" id="loadmine">Click here to load the scan Mike did</button>
 <p id="status"></p>
-<p>Wait until the tunnel is on the screen. You start inside the scan. This page keeps the scan in the browser. It does not keep a copy on the server. This page thins a short drift again to about 2 centimeters and about 1.5 million points, so a phone can open it.</p>
-<p>If the page says the file is LAZ, go back to step 8. If the browser sits still or closes, the file is too big for the page. Go to step 19 and do it on the computer.</p>
+<p>Wait until the tunnel is drawn. The camera is placed inside the tunnel. The scan stays in this browser. The server does not receive a copy. This page thins the cloud again to about 2 centimeters and about 1.5 million points.</p>
+<p>If the status line says the file is LAZ, return to step 8 and save LAS. If the tab stops responding or the browser closes, the file is too large for this page. Use step 19.</p>
 </li>
 <li>
 <h2>Move through the scan.</h2>
@@ -159,16 +201,16 @@ ol.steps h2{margin:0 0 8px;font-size:20px}
 <li>
 <h2>Mark key points along the tunnel.</h2>
 <ol>
-<li>Stand where the walk should start.</li>
-<li>Press the K key, or press the button labeled Key point. The orange dot is the first key point.</li>
-<li>Walk a long way. Press K again. A point that is too close to the last one is ignored, so move farther and press K again.</li>
-<li>Keep doing that through the tunnel. The middle dots are pale.</li>
-<li>Press Undo to remove the last key point.</li>
+<li>Move to the place where the walk should start. Use step 11.</li>
+<li>Press the K key, or click the button labeled Key point. The first marker is orange.</li>
+<li>Move at least half a meter. Press K again. The page rejects a new key point closer than 0.4 meters to the previous one.</li>
+<li>Repeat along the tunnel. Markers between the first and the last are drawn pale.</li>
+<li>Undo removes the last key point.</li>
 </ol>
 </li>
 <li>
 <h2>End the walk on the last point.</h2>
-<p>Stand at the last place the walk should stop. Press End the walk. That spot is the last key point, and it turns green. You need at least two key points before End the walk will take.</p>
+<p>Move to the last place the walk should include. Click End the walk. The page adds that position as the last key point if it is at least 0.4 meters from the previous one, then stores the path. The last marker is green. End the walk requires at least two key points. With only one, the button does not store a path.</p>
 </li>
 <li>
 <h2>Play it.</h2>
@@ -176,7 +218,7 @@ ol.steps h2{margin:0 0 8px;font-size:20px}
 </li>
 <li>
 <h2>Download the site.</h2>
-<p>Press Download the site. The file is named mine-walk.zip. End the walk before you download. Until the walk is ended, the download waits.</p>
+<p>Click Download the site. The file is mine-walk.zip. The button checks that End the walk has been pressed and that the path has at least two points. If either check fails, the hint line in the walk tells you to end the walk first, and no zip is written.</p>
 </li>
 <li>
 <h2>Unzip the download.</h2>
@@ -214,15 +256,21 @@ ol.steps h2{margin:0 0 8px;font-size:20px}
 <li>
 <h2>Or hand the same steps to Cursor.</h2>
 <p>Grok 4.7 or Opus 5.5 can follow this. Paste it, and put your LAS file and your photograph in the folder with it.</p>
-<pre>Build a walk-through of a mine LiDAR scan as one web page for a phone and a desktop.
+<pre>Build a walk-through of one mine LiDAR scan as one web page. Phone and desktop open the same page and the same cloud. Desktop point size is smaller. Phone point size is larger, so a thinned wall still reads as a surface.
 
-1. If there is more than one scan, open them in CloudCompare. Line them up on the overlap with Tools, Registration, Align (point pairs picking), at least four pairs. If they are close but still off, run Fine registration and set the overlap to the part they share. Then Edit, Merge, so they are one cloud.
-2. Edit, Segment. Fence the tunnel by eye and keep the inside: walls, ceiling, ground, a minecart, and any person the scanner caught. Leave the noise filter alone.
-3. Edit, Subsample, method Space, minimum space 0.02 meters for a short drift. Save LAS. A LAZ file has to be saved as LAS.
-4. One web page. The same cloud on both screens. Smaller dots on a desktop. Larger dots on a phone so the walls meet.
-5. Color is three choices: ground, wall, and ceiling. A color picker sets each one. One photo can set them: the bottom of the photo is the ground, the middle is the wall, the top is the ceiling.
-6. Start the view inside the scan. W A S D moves, Shift is faster, left mouse looks, right mouse slides, the wheel moves in and out. On a phone the left side walks and the right side looks.
-7. K drops key points along the tunnel. The last point ends the walk. Orange is the first. Green is the last. They can play it and download the site as a folder. The scan is not uploaded.</pre>
+CloudCompare, in this order:
+1. File, Open. Open every LAS. In the 3D view, left-drag rotates, right-drag pans, the wheel zooms.
+2. If the tunnels do not already occupy the same space: select both clouds. Tools, Registration, Align (point pairs picking). Aligned moves, Reference stays. Pick at least four of the same spots, in the same order, on each cloud. Click align, then the green check. Leave fixed scale checked. If a small gap remains: Tools, Registration, Fine registration (ICP). Data moves (red), Model stays (yellow). Set Final overlap to the percent of the moving scan that actually overlaps the other, often about 50 when the walks share half their length. Leave Adjust scale unchecked.
+3. Select both clouds. Edit, Merge. Use the new cloud. Uncheck the originals.
+4. Edit, Segment. Space pauses so you can rotate. Space again to draw. Left-click a polygon around the tunnel, including walls, ground, ceiling, a minecart, and any person. Right-click closes the polygon and does not add a vertex. Click Segment Inside (keep points inside). Click the trash-can button, Confirm and delete hidden points. Do not use Tools, Clean, SOR filter. SOR removes sparse objects such as a person or a cart.
+5. Edit, Subsample. Method: Spatial. Minimum distance 0.02 if the coordinates are meters, or 20 if they are millimeters. File, Save. File type: LAS cloud (*.las). Not LAZ. Not BIN.
+
+Then one web page:
+6. Before the scan is loaded, set three colors: ground, wall, ceiling. One photo may set all three: bottom of the photo is ground, middle is wall, top is ceiling.
+7. Load the LAS. The camera starts inside the tunnel.
+8. W A S D moves. Shift is faster. Left drag looks. Right drag slides. Wheel moves in and out. On a phone, the left side of the screen walks and the right side looks.
+9. K, or the Key point button, stores a station. Stations closer than 0.4 m are rejected. The first marker is orange. Middle markers are pale. End the walk stores the current position as the last station and turns it green. At least two stations are required.
+10. Play runs the path. Download writes a zip of the site. The scan is not uploaded.</pre>
 </li>
 </ol>
 </main>
