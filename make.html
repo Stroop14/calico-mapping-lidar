@@ -2,9 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>What was sent, and how to make the walk</title>
+<title>A new LiDAR scan: from the files to a walk</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="The Silver King files that were sent, how to prepare a scan in CloudCompare, and how to build the walk.">
+<meta name="description" content="Turn LAS or LAZ from a new scan into one cloud, then into a walk students can open. The points stay the measured points.">
 <style>
 html,body{margin:0;background:#050403;color:#e8d8c4;font-family:system-ui,Segoe UI,Helvetica,Arial,sans-serif}
 a{color:#f0b27a}
@@ -29,25 +29,12 @@ a.dl:hover{background:rgba(233,160,102,.35);color:#fff}
 <body>
 <main>
 <a class="back" href="index.html">Silver King Mine</a>
-<h1>What was sent, then how to make the next one.</h1>
-<p class="lead">Three parts, in this order. Part 1 is the Silver King material. Part 2 is CloudCompare, which turns separate scans into one LAS file. Part 3 is the program that turns that LAS file into a walk.</p>
+<h1>You have a new LiDAR scan. This is how it becomes a walk.</h1>
+<p class="lead">The scanner handed you LAS files, or LAZ files, which are the same points in a compressed file. Often there are several, and they do not yet sit in one tunnel. Part 1 turns them into one LAS file without moving the measured points and without throwing away a cart, a timber, or a person. Part 2 paints ground, wall, and ceiling so the shape reads, builds the walk, and gives you a folder students open on a phone or a computer. The <a href="walk.html">Silver King walk</a> is one finished result of this sequence. Your files go through the same two parts.</p>
+<p>If you already have one LAS file and the scans already share one coordinate system, start at Part 2.</p>
 
-<h2>Part 1. What was sent</h2>
-<p>The walk is the Silver King Mine tunnel from the CSUSB geology field camp on 24 March 2019, led by Dr. Erik Melchiorre. The instrument was a handheld GeoSLAM scanner. The portal is 34.95117° N, 116.86307° W. From the LAS files on, Mike Murrey rendered the walk.</p>
-<p>The scanner recorded shape. It did not record color. The color on the walk is painted from height: ground, wall, and ceiling. A black opening over a shaft, or at the end of an adit, is a place where the scanner did not return points.</p>
-<p><a class="dl" href="walk.html">Open the walk</a></p>
-<p>That address is the walk in the browser. Desktop and phone open the same page.</p>
-<p><a class="dl" href="media/walkthrough-desktop.mp4">Download the video</a></p>
-<p>A recording of the desktop walk.</p>
-<p><a class="dl" href="download/calico-silver-king-offline.zip">Download the offline copy</a></p>
-<p>Unzip <code>calico-silver-king-offline.zip</code>. Open a terminal in the unzipped folder. On Windows, click the folder address bar, type <code>cmd</code>, and press Enter. On a Mac, open Terminal, type <code>cd</code>, then a space, and drag the folder into the window. Run:</p>
-<pre>python3 -m http.server 8000</pre>
-<p>If the computer does not find <code>python3</code>, run <code>python -m http.server 8000</code>. Open <a href="http://localhost:8000/">http://localhost:8000/</a>. The zip holds a copy of the site, including the walk, the maps, and the video, so it opens without GitHub.</p>
-<p><a class="dl" href="download/silver-king-combined.las.zip">Download the combined scan</a></p>
-<p>Unzip <code>silver-king-combined.las.zip</code>. The file inside is <code>silver-king-combined.las</code>. It is the 1.25 cm merge of the two walks: 13,657,307 points. CloudCompare and the walk program both open that LAS file. They do not open the zip.</p>
-
-<h2>Part 2. Prepare a scan in CloudCompare</h2>
-<p>This part makes one LAS file from the scanner files. Download CloudCompare, install it, and use it for the eight steps below.</p>
+<h2>Part 1. Make one LAS file from the scanner files</h2>
+<p>CloudCompare is the program for this part. The points you keep are a subset of the points the scanner measured. This part does not stretch them, and it does not recolor them.</p>
 <p><a class="dl" href="https://www.cloudcompare.org/">Download CloudCompare</a></p>
 <ol class="steps">
 <li>
@@ -58,7 +45,7 @@ a.dl:hover{background:rgba(233,160,102,.35);color:#fff}
 <h3>Open the scan files.</h3>
 <ol>
 <li>In CloudCompare, click File, then Open.</li>
-<li>Select every LAS file from the scanner. Hold Ctrl to select more than one. Click Open.</li>
+<li>Select every LAS or LAZ file from this scan. Hold Ctrl to select more than one. Click Open. LAZ is the compressed copy of the same points. CloudCompare opens it. The walk program in Part 2 does not, so step 8 saves LAS.</li>
 <li>Each file becomes one row in the DB Tree, the list on the left. The checkbox on a row shows or hides that cloud. Click the name to select it. A selected name is highlighted.</li>
 <li>The mouse in the 3D view: hold the left button and drag to rotate. Hold the right button and drag to slide the view. Roll the wheel to zoom. This is the normal mouse. Step 6 changes it while a polygon is being drawn.</li>
 </ol>
@@ -135,14 +122,14 @@ a.dl:hover{background:rgba(233,160,102,.35);color:#fff}
 <li>In the minimum-distance box, type 0.02 if the file is in meters. That is 2 centimeters. Type 20 if the file is in millimeters. A short drift comes out around a million points.</li>
 <li>Click OK. CloudCompare makes a new cloud and unchecks the one you subsampled. The new cloud is the one to save. The points that remain are a subset of the old points. They are not moved.</li>
 </ol>
-<p>The Silver King file used 0.0125 meters, which is 1.25 centimeters, and kept 13,657,307 points. Use 0.02 unless the machine can hold the finer cloud. The walk program in Part 3 thins again to about 2 centimeters and about 1.5 million points.</p>
+<p>The Silver King file used 0.0125 meters, which is 1.25 centimeters, and kept 13,657,307 points. Use 0.02 unless the machine can hold the finer cloud. The walk program in Part 2 thins again to about 2 centimeters and about 1.5 million points.</p>
 </li>
 <li>
 <h3>Save a LAS file.</h3>
 <ol>
 <li>Click the new, subsampled cloud so its name is highlighted.</li>
 <li>Click File, then Save.</li>
-<li>At the bottom of the save window, open the file-type list. Choose “LAS cloud (*.las)”. BIN is CloudCompare’s own format. LAZ is compressed. The walk program in Part 3 opens LAS. It does not open LAZ or BIN.</li>
+<li>At the bottom of the save window, open the file-type list. Choose “LAS cloud (*.las)”. BIN is CloudCompare’s own format. LAZ is compressed. The walk program in Part 2 opens LAS. It does not open LAZ or BIN.</li>
 <li>Choose a folder and a file name. Click Save.</li>
 <li>If a second window asks for a LAS version, point format, or scale, leave the values that are already filled in and click OK.</li>
 </ol>
@@ -150,22 +137,24 @@ a.dl:hover{background:rgba(233,160,102,.35);color:#fff}
 </li>
 </ol>
 
-<h2>Part 3. Make the walk</h2>
-<p>This part takes the LAS file from Part 2 and writes a folder you can open in a browser. The program stores a path down the middle of the tunnel. Press Play to follow it.</p>
+<h2>Part 2. Paint the surfaces and publish the walk</h2>
+<p>The LAS file from Part 1 is the measurement. This part does not move those points. It gives the ground, the wall, and the ceiling three different colors so a student can read the shape of the drift, puts a headlamp and a little fog on the cloud so the rock reads as a surface, and writes a folder. That folder is the site.</p>
+<p>A handheld scanner often records no color. The colors on the walk are paint. Say that next to the walk when you publish it. A black opening over a shaft, or at the end of an adit, is a place the scanner did not return points. It is not a black rock.</p>
+<p>The path Play follows runs down the middle of the points so a student can travel the drift. It is a viewing path. It is not a surveyed centerline. Distances between the points are the scan. On the page you give students, write the spacing you kept: 0.02 m, or 0.0125 m if you used the finer setting below.</p>
 <p><a class="dl" href="download/mine-walk-program.zip">Download the walk program</a></p>
 <ol>
 <li>Unzip <code>mine-walk-program.zip</code>. The folder contains <code>HOW.txt</code>, <code>tools/mine-walk/make_walk.py</code>, <code>tools/mine-walk/viewer.html</code>, and <code>lib/three.min.js</code>.</li>
 <li>Install Python from <a href="https://www.python.org/downloads/">python.org</a> if the computer does not have it. On the Windows installer, check Add python.exe to PATH.</li>
-<li>Open a terminal in the unzipped folder, the same way as in Part 1.</li>
+<li>Open a terminal in the unzipped folder. On Windows, click the folder address bar, type <code>cmd</code>, and press Enter. On a Mac, open Terminal, type <code>cd</code>, then a space, and drag the folder into the window.</li>
 <li>Run <code>pip install numpy pillow</code>. NumPy holds the list of point coordinates. Pillow opens the photograph. They are not part of the scan.</li>
-<li>Copy the LAS file from Part 2 into that folder. Copy one photograph of the tunnel into the same folder.</li>
+<li>Copy the LAS file from Part 1 into that folder. Copy one photograph of the tunnel into the same folder. The photograph is only there to supply three colors.</li>
 <li>Run the command below. Replace the file names with the real names. On Windows, if <code>python3</code> is not found, use <code>python</code>.</li>
 </ol>
 <pre>python3 tools/mine-walk/make_walk.py yourscan.las --photos yourphoto.jpg --out site</pre>
-<p>The photograph is split into three bands. The bottom band is the ground color. The middle band is the wall color. The top band is the ceiling color. The scanner still has no color of its own. The photograph supplies the three colors.</p>
+<p>The photograph is split into three bands. The bottom band is the ground color. The middle band is the wall color. The top band is the ceiling color.</p>
 <p>If the ground and the wall are two separate photographs:</p>
 <pre>python3 tools/mine-walk/make_walk.py yourscan.las --floor ground.jpg --wall wall.jpg --out site</pre>
-<p>The default spacing is 0.02 meters, and the program keeps at most 1,500,000 points. For 1.25 centimeters, the Silver King spacing, put <code>--cell 0.0125</code> before <code>--out site</code>. <code>--max-points 0</code> keeps every point that remains after that spacing.</p>
+<p>The default spacing is 0.02 meters, and the program keeps at most 1,500,000 points so a phone can open the same cloud as a desktop. For 1.25 centimeters, put <code>--cell 0.0125</code> before <code>--out site</code>. <code>--max-points 0</code> keeps every point that remains after that spacing. The points that remain are still the measured points. They are not moved to new positions.</p>
 <ol start="7">
 <li>Run these two commands, then open the address in a browser.</li>
 </ol>
@@ -173,10 +162,11 @@ a.dl:hover{background:rgba(233,160,102,.35);color:#fff}
 python3 -m http.server 8000</pre>
 <p>Open <a href="http://localhost:8000/">http://localhost:8000/</a>.</p>
 <ol start="8">
-<li>Press Play. The orange dot is the first point of the path. The green dot is the last point. Reverse swaps the direction. Lamp turns the headlamp off and on.</li>
-<li>To move yourself instead of playing the path: W walks forward, S walks back, A steps left, D steps right. Hold Shift to go faster. Drag with the left mouse button to turn. Click once and the mouse looks for you; press Esc to release it. Drag with the right mouse button to slide sideways and up. The wheel moves in and out. On a phone, drag the left side of the screen to walk and the right side to look. Press [ to make the dots smaller and ] to make them larger. The phone draws larger dots than the desktop. Both use the same cloud.</li>
-<li>Upload the <code>site</code> folder to a web host. Phone and desktop open that same address.</li>
+<li>Press Play and walk the drift once before you publish it. The orange dot is the first point of the viewing path. The green dot is the last. Reverse swaps the direction. Lamp turns the headlamp off and on. Look at both ends, the carts, and the timbers. If something that belongs in the tunnel is missing, go back to Part 1, step 6, and draw a wider polygon. If the walls are doubled, the alignment in Part 1, step 4, is still off.</li>
+<li>Students move the same way you do. W walks forward, S walks back, A steps left, D steps right. Hold Shift to go faster. Drag with the left mouse button to turn. Click once and the mouse looks for you; press Esc to release it. Drag with the right mouse button to slide sideways and up. The wheel moves in and out. On a phone, drag the left side of the screen to walk and the right side to look. Press [ to make the dots smaller and ] to make them larger. The phone draws larger dots so a thinned wall still reads as a surface. The desktop draws smaller dots so the detail shows. Both use the same points.</li>
+<li>Upload the <code>site</code> folder to a web host. Send students that one address. A phone and a computer open the same page and the same cloud.</li>
 </ol>
+<p>To try Part 2 before your own LAS is ready, unzip <a href="download/silver-king-combined.las.zip">silver-king-combined.las.zip</a> and use the LAS file inside. It is the Silver King merge at 1.25 cm, 13,657,307 points. The program will thin it again unless you pass <code>--cell 0.0125 --max-points 0</code>.</p>
 <p>The same sequence, for Cursor with Grok 4.7 or Opus 5.5. Put the LAS file and the photograph in the folder, and paste this:</p>
 <pre>Build a walk-through of one mine LiDAR scan as one web page. Phone and desktop open the same page and the same cloud. Desktop dots are smaller. Phone dots are larger, so a thinned wall still reads as a surface.
 
